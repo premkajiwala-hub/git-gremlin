@@ -167,12 +167,20 @@ function setHidden(hidden: boolean, ms?: number): void {
   pushStatus()
 }
 
+/**
+ * Login item for the installed app, or for `electron <project>` in dev mode
+ * (useful where Smart App Control blocks unsigned builds).
+ */
+function loginItem(): { path: string; args: string[] } {
+  return { path: process.execPath, args: app.isPackaged ? [] : [app.getAppPath()] }
+}
+
 function startWithWindows(): boolean {
-  return app.getLoginItemSettings().openAtLogin
+  return app.getLoginItemSettings(loginItem()).openAtLogin
 }
 
 function setStartWithWindows(on: boolean): void {
-  app.setLoginItemSettings({ openAtLogin: on })
+  app.setLoginItemSettings({ openAtLogin: on, ...loginItem() })
 }
 
 async function pickRepo(parent: BrowserWindow | null): Promise<RepoResult> {
