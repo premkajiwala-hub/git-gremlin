@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+release/
+*.tsbuildinfo
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# User state files (the app stores real state in Electron's userData folder)
+state.json
+*.state.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
