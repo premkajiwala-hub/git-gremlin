@@ -14,12 +14,11 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "textures": "node scripts/generate-textures.ts",
     "compile": "electron-vite build",
-    "build": "npm run typecheck && electron-vite build && electron-builder --win nsis"
+    "build": "npm run typecheck && electron-vite build && electron-builder --win nsis --x64"
   },
   "dependencies": {
     "koffi": "^3.3.7",
-    "simple-git": "^4.0.2",
-    "three": "^0.187.0"
+    "simple-git": "^4.0.2"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
@@ -27,11 +26,49 @@
     "electron": "^45.2.3",
     "electron-builder": "^26.18.0",
     "electron-vite": "^6.0.0",
+    "three": "^0.187.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.7"
   },
   "allowScripts": {
     "koffi@3.3.7": true,
     "electron-winstaller@5.4.0": true
+  },
+  "build": {
+    "appId": "com.premkajiwala.gitgremlin",
+    "productName": "GitGremlin",
+    "artifactName": "${productName}-Setup-${version}.${ext}",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "**/node_modules/koffi/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true,
+      "shortcutName": "GitGremlin",
+      "runAfterFinish": true
+    }
   }
 }

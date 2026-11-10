@@ -1,16 +1,19 @@
 import { join } from 'node:path'
 import { BrowserWindow, ipcMain, screen, type IpcMainEvent } from 'electron'
 import { IPC, TOPMOST_REASSERT_MS } from '../shared/constants'
-import type { DisplayInfo, OverlayInit, PetPose, PetSnapshot } from '../shared/types'
+import type { DisplayInfo, OverlayInit, PetPose, PetSnapshot, PetStatus, Settings, WindowLedge } from '../shared/types'
 import { getDisplayInfos } from './displays'
 import { forceTopmost, hwndOf, nativeAvailable } from './native'
 
 export interface OverlayOptions {
-  getPetSize: () => number
-  getPetSpeed: () => number
+  getSettings: () => Settings
+  getStatus: () => PetStatus
+  getLedge: () => WindowLedge | null
   /** Last known pet state (restored from disk on startup). */
   initialSnapshot: PetSnapshot | null
   onSnapshot?: (snap: PetSnapshot) => void
+  /** The pet started (hwnd) or stopped (0) standing on a window. */
+  onStanding?: (hwnd: number) => void
 }
 
 interface Overlay {
@@ -205,9 +208,16 @@ export class OverlayManager {
         displays: this.displays,
         isOwner,
         snapshot: isOwner ? this.clampSnapshot(this.lastSnapshot, o.display.id) : null,
-        petSize: this.opts.getPetSize(),
-        petSpeed: this.opts.getPetSpeed()
+        settings: this.opts.getSettings(),
+        status: this.opts.getStatus(),
+        ledge: this.opts.getLedge()
       }
+    })
+
+    ipcMain.on(IPC.standing, (e: IpcMainEvent, hwnd: number) => {
+      const o = this.overlayFor(e.sender.id)
+      if (!o || o.display.id !== this.ownerId) return
+      this.opts.onStanding?.(hwnd)
     })
 
     ipcMain.on(IPC.setInteractive, (e: IpcMainEvent, interactive: boolean) => {
@@ -215,8 +225,6 @@ export class OverlayManager {
       if (!o) return
       o.win.setIgnoreMouseEvents(!interactive, { forward: true })
     })
-
-    ipcMain.handle(IPC.cursor, () => screen.getCursorScreenPoint())
 
     ipcMain.on(IPC.handoff, (e: IpcMainEvent, targetId: number, snap: PetSnapshot) => {
       const from = this.overlayFor(e.sender.id)

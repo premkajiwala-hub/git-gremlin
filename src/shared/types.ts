@@ -19,13 +19,13 @@ export interface DisplayInfo {
   groundY: number
 }
 
-/** A surface the pet can stand on, other than the taskbar (e.g. the focused window's top edge). */
-export interface Ledge {
+/** The focused window, which the pet can hop onto (global DIP coordinates). */
+export interface WindowLedge {
   hwnd: number
-  /** Global DIP coordinates of the window's top edge. */
   x: number
   y: number
   width: number
+  height: number
 }
 
 /**
@@ -52,11 +52,65 @@ export interface PetPose {
   model: Record<string, unknown>
 }
 
+export type HungerStage = 'full' | 'peckish' | 'hungry' | 'starving'
+
+export interface PetStatus {
+  name: string
+  stage: HungerStage
+  /** 1 = completely full, 0 = starving. */
+  fullness: number
+  /** Unix ms of the newest commit eaten, or null if none yet. */
+  lastCommitAt: number | null
+  quiet: boolean
+  paused: boolean
+  repoCount: number
+}
+
+export interface FeedEvent {
+  commits: number
+  lines: number
+  /** Hours of hunger the meal removed. */
+  foodHours: number
+  debug?: boolean
+}
+
+export interface Settings {
+  petName: string
+  /** On-screen height in DIP. */
+  petSize: number
+  /** Walking speed in DIP per second. */
+  petSpeed: number
+  peckishAfterHours: number
+  hungryAfterHours: number
+  starvingAfterHours: number
+  quietHoursEnabled: boolean
+  /** "HH:MM", 24h clock. */
+  quietStart: string
+  quietEnd: string
+  /** Author email to count commits for; empty = use each repo's `git config user.email`. */
+  gitEmail: string
+  repos: string[]
+}
+
 export interface OverlayInit {
   display: DisplayInfo
   displays: DisplayInfo[]
   isOwner: boolean
   snapshot: PetSnapshot | null
-  petSize: number
-  petSpeed: number
+  settings: Settings
+  status: PetStatus
+  ledge: WindowLedge | null
+}
+
+export interface SettingsView {
+  settings: Settings
+  detectedEmail: string
+  startWithWindows: boolean
+}
+
+export interface RepoResult {
+  ok: boolean
+  path?: string
+  error?: string
+  canceled?: boolean
 }

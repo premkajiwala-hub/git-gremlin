@@ -25,6 +25,10 @@ body {
   will-change: transform;
 }
 
+#stage canvas.bubble {
+  will-change: auto;
+}
+
 body.grab {
   cursor: grab;
 }

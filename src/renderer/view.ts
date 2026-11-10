@@ -1,7 +1,5 @@
-import * as THREE from 'three'
+﻿import * as THREE from 'three'
 
-/** Height of the pet model in world units; the camera scales this to the pet size in px. */
-export const PET_UNITS_TALL = 30
 /** Camera elevation (looking slightly down at the pet). */
 const ELEVATION = THREE.MathUtils.degToRad(18)
 
@@ -24,7 +22,15 @@ export class PetView {
   anchorY = 0
   petSize = 0
 
-  constructor(container: HTMLElement, petSize: number) {
+  /**
+   * @param petSize on-screen height of the pet in DIP
+   * @param modelHeight height of the pet model in world units
+   */
+  constructor(
+    container: HTMLElement,
+    petSize: number,
+    private modelHeight: number
+  ) {
     this.canvas = document.createElement('canvas')
     container.appendChild(this.canvas)
     this.renderer = new THREE.WebGLRenderer({
@@ -51,7 +57,7 @@ export class PetView {
     this.anchorX = Math.round(this.width / 2)
     this.anchorY = Math.round(this.height * 0.72)
     this.renderer.setSize(this.width, this.height, true)
-    const ppu = size / PET_UNITS_TALL
+    const ppu = size / this.modelHeight
     this.camera.left = -this.anchorX / ppu
     this.camera.right = (this.width - this.anchorX) / ppu
     this.camera.top = this.anchorY / ppu
@@ -61,7 +67,7 @@ export class PetView {
 
   /** Pixels per world unit at the current size. */
   get ppu(): number {
-    return this.petSize / PET_UNITS_TALL
+    return this.petSize / this.modelHeight
   }
 
   /** Position the canvas so the pet's feet land on (lx, ly) in overlay-local px. */

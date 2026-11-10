@@ -26,7 +26,8 @@ export default defineConfig({
     build: {
       rolldownOptions: {
         input: {
-          index: resolve(root, 'src/renderer/index.html')
+          index: resolve(root, 'src/renderer/index.html'),
+          settings: resolve(root, 'src/renderer/settings.html')
         }
       }
     }

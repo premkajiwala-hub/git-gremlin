@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws:"
+    />
+    <title>GitGremlin Settings</title>
+    <link rel="stylesheet" href="./settings.css" />
+  </head>
+  <body>
+    <header>
+      <img src="./icon.png" alt="" class="logo" />
+      <div>
+        <h1>GitGremlin</h1>
+        <p class="sub">Feed your pet by committing code.</p>
+      </div>
+    </header>
+
+    <form id="form">
+      <section>
+        <h2>Pet</h2>
+        <label>Name <input name="petName" maxlength="24" required /></label>
+        <label
+          >Size <span class="val" data-for="petSize"></span>
+          <input name="petSize" type="range" min="40" max="200" step="4"
+        /></label>
+        <label
+          >Walking speed <span class="val" data-for="petSpeed"></span>
+          <input name="petSpeed" type="range" min="10" max="150" step="5"
+        /></label>
+      </section>
+
+      <section>
+        <h2>Hunger</h2>
+        <p class="hint">Hours without commits before each stage.</p>
+        <div class="row">
+          <label>Peckish <input name="peckishAfterHours" type="number" min="0.1" max="72" step="0.25" /></label>
+          <label>Hungry <input name="hungryAfterHours" type="number" min="0.1" max="72" step="0.25" /></label>
+          <label>Starving <input name="starvingAfterHours" type="number" min="0.1" max="72" step="0.25" /></label>
+        </div>
+        <label class="check"><input name="quietHoursEnabled" type="checkbox" /> Quiet hours (hunger pauses, pet sleeps)</label>
+        <div class="row">
+          <label>From <input name="quietStart" type="time" /></label>
+          <label>To <input name="quietEnd" type="time" /></label>
+        </div>
+      </section>
+
+      <section>
+        <h2>Git</h2>
+        <label
+          >Author email to count
+          <input name="gitEmail" type="email" placeholder="" />
+        </label>
+        <p class="hint" id="emailHint"></p>
+        <div class="repos-head">
+          <h3>Watched repos</h3>
+          <button type="button" id="addRepo">Add repo...</button>
+        </div>
+        <ul id="repos"></ul>
+      </section>
+
+      <section>
+        <h2>System</h2>
+        <label class="check"><input name="startWithWindows" type="checkbox" /> Start with Windows</label>
+      </section>
+
+      <footer>
+        <span id="saved" class="saved"></span>
+        <button type="submit" class="primary">Save</button>
+      </footer>
+    </form>
+    <script type="module" src="./settings.ts"></script>
+  </body>
+</html>
