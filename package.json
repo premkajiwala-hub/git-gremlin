@@ -1,0 +1,37 @@
+{
+  "name": "git-gremlin",
+  "productName": "GitGremlin",
+  "version": "0.1.0",
+  "description": "A blocky Windows desktop pet that lives on your taskbar and gets hungry when you don't commit code.",
+  "author": "premkajiwala-hub",
+  "license": "MIT",
+  "private": true,
+  "main": "./out/main/index.js",
+  "scripts": {
+    "start": "electron-vite dev",
+    "dev": "electron-vite dev",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "textures": "node scripts/generate-textures.ts",
+    "compile": "electron-vite build",
+    "build": "npm run typecheck && electron-vite build && electron-builder --win nsis"
+  },
+  "dependencies": {
+    "koffi": "^3.3.7",
+    "simple-git": "^4.0.2",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/three": "^0.187.0",
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.0",
+    "electron-vite": "^6.0.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.7"
+  },
+  "allowScripts": {
+    "koffi@3.3.7": true,
+    "electron-winstaller@5.4.0": true
+  }
+}
