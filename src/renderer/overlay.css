@@ -26,6 +26,7 @@ body {
 }
 
 #stage canvas.bubble {
+  z-index: 10;
   will-change: auto;
 }
 

@@ -19,19 +19,20 @@ const IGNORED_CLASSES = new Set([
 ])
 
 /**
- * Watches the focused window (Catbot can hop onto its top edge, and a starving
- * Catbot taps on its side) and the window Catbot is standing on (so it falls
+ * Watches the focused window (pets can hop onto its top edge, and a starving
+ * pet taps on its side) and the windows pets are standing on (so they fall
  * when that window moves, closes or is minimised).
  */
 export class WindowTracker {
   ledge: WindowLedge | null = null
   private fgTimer: NodeJS.Timeout | null = null
   private standTimer: NodeJS.Timeout | null = null
-  private standing: WindowLedge | null = null
+  /** Window each pet is standing on, with the bounds it had when the pet landed. */
+  private standing = new Map<string, WindowLedge>()
 
   constructor(
     private onLedge: (ledge: WindowLedge | null) => void,
-    private onStandingLost: (hwnd: number) => void
+    private onStandingLost: (pet: string, hwnd: number) => void
   ) {}
 
   start(): void {
@@ -42,32 +43,40 @@ export class WindowTracker {
   stop(): void {
     if (this.fgTimer) clearInterval(this.fgTimer)
     this.fgTimer = null
-    this.setStanding(0)
+    this.standing.clear()
+    this.syncStandTimer()
   }
 
-  /** Catbot landed on (hwnd) or left (0) a window. */
-  setStanding(hwnd: number): void {
-    if (this.standTimer) clearInterval(this.standTimer)
-    this.standTimer = null
-    this.standing = null
-    if (!hwnd || !nativeAvailable) return
-    const rect = this.describe(hwnd, true)
-    if (!rect) {
-      this.onStandingLost(hwnd)
-      return
+  /** A pet landed on (hwnd) or left (0) a window. */
+  setStanding(pet: string, hwnd: number): void {
+    this.standing.delete(pet)
+    if (hwnd && nativeAvailable) {
+      const rect = this.describe(hwnd, true)
+      if (rect) this.standing.set(pet, rect)
+      else this.onStandingLost(pet, hwnd)
     }
-    this.standing = rect
-    this.standTimer = setInterval(() => {
-      const cur = this.describe(hwnd, true)
-      const was = this.standing
-      if (!was) return
-      const moved =
-        !cur || Math.abs(cur.x - was.x) > 2 || Math.abs(cur.y - was.y) > 2 || Math.abs(cur.width - was.width) > 2
+    this.syncStandTimer()
+  }
+
+  private syncStandTimer(): void {
+    if (this.standing.size && !this.standTimer) {
+      this.standTimer = setInterval(() => this.pollStanding(), 200)
+    } else if (!this.standing.size && this.standTimer) {
+      clearInterval(this.standTimer)
+      this.standTimer = null
+    }
+  }
+
+  private pollStanding(): void {
+    for (const [pet, was] of [...this.standing]) {
+      const cur = this.describe(was.hwnd, true)
+      const moved = !cur || Math.abs(cur.x - was.x) > 2 || Math.abs(cur.y - was.y) > 2 || Math.abs(cur.width - was.width) > 2
       if (moved) {
-        this.setStanding(0)
-        this.onStandingLost(hwnd)
+        this.standing.delete(pet)
+        this.onStandingLost(pet, was.hwnd)
       }
-    }, 200)
+    }
+    this.syncStandTimer()
   }
 
   private pollForeground(): void {

@@ -1,6 +1,7 @@
-import type { DisplayInfo, FeedEvent, PetSnapshot, PetStatus, Settings, WindowLedge } from '../../shared/types'
+import type { DisplayInfo, FeedEvent, PetConfig, PetSnapshot, PetStatus, WindowLedge } from '../../shared/types'
 import type { World } from '../world'
 import type { ParticleKind } from './particles'
+import type { Persona } from './personas'
 import { frameAt, type AnimName, type Mood, type SpriteSet } from './sprites'
 
 export type Activity =
@@ -20,6 +21,8 @@ export type Activity =
   | 'tap'
   | 'dragged'
   | 'air'
+  | 'wash'
+  | 'rummage'
 
 /** Everything the view needs to draw one frame. */
 export interface RenderState {
@@ -33,13 +36,13 @@ export interface RenderState {
   mood: Mood
   /** Eyes glance up (-1) or down (+1) on the screen. */
   lookY: number
-  /** Collar bell lit (well fed). */
+  /** Accent light lit (Catbot's collar bell, when fed). */
   glow: boolean
   /** 0..1 hunger dimming. */
   dim: number
   /** 0..1 red flash. */
   tint: number
-  /** 0 = no food on screen, else the commit cube's remaining size (0..1). */
+  /** 0 = no food on screen, else the food's remaining size (0..1). */
   food: number
   /** 0..1 landing squash. */
   squash: number
@@ -49,9 +52,9 @@ export interface RenderState {
 
 export interface BrainHooks {
   say(text: string, ms?: number): void
-  /** Spawn a particle at (x, y) sprite pixels from Catbot's feet (x already facing-aware). */
+  /** Spawn a particle at (x, y) sprite pixels from the pet's feet (x already facing-aware). */
   spawn(kind: ParticleKind, x: number, y: number): void
-  /** Catbot started (hwnd) or stopped (0) standing on a window's top edge. */
+  /** The pet started (hwnd) or stopped (0) standing on a window's top edge. */
   standing(hwnd: number): void
   handoff(target: DisplayInfo, snap: PetSnapshot): void
 }
@@ -67,41 +70,9 @@ const chance = (p: number) => Math.random() < p
 const pickOne = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v))
 
-export const RANDOM_LINES = [
-  'BEEP BOOP. COMMIT DETECTED?',
-  'SMALL COMMITS = HAPPY CIRCUITS.',
-  'HAVE YOU TRIED GIT ADD -P?',
-  'MERGE CONFLICTS MAKE MY FANS SPIN.',
-  'MEOW.EXE HAS STARTED.',
-  'MY TAIL IS 40% CABLE.',
-  'I DREAM IN GREEN SQUARES.',
-  'REMEMBER TO HYDRATE. I USE COOLANT.',
-  'WIP COMMITS STILL COUNT AS FOOD.',
-  'PURRING AT 60 HZ.'
-]
-const HUNGRY_LINES = [
-  'NO CONTRIBUTIONS TODAY... FEED ME COMMITS',
-  'LOW BATTERY... FEED ME COMMITS',
-  '*WHIRRR* SO HUNGRY...',
-  '*SIGH*',
-  'EVEN A TYPO FIX WOULD DO.',
-  'GIT COMMIT -M "FOOD"?',
-  'ERROR 404: SNACK NOT FOUND'
-]
-/** Remarks when fed, by contribution level ('#' = today's count). */
-const FED_LINES: string[][] = [
-  [],
-  ['# CONTRIBUTIONS TODAY. A FEW MORE?', 'SNACKED. COULD EAT MORE COMMITS.', 'WARMING UP MY CIRCUITS...'],
-  ['# CONTRIBUTIONS! TASTY.', 'NICE AND STEADY TODAY.', 'PURR... COMMITS ARE GOOD.'],
-  ['# CONTRIBUTIONS! FULL BATTERY!', 'BIG DAY! ZOOMIES TIME!', 'YOUR GRAPH IS GLOWING GREEN!'],
-  ['# CONTRIBUTIONS?! LEGENDARY!', 'MAXIMUM GREEN ACHIEVED!', 'I AM POWERED BY YOUR COMMITS!']
-]
-const STARVING_LINES = ['...', 'B-BATTERY CRITICAL...', 'TWO DAYS WITHOUT COMMITS...', 'C-COMMIT... PLEASE...']
-const EAT_LINES = ['NOM.EXE COMPLETE!', 'CRUNCHY COMMIT!', 'BYTES DIGESTED!', 'MMM, FRESH CODE.']
-
 /**
- * What Catbot chooses to do next, by today's contribution level:
- * 0 = no contributions (hungry), 1 = "Less" ... 4 = "More" on the GitHub chart.
+ * What a pet chooses to do next, by its level (Catbot: today's contribution
+ * level, 0 = none/hungry ... 4 = "More" on the GitHub chart; Dusty: how tidy the disk is).
  */
 const LEVEL_WEIGHTS: [string, number][][] = [
   [
@@ -158,11 +129,11 @@ const LEVEL_SPEED = [0.5, 0.85, 1, 1.15, 1.3]
 
 type Gait = 'walk' | 'run' | 'crawl'
 const GAIT_SPEED: Record<Gait, number> = { walk: 1, run: 2.4, crawl: 0.45 }
-/** Activities that pause while the cursor hovers over Catbot, and that cursor-following can interrupt. */
-const PAUSABLE: Activity[] = ['idle', 'walk', 'run', 'crawl', 'sit', 'curious']
+/** Activities that pause while the cursor hovers over the pet, and that cursor-following can interrupt. */
+const PAUSABLE: Activity[] = ['idle', 'walk', 'run', 'crawl', 'sit', 'curious', 'wash', 'rummage']
 
 /**
- * Catbot's body and mind: free movement across the screen (or along the
+ * A pet's body and mind: free movement across the screen (or along the
  * bottom edge), hops onto the focused window's top edge, following the cursor,
  * physics for jumps and throws, the behaviour state machine, and what to draw.
  *
@@ -184,7 +155,7 @@ export class PetBrain {
   ty = 0
   /** On-screen standing height in DIP (set by the view, snapped to crisp pixels). */
   size = 72
-  /** The focused app window, which Catbot may hop onto. */
+  /** The focused app window, which the pet may hop onto. */
   ledge: WindowLedge | null = null
 
   private stand: WindowLedge | null = null
@@ -215,6 +186,8 @@ export class PetBrain {
   private noLandT = 0
   private nagT = rand(25, 50)
   private curiousCooldown = 0
+  private washNext = false
+  private wasBusy: PetStatus['busy'] = null
   private dragOffset = { x: 0, y: 0 }
   private cursor = { x: 0, y: 0 }
   /** Seconds since the cursor last moved over the visible desktop. */
@@ -222,9 +195,10 @@ export class PetBrain {
 
   constructor(
     public world: World,
-    public settings: Settings,
+    public settings: PetConfig,
     public status: PetStatus,
     private sprites: SpriteSet,
+    private persona: Persona,
     private hooks: BrainHooks
   ) {}
 
@@ -242,7 +216,7 @@ export class PetBrain {
     return this.stand !== null
   }
 
-  /** Hit box around Catbot in DIP. */
+  /** Hit box around the pet in DIP. */
   hitBox(): { left: number; right: number; top: number; bottom: number } {
     const lying = this.activity === 'sleep' || this.activity === 'starving'
     const hw = this.size * (lying ? 0.7 : 0.6)
@@ -317,7 +291,7 @@ export class PetBrain {
     this.stand = null
     this.following = this.crossing = this.thenHop = this.walkingOff = this.afterTap = false
     this.handedOff = false
-    const known: Activity[] = ['idle', 'walk', 'run', 'crawl', 'sit', 'curious', 'sleep', 'happy', 'hurt', 'starving', 'air']
+    const known: Activity[] = ['idle', 'walk', 'run', 'crawl', 'sit', 'curious', 'sleep', 'happy', 'hurt', 'starving', 'air', 'wash', 'rummage']
     this.activity = b.activity && known.includes(b.activity) ? b.activity : 'idle'
     if (this.z > 0) this.activity = 'air'
     if (!this.roam) this.y = this.world.groundY
@@ -336,7 +310,7 @@ export class PetBrain {
     this.blinking = 0
   }
 
-  /** The cursor is over Catbot: it stops what it's doing and looks at you. */
+  /** The cursor is over the pet: it stops what it's doing and looks at you. */
   setHovered(h: boolean): void {
     this.hovered = h
   }
@@ -378,7 +352,7 @@ export class PetBrain {
     if (hard) {
       // Flicked hard: cosmetic red flash and a bouncier landing.
       this.flashT = 0.35
-      if (chance(0.6)) this.hooks.say(pickOne(['WHEEE!', 'SYSTEM SHAKEN!', 'HEY!']), 1500)
+      if (chance(0.6)) this.hooks.say(pickOne(this.persona.thrownLines), 1500)
     }
     if (this.roam) {
       this.vx = vx * 0.6
@@ -396,7 +370,7 @@ export class PetBrain {
     this.set('air', 0)
   }
 
-  /** The window Catbot is standing on moved, closed or was minimised. */
+  /** The window the pet is standing on moved, closed or was minimised. */
   standingLost(hwnd: number): void {
     if (this.stand?.hwnd === hwnd) this.fallFromWindow()
   }
@@ -411,12 +385,14 @@ export class PetBrain {
     this.tickTimers(dt)
     this.handleHover()
     this.handleFollow()
+    this.handleBusy()
 
     switch (this.activity) {
       case 'idle':
       case 'sit':
       case 'curious':
       case 'hurt':
+      case 'wash':
         this.slide(dt)
         if (this.t > this.dur) {
           if (this.afterTap) {
@@ -430,6 +406,20 @@ export class PetBrain {
         if (this.fxClock > 0.35) {
           this.fxClock = 0
           this.hooks.spawn('heart', this.facing * 4 + rand(-4, 4), -34)
+        }
+        if (this.t > this.dur) {
+          if (this.washNext) {
+            this.washNext = false
+            this.set('wash', rand(2, 3))
+          } else this.next()
+        }
+        break
+      case 'rummage':
+        // Digging through the junk: little bits fly out.
+        this.slide(dt)
+        if (this.fxClock > 0.4) {
+          this.fxClock = 0
+          this.hooks.spawn('crumb', this.facing * 14, -2)
         }
         if (this.t > this.dur) this.next()
         break
@@ -477,6 +467,8 @@ export class PetBrain {
           this.fxClock = 0
           for (let i = 0; i < 2; i++) this.hooks.spawn('crumb', this.facing * 20, -3)
         }
+        // Munching for as long as the job takes (Dusty cleaning).
+        if (this.dur === Infinity && this.status.busy !== 'cleaning') this.dur = this.t + 0.4
         if (this.t > this.dur) this.set('happy', 1.8)
         break
       case 'starving':
@@ -511,12 +503,28 @@ export class PetBrain {
     if (this.pausedForHover && Math.abs(this.cursor.x - this.x) > 6) this.facing = this.cursor.x > this.x ? 1 : -1
   }
 
+  /** Working for you: sniff around while scanning, munch while cleaning. */
+  private handleBusy(): void {
+    const busy = this.status.busy
+    if (busy === this.wasBusy) return
+    this.wasBusy = busy
+    if (busy === 'cleaning' && !['dragged', 'air', 'hop', 'prejump'].includes(this.activity)) {
+      this.z = 0
+      this.vx = this.vy = this.vz = 0
+      this.following = false
+      this.set('eat', Infinity)
+    } else if (busy === 'scanning' && PAUSABLE.includes(this.activity) && !this.hovered) {
+      this.set('rummage', rand(2.5, 4))
+    }
+  }
+
   /** Follow the cursor while it's moving over the desktop; go back to wandering once it rests. */
   private handleFollow(): void {
     const canFollow =
       this.settings.followCursor &&
       !this.hovered &&
       !this.pendingFeed &&
+      !this.status.busy &&
       this.stage !== 'starving' &&
       PAUSABLE.includes(this.activity)
     const active = this.cursorIdle < FOLLOW_GRACE
@@ -539,7 +547,7 @@ export class PetBrain {
     return Math.hypot(this.tx - this.x, this.ty - this.y) > this.size * 4 ? 'run' : 'walk'
   }
 
-  /** Aim so the cursor ends up over Catbot's body. */
+  /** Aim so the cursor ends up over the pet's body. */
   private aimAtCursor(): void {
     const a = this.area()
     if (this.stand) {
@@ -577,6 +585,11 @@ export class PetBrain {
       return this.startEat(ev)
     }
     if (this.stage === 'starving') return this.stand ? this.walkOffWindow() : this.set('starving', rand(20, 50))
+    if (this.status.busy === 'cleaning') return this.set('eat', Infinity)
+    if (this.status.busy === 'scanning' && !this.stand) {
+      // Sniffing out junk: dig here, then trot somewhere else and dig again.
+      return chance(0.55) ? this.set('rummage', rand(2.5, 4.5)) : this.startMove(chance(0.3) ? 'run' : 'walk')
+    }
 
     if (this.stand) {
       const r = Math.random()
@@ -586,8 +599,9 @@ export class PetBrain {
       return this.walkOffWindow()
     }
 
-    // Busier days on the contribution chart make a livelier Catbot.
-    const weights = this.stage === 'hungry' ? LEVEL_WEIGHTS[0] : LEVEL_WEIGHTS[Math.max(1, this.status.level)]
+    // A higher level (busier contribution chart, tidier disk) makes a livelier pet.
+    const weights =
+      this.stage === 'hungry' ? LEVEL_WEIGHTS[0] : [...LEVEL_WEIGHTS[Math.max(1, this.status.level)], ...this.persona.extraWeights]
     let r = Math.random() * weights.reduce((s, [, w]) => s + w, 0)
     let choice = weights[0][0]
     for (const [name, w] of weights) {
@@ -613,6 +627,10 @@ export class PetBrain {
         return this.set('curious', 1.6)
       case 'dance':
         return this.set('happy', rand(1.5, 2.5))
+      case 'wash':
+        return this.set('wash', rand(2, 3.5))
+      case 'rummage':
+        return this.set('rummage', rand(2, 4))
       default:
         return this.set('idle', rand(2, 5))
     }
@@ -672,7 +690,7 @@ export class PetBrain {
     this.set('hop', 0)
   }
 
-  /** The focused window's top edge on this monitor, if Catbot can stand on it. */
+  /** The focused window's top edge on this monitor, if the pet can stand on it. */
   private usableLedge(): WindowLedge | null {
     const l = this.ledge
     if (!l) return null
@@ -756,10 +774,8 @@ export class PetBrain {
     this.jump = null
     this.following = false
     this.set('eat', 2.8)
-    const what = ev.debug
-      ? 'NOM.EXE (DEBUG SNACK)'
-      : `${pickOne(EAT_LINES)} +${ev.commits} CONTRIBUTION${ev.commits === 1 ? '' : 'S'}`
-    this.hooks.say(what, 2600)
+    this.washNext = this.persona.washAfterEat
+    this.hooks.say(ev.debug ? `${ev.text} (DEBUG SNACK)` : ev.text, 2600)
   }
 
   /** Starving: get up, crawl over to the focused window's edge and tap on it. */
@@ -775,7 +791,7 @@ export class PetBrain {
     this.crossing = false
     this.afterTap = true
     this.set('crawl', 0)
-    if (chance(0.5)) this.hooks.say(pickOne(['FOOD...?', '*TAP TAP*', 'ANYONE CODING?']), 2500)
+    if (chance(0.5)) this.hooks.say(pickOne(this.persona.tapLines), 2500)
   }
 
   // --- movement & physics ------------------------------------------------------------------
@@ -968,21 +984,24 @@ export class PetBrain {
     }
     this.twitching = Math.max(0, this.twitching - dt)
 
-    if (this.activity === 'sleep' || this.activity === 'dragged' || this.activity === 'eat' || this.hovered) return
+    if (this.activity === 'sleep' || this.activity === 'dragged' || this.activity === 'eat' || this.hovered || this.status.busy) return
     this.nagT -= dt
     if (this.nagT > 0) return
-    if (this.stage === 'hungry') {
-      this.hooks.say(pickOne(HUNGRY_LINES), 3000)
+    const p = this.persona
+    if (this.status.alert && chance(0.6)) {
+      // Something for you to do (sign in, review junk): clicking the pet opens its page.
+      this.hooks.say(this.status.alert, 4000)
+      this.nagT = rand(150, 300)
+    } else if (this.stage === 'hungry') {
+      this.hooks.say(pickOne(p.hungryLines), 3000)
       this.nagT = rand(45, 90)
     } else if (this.stage === 'starving') {
-      this.hooks.say(pickOne(STARVING_LINES), 2500)
+      this.hooks.say(pickOne(p.starvingLines), 2500)
       this.nagT = rand(60, 120)
     } else {
-      // Fed: the occasional remark that matches how busy today has been.
-      const lines = FED_LINES[this.status.level] ?? FED_LINES[1]
-      const n = this.status.todayCount
-      const counted = `${n} CONTRIBUTION${n === 1 ? '' : 'S'}`
-      if (chance(0.5)) this.hooks.say(pickOne(lines).replace('# CONTRIBUTIONS', counted), 2600)
+      // Content: the occasional remark that matches its level.
+      const lines = p.fedLines[this.status.level] ?? p.fedLines[1] ?? []
+      if (lines.length && chance(0.5)) this.hooks.say(pickOne(lines), 2600)
       this.nagT = rand(150, 300)
     }
   }
@@ -1067,7 +1086,17 @@ export class PetBrain {
         anim = 'dragged'
         mood = 'alert'
         break
+      case 'wash':
+        anim = 'wash'
+        mood = this.blinking > 0 ? 'blink' : 'happy'
+        break
+      case 'rummage':
+        anim = 'rummage'
+        mood = 'alert'
+        break
     }
+    // Not every pet has every animation.
+    if (!this.sprites.anims[anim]) anim = hungry && this.sprites.anims.idle_sad ? 'idle_sad' : 'idle'
     if ((this.pausedForHover || this.lookAtYou > 0) && this.activity === 'idle') {
       mood = this.blinking > 0 ? 'blink' : hungry ? 'sad' : this.lookAtYou > 0 ? 'alert' : 'idle'
     }
@@ -1077,10 +1106,10 @@ export class PetBrain {
       this.animName = anim
       this.animT = 0
     }
-    const a = this.sprites.anims[anim]
+    const a = this.sprites.anims[anim] ?? this.sprites.anims.idle
     const frame = fixedFrame ?? frameAt(a, this.animT * rate)
 
-    // Eyes glance up toward the cursor when it's above Catbot's head.
+    // Eyes glance up toward the cursor when it's above the pet's head.
     const watching = this.pausedForHover || this.following || this.lookAtYou > 0 || this.activity === 'curious'
     const headY = this.y - this.z - this.size * 0.75
     const lookY = watching && this.cursor.y < headY - this.size * 0.3 ? -1 : 0

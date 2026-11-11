@@ -1,7 +1,8 @@
+import { GRID_MARK } from '../../shared/constants'
 import { ADVANCE, drawText, GLYPH_H, LINE_H, wrap } from './font'
 
-/** Catbot palette: light-gray shell, orange accents, dark face-screen, cyan text. */
-const C = {
+/** Default (Catbot) palette: light-gray shell, orange accents, dark face-screen, cyan text. */
+const BASE = {
   ink: '#15191e',
   shell: '#dfe3e8',
   shellShade: '#a9b1bb',
@@ -15,6 +16,8 @@ const C = {
   cable: '#ff9a2e'
 }
 
+export type BubbleTheme = Partial<typeof BASE>
+
 const PAD = 4 // screen padding, in font pixels
 const FRAME = 2 // gray shell thickness
 const HEADER = 9 // header bar height
@@ -22,8 +25,6 @@ const TAIL = 5
 const MAX_CHARS = 24
 const TYPE_RATE = 45 // characters per second
 
-/** A text line consisting of just this character is drawn as the contribution squares. */
-export const GRID_MARK = '▦'
 /** GitHub's dark-theme contribution colours, level 0..4. */
 const GRID = ['#161b22', '#0e4429', '#006d32', '#26a641', '#39d353']
 const GRID_EDGE = '#2d333b'
@@ -31,7 +32,7 @@ const GRID_EDGE = '#2d333b'
 export type Mood = 'ok' | 'warn' | 'bad'
 const LED: Record<Mood, string> = { ok: '#5ef2ff', warn: '#ffb21e', bad: '#ff4d5e' }
 
-/** A little robot terminal that pops up above the catbot and types its message out. */
+/** A little robot terminal that pops up above a pet and types its message out. */
 export class SpeechBubble {
   private canvas = document.createElement('canvas')
   private ctx = this.canvas.getContext('2d')!
@@ -50,7 +51,10 @@ export class SpeechBubble {
   private grid: number[] = []
   visible = false
 
-  constructor(container: HTMLElement) {
+  private C: typeof BASE
+
+  constructor(container: HTMLElement, theme: BubbleTheme = {}) {
+    this.C = { ...BASE, ...theme }
     this.canvas.className = 'bubble'
     this.canvas.style.display = 'none'
     container.appendChild(this.canvas)
@@ -129,6 +133,7 @@ export class SpeechBubble {
 
   private draw(tailCenter: number, shown: number, cursorOn: boolean): void {
     const c = this.ctx
+    const C = this.C
     const px = this.px
     const w = this.wUnits
     const h = this.hUnits

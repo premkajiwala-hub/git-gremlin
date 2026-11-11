@@ -1,10 +1,10 @@
 /**
  * Dev-only browser preview of the overlay renderer: a fake desktop, a fake
- * focused window and buttons to drive Catbot's states. Open
+ * focused window and buttons to drive every pet's states. Open
  * http://localhost:5173/preview.html while `npm start` is running.
  */
-import { DEFAULT_SETTINGS } from '../shared/constants'
-import type { ContributionLevel, DisplayInfo, FeedEvent, OverlayInit, PetStatus, Settings, WindowLedge } from '../shared/types'
+import { DEFAULT_SETTINGS, GRID_MARK } from '../shared/constants'
+import type { ContributionLevel, DisplayInfo, OverlayInit, PetId, PetStatus, Settings, WindowLedge } from '../shared/types'
 
 type Cb = (...args: any[]) => void
 const listeners: Record<string, Cb[]> = {}
@@ -25,32 +25,55 @@ const display: DisplayInfo = {
   taskbar: 'bottom',
   groundY: H - 40
 }
-const settings: Settings = { ...DEFAULT_SETTINGS, petSize: 96 }
-let status: PetStatus = {
+const settings: Settings = structuredClone(DEFAULT_SETTINGS)
+settings.pets.catbot.petSize = 96
+settings.pets.dusty.petSize = 88
+
+let week: ContributionLevel[] = [0, 1, 2, 2, 3, 1, 2]
+const catbot = (level: ContributionLevel, count: number, starving = false): PetStatus => ({
   name: 'Catbot',
-  stage: 'fed',
-  level: 2,
-  todayCount: 5,
-  streak: 4,
-  week: [0, 1, 2, 2, 3, 1, 2],
-  login: 'preview-user',
+  stage: count > 0 ? 'fed' : starving ? 'starving' : 'hungry',
+  level,
+  report: [`TODAY: ${count} CONTRIBUTIONS`, `MOOD: LEVEL ${level}/4`, 'LAST 7 DAYS:', GRID_MARK, '', '> PREVIEW MODE.'],
+  grid: week,
+  alert: null,
+  busy: null,
   connected: true
-}
+})
+const dusty = (busy: PetStatus['busy'], alert: string | null = null): PetStatus => ({
+  name: 'Dusty',
+  stage: 'fed',
+  level: alert ? 2 : 3,
+  report: [alert ? 'JUNK FOUND: 1.2 GB' : 'ALL CLEAN!', 'MODE: ASK FIRST', 'LAST SCAN: 3M AGO', '', '> PREVIEW MODE.'],
+  grid: null,
+  alert,
+  busy,
+  connected: true
+})
+const status: Record<PetId, PetStatus> = { catbot: catbot(2, 5), dusty: dusty(null) }
+
 const fake = document.getElementById('fakewin')!.getBoundingClientRect()
 const ledge: WindowLedge = { hwnd: 42, x: fake.left, y: fake.top, width: fake.width, height: fake.height }
 let cursor = { x: -1000, y: -1000 }
 window.addEventListener('mousemove', (e) => (cursor = { x: e.clientX, y: e.clientY }))
 
-const init: OverlayInit = { display, displays: [display], isOwner: true, snapshot: null, settings, status, ledge }
+const init: OverlayInit = {
+  display,
+  displays: [display],
+  settings,
+  pets: (['catbot', 'dusty'] as PetId[]).map((id) => ({ id, isOwner: true, snapshot: null, status: status[id] })),
+  ledge
+}
 
 ;(window as any).gremlin = {
   getInit: async () => init,
   setInteractive: () => {},
+  getCursor: async () => ({ ...cursor, visible: true }),
   handoff: () => {},
   sendPose: () => {},
   sendSnapshot: () => {},
   setStanding: () => {},
-  getCursor: async () => ({ ...cursor, visible: true }),
+  openHub: (id: string) => console.log('[preview] open hub', id),
   onAdopt: on('adopt'),
   onRelease: on('release'),
   onMirror: on('mirror'),
@@ -63,29 +86,37 @@ const init: OverlayInit = { display, displays: [display], isOwner: true, snapsho
   onSettings: on('settings')
 }
 
-/** Set today's contribution count/level, like a square on the GitHub chart. */
-function setLevel(level: ContributionLevel, count: number, starving = false): void {
-  const week = [...status.week.slice(1, 6), starving ? 0 : 1, level] as ContributionLevel[]
-  status = { ...status, level, todayCount: count, stage: count > 0 ? 'fed' : starving ? 'starving' : 'hungry', week }
-  emit('status', status)
+const setStatus = (id: PetId, s: PetStatus) => {
+  status[id] = s
+  emit('status', id, s)
 }
-const setStage = (stage: PetStatus['stage']) => setLevel(stage === 'fed' ? 2 : 0, stage === 'fed' ? 5 : 0, stage === 'starving')
+const level = (l: ContributionLevel, count: number, starving = false) => {
+  week = [...week.slice(1, 6), starving ? 0 : 1, l] as ContributionLevel[]
+  setStatus('catbot', catbot(l, count, starving))
+}
 
 const actions: Record<string, () => void> = {
-  Feed: () => emit('feed', { commits: 2 } satisfies FeedEvent),
-  Say: () => emit('say', 'HELLO! I AM CATBOT. BEEP BOOP, FEED ME COMMITS.'),
-  Starving: () => setLevel(0, 0, true),
-  '0 (hungry)': () => setLevel(0, 0),
-  '1 Less': () => setLevel(1, 2),
-  '2': () => setLevel(2, 5),
-  '3': () => setLevel(3, 8),
-  '4 More': () => setLevel(4, 14),
-  'Not linked': () => {
-    status = { ...status, connected: !status.connected }
-    emit('status', status)
+  'Catbot: feed': () => emit('feed', 'catbot', { text: 'CRUNCHY COMMIT! +2 CONTRIBUTIONS' }),
+  'Catbot: starving': () => level(0, 0, true),
+  'Catbot: hungry': () => level(0, 0),
+  'Catbot: level 2': () => level(2, 5),
+  'Catbot: level 4': () => level(4, 14),
+  'Dusty: scan': () => {
+    setStatus('dusty', dusty('scanning'))
+    window.setTimeout(() => setStatus('dusty', dusty(null, 'I SNIFFED OUT 1.2 GB OF JUNK! CLICK ME TO REVIEW.')), 9000)
   },
-  'Window moved': () => emit('standingLost', 42),
-  'Bottom only': () => emit('settings', { ...settings, movement: settings.movement === 'roam' ? 'ground' : 'roam' })
+  'Dusty: clean': () => {
+    setStatus('dusty', dusty('cleaning'))
+    window.setTimeout(() => {
+      setStatus('dusty', dusty(null))
+      emit('feed', 'dusty', { text: 'MUNCHED 1.2 GB OF JUNK!' })
+    }, 5000)
+  },
+  'Dusty: say': () => emit('say', 'dusty', 'TRASH PANDA REPORTING FOR DUTY.'),
+  'Window moved': () => {
+    emit('standingLost', 'catbot', 42)
+    emit('standingLost', 'dusty', 42)
+  }
 }
 const panel = document.getElementById('panel')!
 for (const [label, fn] of Object.entries(actions)) {
@@ -94,6 +125,6 @@ for (const [label, fn] of Object.entries(actions)) {
   b.addEventListener('click', fn)
   panel.append(b)
 }
-;(window as any).__preview = { emit, setStage }
+;(window as any).__preview = { emit, setStatus }
 
 await import('./main')

@@ -1,4 +1,4 @@
-﻿import type { RenderState } from './pet/brain'
+import type { RenderState } from './pet/brain'
 import type { Particles } from './pet/particles'
 import { pixelScale, type SpriteSet } from './pet/sprites'
 
@@ -8,7 +8,7 @@ const TOP = 30
 const BOTTOM = 4
 
 /**
- * A small transparent 2D canvas that follows Catbot around the overlay. It
+ * A small transparent 2D canvas that follows one pet around the overlay. It
  * draws in whole device pixels so the pixel art is always crisp.
  */
 export class PetView {
@@ -55,7 +55,7 @@ export class PetView {
     this.sprite.height = sp.cellH * s
   }
 
-  /** Position the canvas so Catbot's feet land on (lx, ly) in overlay-local CSS px. */
+  /** Position the canvas so the pet's feet land on (lx, ly) in overlay-local CSS px. */
   place(lx: number, ly: number): void {
     const tx = Math.round(lx * this.dpr - this.ax) / this.dpr
     const ty = Math.round(ly * this.dpr - this.ay) / this.dpr
@@ -77,22 +77,24 @@ export class PetView {
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
     ctx.imageSmoothingEnabled = false
 
-    // Pixel shadow on the floor, smaller the higher Catbot is.
+    // Pixel shadow on the floor, smaller the higher the pet is.
     const lift = Math.min(0.7, rs.z / 160 + (rs.lifted ? 0.4 : 0))
     const half = Math.max(3, Math.round(12 * (1 - lift)))
     ctx.fillStyle = `rgba(0, 0, 0, ${0.25 * (1 - lift)})`
     ctx.fillRect(this.ax - half * s, this.ay - s, half * 2 * s, s)
     ctx.fillRect(this.ax - (half - 2) * s, this.ay - 2 * s, (half - 2) * 2 * s, s)
 
-    // The commit cube being eaten, in front of Catbot.
+    // The pet's food (Catbot: a commit cube; Dusty: a junk file), shrinking as it's eaten.
     if (rs.food > 0) {
-      const fs = Math.max(2, Math.round(10 * rs.food)) * s
-      const fx = this.ax + rs.facing * 20 * s - fs / 2
-      ctx.drawImage(sp.food, Math.round(fx), this.ay - fs, fs, fs)
+      const k = Math.max(0.2, rs.food)
+      const fw = Math.max(2, Math.round(sp.food.width * k)) * s
+      const fh = Math.max(2, Math.round(sp.food.height * k)) * s
+      const fx = this.ax + rs.facing * 20 * s - fw / 2
+      ctx.drawImage(sp.food, Math.round(fx), this.ay - fh, fw, fh)
     }
 
-    // Compose the frame, its face-screen expression and the lit bell.
-    const frame = sp.anims[rs.anim].frames[rs.frame] ?? sp.anims.idle.frames[0]
+    // Compose the frame, its expression and the lit accent (Catbot's bell).
+    const frame = (sp.anims[rs.anim] ?? sp.anims.idle).frames[rs.frame] ?? sp.anims.idle.frames[0]
     const sc = this.sctx
     sc.setTransform(1, 0, 0, 1, 0, 0)
     sc.globalCompositeOperation = 'source-over'
@@ -101,7 +103,9 @@ export class PetView {
     sc.drawImage(frame.img, 0, 0, sp.cellW * s, sp.cellH * s)
     const eyes = sp.eyes[rs.mood]
     sc.drawImage(eyes, frame.screen[0] * s, (frame.screen[1] + rs.lookY) * s, eyes.width * s, eyes.height * s)
-    if (rs.glow) sc.drawImage(sp.bellOn, frame.bell[0] * s, frame.bell[1] * s, 3 * s, 3 * s)
+    if (rs.glow && sp.accentOn && frame.accent) {
+      sc.drawImage(sp.accentOn, frame.accent[0] * s, frame.accent[1] * s, sp.accentOn.width * s, sp.accentOn.height * s)
+    }
     if (rs.dim > 0 || rs.tint > 0) {
       sc.globalCompositeOperation = 'source-atop'
       if (rs.dim > 0) {

@@ -2,7 +2,7 @@ export type ParticleKind = 'heart' | 'zzz' | 'crumb'
 
 interface Particle {
   kind: ParticleKind
-  /** Position relative to Catbot's feet, in sprite pixels (y up is negative). */
+  /** Position relative to the pet's feet, in sprite pixels (y up is negative). */
   x: number
   y: number
   vx: number
@@ -13,7 +13,7 @@ interface Particle {
 
 const GRAVITY = 160 // sprite px / s^2
 
-/** Pixel hearts, sleepy Zs and commit-cube crumbs, drawn on Catbot's canvas. */
+/** Pixel hearts, sleepy Zs and food crumbs, drawn on a pet's canvas. */
 export class Particles {
   private live: Particle[] = []
 
@@ -77,7 +77,7 @@ export class Particles {
       const h = p.kind === 'crumb' ? 2 : img.height
       const x = Math.round(ax + (p.x - w / 2) * s)
       const y = Math.round(ay + (p.y - h) * s)
-      if (p.kind === 'crumb') ctx.drawImage(img, 3, 3, 3, 3, x, y, w * s, h * s)
+      if (p.kind === 'crumb') ctx.drawImage(img, Math.floor(img.width / 2) - 1, Math.floor(img.height / 2) - 1, 3, 3, x, y, w * s, h * s)
       else ctx.drawImage(img, x, y, w * s, h * s)
     }
     ctx.globalAlpha = 1

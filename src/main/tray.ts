@@ -1,63 +1,83 @@
 import { join } from 'node:path'
-import { app, Menu, nativeImage, Tray } from 'electron'
-import { APP_NAME } from '../shared/constants'
-import type { PetStatus } from '../shared/types'
+import { app, Menu, nativeImage, Tray, type MenuItemConstructorOptions } from 'electron'
+import { APP_NAME, PET_IDS } from '../shared/constants'
+import type { PetId, PetStatus, Settings } from '../shared/types'
 
 export interface TrayActions {
-  feedNow(): void
-  refreshGitHub(): void
+  openHub(page?: string): void
+  setPetEnabled(id: PetId, enabled: boolean): void
+  catbotRefresh(): void
+  catbotFeed(): void
+  dustyScan(): void
+  dustyReview(): void
   hideForHour(): void
-  showPet(): void
-  openSettings(): void
+  showPets(): void
   toggleStartWithWindows(): void
   quit(): void
 }
 
 export interface TrayState {
-  status: PetStatus
+  settings: Settings
+  status: Record<PetId, PetStatus>
   hidden: boolean
   startWithWindows: boolean
 }
 
-const LEVEL_WORD = ['none', 'less', 'some', 'lots', 'more']
-
-export function moodLabel(s: PetStatus): string {
-  if (!s.connected) return 'GitHub not linked'
-  const stage = s.stage === 'fed' ? 'Fed' : s.stage === 'hungry' ? 'Hungry' : 'Starving'
-  return `${stage}, ${s.todayCount} contribution${s.todayCount === 1 ? '' : 's'} today (${LEVEL_WORD[s.level]})`
+/** One line about a pet for the tray, e.g. "Fed, level 2" or "1.2 GB of junk found". */
+function summary(s: PetStatus): string {
+  const first = (s.report[0] ?? '').toLowerCase().replace(/\b(\d+(?:\.\d+)?) (b|kb|mb|gb|tb)\b/g, (_m, n: string, u: string) => `${n} ${u.toUpperCase()}`)
+  return first.charAt(0).toUpperCase() + first.slice(1)
 }
 
+/** The GitGremlin tray icon: opens the panel and gives quick access to every pet. */
 export class AppTray {
   private tray: Tray
 
   constructor(private actions: TrayActions) {
     const icon = nativeImage.createFromPath(join(app.getAppPath(), 'assets', 'icon.png'))
     this.tray = new Tray(icon.isEmpty() ? icon : icon.resize({ width: 16, height: 16, quality: 'good' }))
-    this.tray.on('click', () => this.tray.popUpContextMenu())
+    this.tray.setToolTip(APP_NAME)
+    this.tray.on('click', () => this.actions.openHub())
   }
 
   update(s: TrayState): void {
-    const label = moodLabel(s.status)
-    this.tray.setToolTip(`${APP_NAME}: ${s.status.name} (${label})`)
     const a = this.actions
+    const pets: MenuItemConstructorOptions[] = PET_IDS.map((id) => {
+      const cfg = s.settings.pets[id]
+      const status = s.status[id]
+      const extra: MenuItemConstructorOptions[] =
+        id === 'catbot'
+          ? [
+              { label: 'Refresh GitHub now', enabled: cfg.enabled, click: () => a.catbotRefresh() },
+              { label: 'Feed (debug)', enabled: cfg.enabled, click: () => a.catbotFeed() }
+            ]
+          : [
+              { label: 'Scan for junk now', enabled: cfg.enabled, click: () => a.dustyScan() },
+              { label: 'Review and clean...', enabled: cfg.enabled, click: () => a.dustyReview() }
+            ]
+      return {
+        label: cfg.name,
+        submenu: [
+          { label: cfg.enabled ? summary(status) : 'Turned off', enabled: false },
+          { type: 'separator' },
+          { label: 'Show on desktop', type: 'checkbox', checked: cfg.enabled, click: (item) => a.setPetEnabled(id, item.checked) },
+          ...extra,
+          { type: 'separator' },
+          { label: 'Settings...', click: () => a.openHub(id) }
+        ]
+      }
+    })
+    const on = PET_IDS.filter((id) => s.settings.pets[id].enabled).map((id) => s.settings.pets[id].name)
+    this.tray.setToolTip(`${APP_NAME}: ${on.length ? on.join(', ') : 'no pets out'}`)
     this.tray.setContextMenu(
       Menu.buildFromTemplate([
-        { label: `${s.status.name}: ${label}`, enabled: false },
-        { label: s.status.login ? `GitHub: ${s.status.login}` : 'GitHub: not linked', enabled: false },
+        { label: `Open ${APP_NAME}`, click: () => a.openHub() },
         { type: 'separator' },
-        { label: 'Refresh GitHub now', click: () => a.refreshGitHub() },
-        { label: 'Feed now (debug)', click: () => a.feedNow() },
+        ...pets,
         { type: 'separator' },
-        { label: 'Hide for 1 hour', enabled: !s.hidden, click: () => a.hideForHour() },
-        { label: 'Show pet', enabled: s.hidden, click: () => a.showPet() },
-        { type: 'separator' },
-        { label: 'Settings...', click: () => a.openSettings() },
-        {
-          label: 'Start with Windows',
-          type: 'checkbox',
-          checked: s.startWithWindows,
-          click: () => a.toggleStartWithWindows()
-        },
+        { label: 'Hide all pets for 1 hour', enabled: !s.hidden, click: () => a.hideForHour() },
+        { label: 'Show pets', enabled: s.hidden, click: () => a.showPets() },
+        { label: 'Start with Windows', type: 'checkbox', checked: s.startWithWindows, click: () => a.toggleStartWithWindows() },
         { type: 'separator' },
         { label: 'Quit', click: () => a.quit() }
       ])

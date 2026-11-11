@@ -66,54 +66,114 @@ export type GitHubSource = 'oauth' | 'gh' | 'none'
 
 export type HungerStage = 'fed' | 'hungry' | 'starving'
 
+/** Every pet GitGremlin can host. */
+export type PetId = 'catbot' | 'dusty'
+
+/**
+ * A pet's live state, built by its "purpose" service in the main process
+ * (Catbot: GitHub contributions; Dusty: junk cleaning).
+ */
 export interface PetStatus {
   name: string
-  /** fed = contributed today; hungry = nothing today; starving = nothing today or yesterday. */
+  /** Drives behaviour: hungry/starving pets droop; fed pets get livelier with `level`. */
   stage: HungerStage
-  /** Today's square on the contribution chart (0..4). */
+  /** 0..4 energy/mood level. */
   level: ContributionLevel
-  todayCount: number
-  /** Consecutive days with contributions, up to today (or yesterday). */
-  streak: number
-  /** Levels of the last 7 days, oldest first. */
-  week: ContributionLevel[]
-  login: string | null
-  /** Whether a GitHub account is linked and its contributions have been loaded. */
+  /** Lines for the hover/click status report; a line equal to GRID_MARK draws `grid` as squares. */
+  report: string[]
+  grid: ContributionLevel[] | null
+  /** Something the pet wants you to act on. It says this now and then, and clicking it opens its page. */
+  alert: string | null
+  /** What the pet is busy doing for you right now. */
+  busy: 'scanning' | 'cleaning' | null
+  /** Catbot: whether a GitHub account is linked. */
   connected: boolean
 }
 
+/** Make the pet play its eating animation, saying `text`. */
 export interface FeedEvent {
-  /** New contributions since the last check. */
-  commits: number
+  text: string
   debug?: boolean
 }
 
 /** Where the pet may wander: anywhere on screen, or only along the bottom edge. */
 export type Movement = 'roam' | 'ground'
 
-export interface Settings {
-  petName: string
+/** Per-pet look and behaviour. */
+export interface PetConfig {
+  enabled: boolean
+  name: string
   /** On-screen height in DIP. */
   petSize: number
   /** Walking speed in DIP per second. */
   petSpeed: number
   movement: Movement
-  /** true = drawn on top of every app; false = only on the desktop, behind app windows. */
-  onTopOfApps: boolean
-  /** Catbot follows the cursor while it moves over the desktop. */
+  /** Follows the cursor while it moves over the desktop. */
   followCursor: boolean
+}
+
+/** How Dusty deals with the junk it finds. */
+export type CleanMode = 'ask' | 'auto' | 'report'
+export type JunkTarget = 'devCaches' | 'recycleBin' | 'temp' | 'browser'
+
+export interface DustyConfig {
+  mode: CleanMode
+  targets: Record<JunkTarget, boolean>
+  /** Minutes between automatic scans. */
+  scanEveryMinutes: number
+}
+
+export interface Settings {
+  /** true = pets are drawn on top of every app; false = only on the desktop, behind app windows. */
+  onTopOfApps: boolean
+  pets: Record<PetId, PetConfig>
+  dusty: DustyConfig
+}
+
+export interface PetInit {
+  id: PetId
+  isOwner: boolean
+  snapshot: PetSnapshot | null
+  status: PetStatus
 }
 
 export interface OverlayInit {
   display: DisplayInfo
   displays: DisplayInfo[]
-  isOwner: boolean
-  snapshot: PetSnapshot | null
   settings: Settings
-  status: PetStatus
+  pets: PetInit[]
   ledge: WindowLedge | null
 }
 
+/** One kind of junk Dusty found. */
+export interface JunkCategory {
+  id: string
+  target: JunkTarget
+  label: string
+  bytes: number
+  items: number
+  /** Why it can't be cleaned right now (e.g. "Close Chrome first"), or null. */
+  blocked: string | null
+}
+
+export interface ScanResult {
+  at: number
+  categories: JunkCategory[]
+  totalBytes: number
+}
+
+export interface CleanResult {
+  at: number
+  freedBytes: number
+  /** Files that couldn't be removed (in use, permissions). */
+  failed: number
+}
+
+export interface DustyView {
+  scan: ScanResult | null
+  lastClean: CleanResult | null
+  busy: 'scanning' | 'cleaning' | null
+}
 export interface GitHubView {
   /** The linked account, or null when not signed in. */
   login: string | null
@@ -133,10 +193,13 @@ export interface GitHubView {
   ghAvailable: boolean
 }
 
-export interface SettingsView {
+/** Everything the GitGremlin panel shows. */
+export interface HubView {
   settings: Settings
-  github: GitHubView
   startWithWindows: boolean
+  status: Record<PetId, PetStatus>
+  github: GitHubView
+  dusty: DustyView
 }
 
 /** Shown while signing in: enter this code at the verification URL. */

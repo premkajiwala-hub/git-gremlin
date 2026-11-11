@@ -1,371 +1,453 @@
-import { FRAME_MS, IDLE_FRAME_MS } from '../shared/constants'
-import type { PetPose, PetSnapshot, PetStatus, Settings } from '../shared/types'
-import { PetBrain, RANDOM_LINES, type RenderState } from './pet/brain'
+import { FRAME_MS, IDLE_FRAME_MS, PET_IDS } from '../shared/constants'
+import type { OverlayInit, PetConfig, PetId, PetPose, PetSnapshot, PetStatus } from '../shared/types'
+import { PetBrain, type RenderState } from './pet/brain'
 import { Particles } from './pet/particles'
-import { loadSprites } from './pet/sprites'
-import { GRID_MARK, SpeechBubble, type Mood } from './ui/bubble'
+import { PERSONAS } from './pet/personas'
+import { loadSprites, type SpriteSet } from './pet/sprites'
+import { SpeechBubble, type Mood } from './ui/bubble'
 import { PetView } from './view'
 import { World } from './world'
 
 const api = window.gremlin
 
 type Mode = 'owner' | 'mirror' | 'idle'
+interface Cursor {
+  x: number
+  y: number
+  visible: boolean
+}
 
-async function boot(): Promise<void> {
-  const init = await api.getInit()
-  if (!init) return
+/** Status shown before the main process has sent the real one. */
+function placeholderStatus(cfg: PetConfig): PetStatus {
+  return { name: cfg.name, stage: 'fed', level: 1, report: ['...'], grid: null, alert: null, busy: null, connected: false }
+}
 
-  let settings: Settings = init.settings
-  let status: PetStatus = init.status
-  const stage = document.getElementById('stage')!
-  const world = new World(init.display, init.displays)
-  const sprites = await loadSprites()
-  const view = new PetView(stage, settings.petSize, sprites)
-  const particles = new Particles()
-  const bubble = new SpeechBubble(stage)
+/**
+ * Pointer handling shared by every pet on this overlay: the window is
+ * click-through except while the cursor is over (or dragging) a pet.
+ */
+class Pointer {
+  cursor: Cursor = { x: -1e6, y: -1e6, visible: true }
+  private interactive = false
 
-  const mood = (): Mood => (status.stage === 'starving' ? 'bad' : status.stage === 'hungry' ? 'warn' : 'ok')
-  /** Whether the bubble on screen is the hover status report (as opposed to chatter). */
-  let statusBubble = false
-  const say = (text: string, ms = 4000) => {
-    if (mode !== 'owner') return
-    statusBubble = false
-    bubble.show(text, ms, status.name, mood())
-  }
+  constructor(private hosts: () => PetHost[]) {}
 
-  const brain = new PetBrain(world, settings, status, sprites, {
-    say,
-    spawn: (kind, x, y) => particles.spawn(kind, x, y),
-    standing: (hwnd) => api.setStanding(hwnd),
-    handoff: (target, snap) => {
-      if (straddling) api.sendPose(null)
-      straddling = false
-      becomeIdle()
-      api.handoff(target.id, snap)
+  refresh(): void {
+    const want = this.hosts().some((h) => h.wantsPointer)
+    const dragging = this.hosts().some((h) => h.dragging)
+    if (want !== this.interactive) {
+      this.interactive = want
+      api.setInteractive(want)
     }
-  })
-  brain.ledge = init.ledge
-  brain.size = view.displaySize
-  if (import.meta.env.DEV) Object.assign(window, { __catbot: { brain, view, world, bubble } })
-
-  let mode: Mode = 'idle'
-
-  // --- render loop ---------------------------------------------------------------
-  let timer: number | null = null
-  let last = performance.now()
-  let snapshotClock = 0
-  let cursorClock = 0
-  let straddling = false
-  let lastKey = ''
-  let quietFrames = 0
-  let mirrorTimeout: number | null = null
-
-  function startLoop(): void {
-    if (timer !== null || document.hidden || mode !== 'owner') return
-    last = performance.now()
-    timer = window.setTimeout(tick, FRAME_MS)
+    document.body.classList.toggle('grab', want && !dragging)
+    document.body.classList.toggle('grabbing', dragging)
   }
-  function stopLoop(): void {
-    if (timer !== null) window.clearTimeout(timer)
-    timer = null
+}
+
+/** One pet on this monitor: owns it (runs its brain), mirrors it from a neighbour, or is idle. */
+class PetHost {
+  mode: Mode = 'idle'
+  hovered = false
+  dragging = false
+  pending: { x: number; y: number; at: number } | null = null
+  private brain: PetBrain
+  private view: PetView
+  private particles = new Particles()
+  private bubble: SpeechBubble
+  /** Whether the bubble on screen is the hover status report (as opposed to chatter). */
+  private statusBubble = false
+  private timer: number | null = null
+  private last = performance.now()
+  private snapshotClock = 0
+  private straddling = false
+  private lastKey = ''
+  private quietFrames = 0
+  private mirrorTimeout: number | null = null
+  private cursorWasNear = false
+
+  constructor(
+    readonly id: PetId,
+    private cfg: PetConfig,
+    private status: PetStatus,
+    private world: World,
+    sprites: SpriteSet,
+    stage: HTMLElement,
+    private pointer: Pointer
+  ) {
+    const persona = PERSONAS[id]
+    this.view = new PetView(stage, cfg.petSize, sprites)
+    this.bubble = new SpeechBubble(stage, persona.bubble)
+    this.brain = new PetBrain(world, cfg, status, sprites, persona, {
+      say: (text, ms) => this.say(text, ms),
+      spawn: (kind, x, y) => this.particles.spawn(kind, x, y),
+      standing: (hwnd) => api.setStanding(id, hwnd),
+      handoff: (target, snap) => {
+        if (this.straddling) api.sendPose(id, null)
+        this.straddling = false
+        this.becomeIdle()
+        api.handoff(id, target.id, snap)
+      }
+    })
+    this.brain.size = this.view.displaySize
+    this.view.setVisible(false)
   }
 
-  function tick(): void {
-    timer = null
-    if (mode !== 'owner') return
-    const now = performance.now()
-    const dt = Math.min(0.1, (now - last) / 1000)
-    last = now
+  get wantsPointer(): boolean {
+    return this.mode === 'owner' && (this.hovered || this.dragging || this.pending !== null)
+  }
 
-    // Ask where the cursor is ~10x a second: hover works even when Catbot walks
-    // under a still cursor, and following works even without mouse events.
-    cursorClock += dt
-    if (cursorClock >= 0.1) {
-      cursorClock = 0
-      void api.getCursor().then((c) => {
-        const moved = Math.hypot(c.x - cursor.x, c.y - cursor.y) > 2
-        cursor = { x: c.x, y: c.y }
-        cursorVisible = c.visible
-        if (!dragging) brain.setCursor(c.x, c.y, moved && c.visible && onThisMonitor(c.x, c.y))
-        updateHover()
+  private mood(): Mood {
+    const s = this.status
+    return s.stage === 'starving' ? 'bad' : s.stage === 'hungry' || s.alert ? 'warn' : 'ok'
+  }
+
+  say(text: string, ms = 4000): void {
+    if (this.mode !== 'owner') return
+    this.statusBubble = false
+    this.bubble.show(text, ms, this.status.name, this.mood())
+  }
+
+  /** The hover/click status report, built by the pet's service in the main process. */
+  private showStatus(ms: number): void {
+    this.statusBubble = true
+    this.bubble.show(this.status.report.join('\n'), ms, this.status.name, this.mood(), this.status.grid ?? [])
+  }
+
+  // --- lifecycle --------------------------------------------------------------------------
+  becomeOwner(snap: PetSnapshot | null): void {
+    if (snap) this.brain.restore(snap)
+    else {
+      const wa = this.world.workArea
+      this.brain.restore({
+        x: wa.x + wa.width * (0.25 + Math.random() * 0.5),
+        y: this.cfg.movement === 'roam' ? wa.y + wa.height * (0.5 + Math.random() * 0.4) : this.world.groundY,
+        vx: 0,
+        vy: 0,
+        facing: Math.random() < 0.5 ? 1 : -1,
+        grounded: true
       })
     }
+    this.mode = 'owner'
+    if (this.mirrorTimeout !== null) window.clearTimeout(this.mirrorTimeout)
+    this.view.setVisible(true)
+    this.lastKey = ''
+    this.startLoop()
+  }
+
+  becomeIdle(): void {
+    this.mode = 'idle'
+    this.stopLoop()
+    this.view.setVisible(false)
+    this.bubble.hide()
+    this.particles.clear()
+    this.dragging = false
+    this.pending = null
+    if (this.hovered) {
+      this.hovered = false
+      this.brain.setHovered(false)
+    }
+    this.pointer.refresh()
+  }
+
+  /** Part of this pet hangs over from a neighbouring monitor: draw that part here. */
+  mirror(p: PetPose | null): void {
+    if (this.mode === 'owner') return
+    if (this.mirrorTimeout !== null) window.clearTimeout(this.mirrorTimeout)
+    const hw = this.view.displaySize
+    if (!p || !this.world.overlaps(p.x - hw, p.x + hw, p.y - this.view.displaySize * 1.5, p.y)) {
+      this.mode = 'idle'
+      this.view.setVisible(false)
+      return
+    }
+    this.mode = 'mirror'
+    const l = this.world.toLocal(p.x, p.y)
+    this.view.setVisible(true)
+    this.view.place(l.x, l.y)
+    this.view.draw(p.model as unknown as RenderState, null)
+    this.mirrorTimeout = window.setTimeout(() => {
+      if (this.mode === 'mirror') {
+        this.mode = 'idle'
+        this.view.setVisible(false)
+      }
+    }, 500)
+  }
+
+  // --- messages from main -------------------------------------------------------------------
+  setStatus(s: PetStatus): void {
+    this.status = s
+    this.brain.status = s
+    // Keep an open status report up to date (e.g. Dusty finishing a scan).
+    if (this.statusBubble && this.bubble.visible && this.hovered) this.showStatus(60_000)
+  }
+  feed(ev: Parameters<PetBrain['feed']>[0]): void {
+    this.brain.feed(ev)
+  }
+  setLedge(l: PetBrain['ledge']): void {
+    this.brain.ledge = l
+  }
+  standingLost(hwnd: number): void {
+    this.brain.standingLost(hwnd)
+  }
+  setConfig(cfg: PetConfig): void {
+    const movementChanged = cfg.movement !== this.cfg.movement
+    this.cfg = cfg
+    this.brain.settings = cfg
+    this.view.setPetSize(cfg.petSize)
+    this.brain.size = this.view.displaySize
+    if (this.mode === 'owner' && movementChanged) this.brain.restore(this.brain.snapshot())
+    this.lastKey = ''
+  }
+  displaysChanged(): void {
+    if (this.mode === 'owner') this.brain.restore(this.brain.snapshot())
+    this.lastKey = ''
+  }
+  visibilityChanged(hidden: boolean): void {
+    if (hidden) this.stopLoop()
+    else if (this.mode === 'owner') {
+      this.lastKey = ''
+      this.startLoop()
+    }
+  }
+
+  // --- pointer --------------------------------------------------------------------------------
+  hit(gx: number, gy: number): boolean {
+    if (this.mode !== 'owner') return false
+    const b = this.brain.hitBox()
+    return gx >= b.left - 4 && gx <= b.right + 4 && gy >= b.top - 4 && gy <= b.bottom
+  }
+
+  /** New cursor position from polling; `moved` = it moved over the visible desktop of this monitor. */
+  cursorPolled(c: Cursor, moved: boolean): void {
+    if (this.mode !== 'owner') return
+    if (!this.dragging) this.brain.setCursor(c.x, c.y, moved)
+    this.updateHover()
+  }
+
+  /** Recompute hover from the latest cursor position; hovering shows the status report. */
+  updateHover(): void {
+    if (this.mode !== 'owner') return
+    const c = this.pointer.cursor
+    const over = c.visible && !this.dragging && this.hit(c.x, c.y)
+    if (over !== this.hovered) {
+      this.hovered = over
+      this.brain.setHovered(over)
+      if (over) this.showStatus(60_000)
+      else if (this.statusBubble) this.bubble.expireIn(1500)
+    }
+    this.pointer.refresh()
+  }
+
+  mouseMove(clientX: number, clientY: number, moved: boolean): void {
+    if (this.mode !== 'owner') return
+    const g = this.pointer.cursor
+    const p = this.pending
+    if (p && !this.dragging && (Math.hypot(clientX - p.x, clientY - p.y) > 5 || performance.now() - p.at > 250)) {
+      this.dragging = true
+      const start = this.world.toGlobal(p.x, p.y)
+      if (this.statusBubble) this.bubble.hide()
+      this.brain.startDrag(start.x, start.y)
+      this.pointer.refresh()
+    }
+    this.brain.setCursor(g.x, g.y, moved && g.visible && !this.dragging)
+    if (!this.dragging && !this.pending) {
+      this.updateHover()
+      if (g.visible) this.trackNear(g.x, g.y)
+    }
+  }
+
+  mouseDown(clientX: number, clientY: number): void {
+    this.pending = { x: clientX, y: clientY, at: performance.now() }
+    this.pointer.refresh()
+  }
+
+  mouseUp(): void {
+    if (this.dragging) {
+      this.brain.release()
+      this.dragging = false
+    } else if (this.pending) {
+      // Click: look up and give the status report. If the pet wants something
+      // from you (sign in, review junk), open its page in the GitGremlin panel too.
+      this.brain.clicked()
+      this.showStatus(this.hovered ? 60_000 : 6000)
+      if (this.status.alert) api.openHub(this.id)
+    }
+    this.pending = null
+    this.updateHover()
+  }
+
+  private trackNear(gx: number, gy: number): void {
+    const b = this.brain
+    const cy = b.y - b.z - this.view.displaySize / 2
+    const dist = Math.hypot(gx - b.x, gy - cy)
+    if (dist < this.view.displaySize * 1.4 && !this.cursorWasNear) {
+      this.cursorWasNear = true
+      b.cursorNear(gx)
+    } else if (dist > this.view.displaySize * 3.5) {
+      this.cursorWasNear = false
+    }
+  }
+
+  // --- render loop ----------------------------------------------------------------------------
+  private startLoop(): void {
+    if (this.timer !== null || document.hidden || this.mode !== 'owner') return
+    this.last = performance.now()
+    this.timer = window.setTimeout(() => this.tick(), FRAME_MS)
+  }
+
+  private stopLoop(): void {
+    if (this.timer !== null) window.clearTimeout(this.timer)
+    this.timer = null
+  }
+
+  private tick(): void {
+    this.timer = null
+    if (this.mode !== 'owner') return
+    const now = performance.now()
+    const dt = Math.min(0.1, (now - this.last) / 1000)
+    this.last = now
+    const brain = this.brain
 
     brain.update(dt)
-    if (mode !== 'owner') return // handed off to another monitor
-    particles.update(dt)
-    updateHover()
+    if (this.mode !== 'owner') return // handed off to another monitor
+    this.particles.update(dt)
+    this.updateHover()
     const rs = brain.render()
 
     // Only redraw when something visible changed; drop to a slow tick when static.
     const key = renderKey(brain.x, brain.y, rs)
-    if (key !== lastKey || particles.active) {
-      lastKey = key
-      draw(rs)
-      quietFrames = 0
+    if (key !== this.lastKey || this.particles.active) {
+      this.lastKey = key
+      const p = this.world.toLocal(brain.x, brain.y)
+      this.view.place(p.x, p.y)
+      this.view.draw(rs, this.particles)
+      this.quietFrames = 0
     } else {
-      quietFrames++
+      this.quietFrames++
     }
-    const head = world.toLocal(brain.x, brain.hitBox().top)
-    bubble.update(head.x, head.y, world.display.bounds.width, world.display.bounds.height)
+    const head = this.world.toLocal(brain.x, brain.hitBox().top)
+    this.bubble.update(head.x, head.y, this.world.display.bounds.width, this.world.display.bounds.height)
 
-    shareEdgePose(rs)
+    this.shareEdgePose(rs)
 
-    snapshotClock += dt
-    if (snapshotClock > 2) {
-      snapshotClock = 0
-      api.sendSnapshot(brain.snapshot())
+    this.snapshotClock += dt
+    if (this.snapshotClock > 2) {
+      this.snapshotClock = 0
+      api.sendSnapshot(this.id, brain.snapshot())
     }
 
-    const busy = bubble.busy || dragging || particles.active || hovered
-    const interval = quietFrames > 15 && !busy ? IDLE_FRAME_MS : FRAME_MS
-    timer = window.setTimeout(tick, Math.max(1, interval - (performance.now() - now)))
+    const busy = this.bubble.busy || this.dragging || this.particles.active || this.hovered
+    const interval = this.quietFrames > 15 && !busy ? IDLE_FRAME_MS : FRAME_MS
+    this.timer = window.setTimeout(() => this.tick(), Math.max(1, interval - (performance.now() - now)))
   }
 
-  function draw(rs: RenderState): void {
-    const p = world.toLocal(brain.x, brain.y)
-    view.place(p.x, p.y)
-    view.draw(rs, particles)
-  }
-
-  /** While part of Catbot hangs over a neighbouring monitor, let that overlay draw it too. */
-  function shareEdgePose(rs: RenderState): void {
-    const hb = brain.hitBox()
-    const over = (hb.right > world.right && world.neighbor(1)) || (hb.left < world.left && world.neighbor(-1))
+  /** While part of the pet hangs over a neighbouring monitor, let that overlay draw it too. */
+  private shareEdgePose(rs: RenderState): void {
+    const hb = this.brain.hitBox()
+    const w = this.world
+    const over = (hb.right > w.right && w.neighbor(1)) || (hb.left < w.left && w.neighbor(-1))
     if (over) {
-      const pose: PetPose = { x: brain.x, y: brain.y, grounded: brain.z <= 0, model: { ...rs } }
-      api.sendPose(pose)
-    } else if (straddling) {
-      api.sendPose(null)
+      const pose: PetPose = { x: this.brain.x, y: this.brain.y, grounded: this.brain.z <= 0, model: { ...rs } }
+      api.sendPose(this.id, pose)
+    } else if (this.straddling) {
+      api.sendPose(this.id, null)
     }
-    straddling = Boolean(over)
+    this.straddling = Boolean(over)
   }
 
-  function becomeOwner(snap: PetSnapshot | null): void {
-    if (snap) brain.restore(snap)
-    else {
-      const wa = world.workArea
-      brain.restore({
-        x: wa.x + wa.width * (0.3 + Math.random() * 0.4),
-        y: settings.movement === 'roam' ? wa.y + wa.height * (0.5 + Math.random() * 0.4) : world.groundY,
-        vx: 0,
-        vy: 0,
-        facing: 1,
-        grounded: true
-      })
-    }
-    mode = 'owner'
-    if (mirrorTimeout !== null) window.clearTimeout(mirrorTimeout)
-    view.setVisible(true)
-    lastKey = ''
-    startLoop()
+  debug() {
+    return { brain: this.brain, view: this.view, bubble: this.bubble }
   }
-
-  function becomeIdle(): void {
-    mode = 'idle'
-    stopLoop()
-    view.setVisible(false)
-    bubble.hide()
-    particles.clear()
-    setInteractive(false)
-    dragging = false
-    pending = null
-    if (hovered) {
-      hovered = false
-      brain.setHovered(false)
-    }
-  }
-
-  // --- mirroring (Catbot straddling the edge from a neighbouring monitor) ------------------
-  api.onMirror((p) => {
-    if (mode === 'owner') return
-    if (mirrorTimeout !== null) window.clearTimeout(mirrorTimeout)
-    const hw = view.displaySize
-    if (!p || !world.overlaps(p.x - hw, p.x + hw, p.y - view.displaySize * 1.5, p.y)) {
-      mode = 'idle'
-      view.setVisible(false)
-      return
-    }
-    mode = 'mirror'
-    const l = world.toLocal(p.x, p.y)
-    view.setVisible(true)
-    view.place(l.x, l.y)
-    view.draw(p.model as unknown as RenderState, null)
-    mirrorTimeout = window.setTimeout(() => {
-      if (mode === 'mirror') {
-        mode = 'idle'
-        view.setVisible(false)
-      }
-    }, 500)
-  })
-
-  // --- mouse: click-through everywhere except Catbot ------------------------------------
-  let interactive = false
-  let hovered = false
-  let dragging = false
-  let pending: { x: number; y: number; at: number } | null = null
-  let cursor = { x: -1e6, y: -1e6 }
-  let cursorVisible = true
-  let cursorWasNear = false
-
-  function onThisMonitor(gx: number, gy: number): boolean {
-    return gx >= world.left && gx < world.right && gy >= world.top && gy < world.bottom
-  }
-
-  function setInteractive(on: boolean): void {
-    if (on === interactive) return
-    interactive = on
-    api.setInteractive(on)
-    document.body.classList.toggle('grab', on && !dragging)
-  }
-
-  function hit(gx: number, gy: number): boolean {
-    if (mode !== 'owner') return false
-    const b = brain.hitBox()
-    return gx >= b.left - 4 && gx <= b.right + 4 && gy >= b.top - 4 && gy <= b.bottom
-  }
-
-  /** Recompute hover from the latest cursor position; hovering shows the status report. */
-  function updateHover(): void {
-    if (mode !== 'owner') return
-    const over = cursorVisible && !dragging && hit(cursor.x, cursor.y)
-    if (over !== hovered) {
-      hovered = over
-      brain.setHovered(over)
-      if (over) {
-        showStatus(60_000)
-      } else if (statusBubble) {
-        bubble.expireIn(1500)
-      }
-    }
-    setInteractive(hovered || dragging || pending !== null)
-  }
-
-  function trackNear(gx: number, gy: number): void {
-    const cy = brain.y - brain.z - view.displaySize / 2
-    const dist = Math.hypot(gx - brain.x, gy - cy)
-    if (dist < view.displaySize * 1.4 && !cursorWasNear) {
-      cursorWasNear = true
-      brain.cursorNear(gx)
-    } else if (dist > view.displaySize * 3.5) {
-      cursorWasNear = false
-    }
-  }
-
-  window.addEventListener('mousemove', (e) => {
-    const g = world.toGlobal(e.clientX, e.clientY)
-    const moved = Math.hypot(g.x - cursor.x, g.y - cursor.y) > 2
-    cursor = g
-    if (mode !== 'owner') return
-    if (pending && !dragging && (Math.hypot(e.clientX - pending.x, e.clientY - pending.y) > 5 || performance.now() - pending.at > 250)) {
-      dragging = true
-      document.body.classList.remove('grab')
-      document.body.classList.add('grabbing')
-      const start = world.toGlobal(pending.x, pending.y)
-      if (statusBubble) bubble.hide()
-      brain.startDrag(start.x, start.y)
-    }
-    brain.setCursor(g.x, g.y, moved && cursorVisible && !dragging)
-    if (!dragging && !pending) {
-      updateHover()
-      if (cursorVisible) trackNear(g.x, g.y)
-    }
-  })
-
-  window.addEventListener('mousedown', (e) => {
-    const g = world.toGlobal(e.clientX, e.clientY)
-    if (e.button !== 0 || !hit(g.x, g.y)) return
-    pending = { x: e.clientX, y: e.clientY, at: performance.now() }
-    setInteractive(true)
-  })
-
-  window.addEventListener('mouseup', (e) => {
-    if (e.button !== 0) return
-    const g = world.toGlobal(e.clientX, e.clientY)
-    cursor = g
-    if (dragging) {
-      brain.release()
-      dragging = false
-      document.body.classList.remove('grabbing')
-    } else if (pending) {
-      // Click: look up and give the status report (with a fresh random line).
-      brain.clicked()
-      showStatus(hovered ? 60_000 : 6000)
-    }
-    pending = null
-    updateHover()
-  })
-
-  /** The hover/click status report, built from today's square on the GitHub chart. */
-  function statusText(): string {
-    if (!status.connected) {
-      return 'GITHUB NOT LINKED YET.\n\n> RIGHT-CLICK MY TRAY ICON, OPEN SETTINGS AND SIGN IN WITH GITHUB.'
-    }
-    const n = status.todayCount
-    const moodText =
-      status.stage === 'fed' ? `FED, LEVEL ${status.level}/4` : status.stage === 'hungry' ? 'HUNGRY' : 'STARVING'
-    const tip =
-      status.stage === 'fed'
-        ? RANDOM_LINES[Math.floor(Math.random() * RANDOM_LINES.length)]
-        : 'NO CONTRIBUTIONS TODAY. ONE COMMIT WOULD FEED ME!'
-    return [
-      `TODAY: ${n} CONTRIBUTION${n === 1 ? '' : 'S'}`,
-      `MOOD: ${moodText}`,
-      `STREAK: ${status.streak} DAY${status.streak === 1 ? '' : 'S'}`,
-      'LAST 7 DAYS:',
-      GRID_MARK,
-      '',
-      `> ${tip}`
-    ].join('\n')
-  }
-
-  function showStatus(ms: number): void {
-    statusBubble = true
-    bubble.show(statusText(), ms, status.name, mood(), status.week)
-  }
-
-  // --- lifecycle & messages from main --------------------------------------------------
-  api.onAdopt((snap) => becomeOwner(snap))
-  api.onRelease(() => becomeIdle())
-  api.onDisplaysChanged((d, all) => {
-    world.display = d
-    world.displays = all
-    if (mode === 'owner') brain.restore(brain.snapshot())
-    lastKey = ''
-  })
-  api.onStatus((s) => {
-    status = s
-    brain.status = s
-  })
-  api.onFeed((ev) => brain.feed(ev))
-  api.onLedge((l) => {
-    brain.ledge = l
-  })
-  api.onStandingLost((hwnd) => brain.standingLost(hwnd))
-  api.onSay((text) => say(text, 4000))
-  api.onSettings((s) => {
-    const movementChanged = s.movement !== settings.movement
-    settings = s
-    brain.settings = s
-    view.setPetSize(s.petSize)
-    brain.size = view.displaySize
-    if (mode === 'owner' && movementChanged) brain.restore(brain.snapshot())
-    lastKey = ''
-  })
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) stopLoop()
-    else if (mode === 'owner') {
-      lastKey = ''
-      startLoop()
-    }
-  })
-
-  if (init.isOwner) becomeOwner(init.snapshot)
-  else becomeIdle()
 }
 
 function renderKey(x: number, y: number, rs: RenderState): string {
   return `${Math.round(x)},${Math.round(y)},${rs.anim}${rs.frame},${Math.round(rs.z)},${Math.round(rs.bob)},${rs.mood},${rs.lookY},${rs.glow},${rs.dim},${rs.tint},${Math.round(rs.food * 10)},${Math.round(rs.squash * 10)},${rs.facing}`
+}
+
+async function boot(): Promise<void> {
+  const init: OverlayInit | null = await api.getInit()
+  if (!init) return
+  let settings = init.settings
+  const stage = document.getElementById('stage')!
+  const world = new World(init.display, init.displays)
+  const sprites = await Promise.all(PET_IDS.map((id) => loadSprites(id)))
+
+  const hosts = new Map<PetId, PetHost>()
+  const list = () => [...hosts.values()]
+  const pointer = new Pointer(list)
+  PET_IDS.forEach((id, i) => {
+    const cfg = settings.pets[id]
+    const fromInit = init.pets.find((p) => p.id === id)
+    hosts.set(id, new PetHost(id, cfg, fromInit?.status ?? placeholderStatus(cfg), world, sprites[i], stage, pointer))
+  })
+  for (const h of list()) h.setLedge(init.ledge)
+  if (import.meta.env.DEV) Object.assign(window, { __pets: Object.fromEntries(list().map((h) => [h.id, h.debug()])) })
+
+  const onThisMonitor = (gx: number, gy: number) => gx >= world.left && gx < world.right && gy >= world.top && gy < world.bottom
+
+  // Ask where the cursor is ~10x a second: hover works even when a pet walks
+  // under a still cursor, and following works even without mouse events.
+  window.setInterval(() => {
+    if (!list().some((h) => h.mode === 'owner') || document.hidden) return
+    void api.getCursor().then((c) => {
+      const prev = pointer.cursor
+      const moved = Math.hypot(c.x - prev.x, c.y - prev.y) > 2
+      pointer.cursor = c
+      for (const h of list()) h.cursorPolled(c, moved && c.visible && onThisMonitor(c.x, c.y))
+    })
+  }, 100)
+
+  window.addEventListener('mousemove', (e) => {
+    const g = world.toGlobal(e.clientX, e.clientY)
+    const moved = Math.hypot(g.x - pointer.cursor.x, g.y - pointer.cursor.y) > 2
+    pointer.cursor = { ...g, visible: pointer.cursor.visible }
+    for (const h of list()) h.mouseMove(e.clientX, e.clientY, moved)
+  })
+  window.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return
+    const g = world.toGlobal(e.clientX, e.clientY)
+    // The pet drawn on top (added last) gets the click.
+    const target = list()
+      .reverse()
+      .find((h) => h.hit(g.x, g.y))
+    target?.mouseDown(e.clientX, e.clientY)
+  })
+  window.addEventListener('mouseup', (e) => {
+    if (e.button !== 0) return
+    const g = world.toGlobal(e.clientX, e.clientY)
+    pointer.cursor = { ...g, visible: pointer.cursor.visible }
+    for (const h of list()) h.mouseUp()
+  })
+
+  // --- messages from main ---------------------------------------------------------------
+  api.onAdopt((id, snap, status) => {
+    const h = hosts.get(id)
+    if (!h) return
+    if (status) h.setStatus(status)
+    h.becomeOwner(snap)
+  })
+  api.onRelease((id) => hosts.get(id)?.becomeIdle())
+  api.onMirror((id, pose) => hosts.get(id)?.mirror(pose))
+  api.onDisplaysChanged((d, all) => {
+    world.display = d
+    world.displays = all
+    for (const h of list()) h.displaysChanged()
+  })
+  api.onStatus((id, s) => hosts.get(id)?.setStatus(s))
+  api.onFeed((id, ev) => hosts.get(id)?.feed(ev))
+  api.onLedge((l) => {
+    for (const h of list()) h.setLedge(l)
+  })
+  api.onStandingLost((id, hwnd) => hosts.get(id)?.standingLost(hwnd))
+  api.onSay((id, text) => hosts.get(id)?.say(text, 4000))
+  api.onSettings((s) => {
+    settings = s
+    for (const h of list()) h.setConfig(s.pets[h.id])
+  })
+  document.addEventListener('visibilitychange', () => {
+    for (const h of list()) h.visibilityChanged(document.hidden)
+  })
+
+  for (const p of init.pets) if (p.isOwner) hosts.get(p.id)?.becomeOwner(p.snapshot)
 }
 
 void boot()

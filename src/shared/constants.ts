@@ -1,4 +1,4 @@
-import type { Settings } from './types'
+import type { PetId, Settings } from './types'
 
 export const APP_NAME = 'GitGremlin'
 export const APP_ID = 'com.premkajiwala.gitgremlin'
@@ -27,18 +27,38 @@ export const GITHUB_SCOPES = 'read:user'
 export const PET_SIZE_MIN = 48
 export const PET_SIZE_MAX = 112
 
-export const DEFAULT_SETTINGS: Settings = {
-  petName: 'Catbot',
-  petSize: 72,
-  petSpeed: 45,
-  movement: 'roam',
-  onTopOfApps: false,
-  followCursor: true
+/** Every pet, in the order the GitGremlin panel lists them. */
+export const PET_IDS: PetId[] = ['catbot', 'dusty']
+
+/** What each pet is for (shown in the panel). */
+export const PET_PURPOSE: Record<PetId, string> = {
+  catbot: 'Robot cat fed by your GitHub contributions',
+  dusty: 'Raccoon that eats junk files and caches'
 }
 
-/** IPC channel names, shared by main, preload and renderer. */
+export const DEFAULT_SETTINGS: Settings = {
+  onTopOfApps: false,
+  pets: {
+    catbot: { enabled: true, name: 'Catbot', petSize: 72, petSpeed: 45, movement: 'roam', followCursor: true },
+    dusty: { enabled: true, name: 'Dusty', petSize: 64, petSpeed: 40, movement: 'roam', followCursor: false }
+  },
+  dusty: {
+    mode: 'ask',
+    targets: { devCaches: true, recycleBin: true, temp: false, browser: false },
+    scanEveryMinutes: 60
+  }
+}
+
+/** Below this much junk Dusty doesn't bother you about it. */
+export const JUNK_ALERT_BYTES = 50 * 1024 * 1024
+
+/** A text line equal to this is drawn as a row of contribution squares in speech bubbles. */
+export const GRID_MARK = '▦'
+
+/** IPC channel names, shared by main, preload and renderer. Pet events carry the pet id first. */
 export const IPC = {
   getInit: 'overlay:get-init',
+  openHub: 'pet:open-hub',
   setInteractive: 'overlay:set-interactive',
   displaysChanged: 'overlay:displays-changed',
   handoff: 'pet:handoff',
@@ -55,8 +75,12 @@ export const IPC = {
   cursor: 'overlay:cursor',
   say: 'pet:say',
   settingsChanged: 'settings:changed',
-  settingsGet: 'settings:get',
+  hubGet: 'hub:get',
+  hubChanged: 'hub:changed',
+  hubShowPage: 'hub:show-page',
   settingsSave: 'settings:save',
+  dustyScan: 'hub:dusty-scan',
+  dustyClean: 'hub:dusty-clean',
   githubRefresh: 'settings:github-refresh',
   githubSignIn: 'settings:github-sign-in',
   githubCancelSignIn: 'settings:github-cancel-sign-in',

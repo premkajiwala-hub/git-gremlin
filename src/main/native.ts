@@ -26,6 +26,8 @@ interface Win32 {
   GetWindow: Fn
   GetWindowLongPtrW: Fn
   WindowFromPoint: Fn
+  SHQueryRecycleBinW: Fn
+  SHEmptyRecycleBinW: Fn
 }
 
 let api: Win32 | null = null
@@ -58,7 +60,9 @@ try {
     GetWindowLongPtrW: user32.func('intptr_t __stdcall GetWindowLongPtrW(intptr_t hWnd, int nIndex)'),
     WindowFromPoint: user32.func(
       `intptr_t __stdcall WindowFromPoint(${koffi.struct('POINT', { x: 'long', y: 'long' }).name} pt)`
-    )
+    ),
+    SHQueryRecycleBinW: shell32.func('long __stdcall SHQueryRecycleBinW(str16 pszRootPath, void *pSHQueryRBInfo)'),
+    SHEmptyRecycleBinW: shell32.func('long __stdcall SHEmptyRecycleBinW(intptr_t hwnd, str16 pszRootPath, uint32_t dwFlags)')
   }
 } catch (err) {
   console.warn('[native] koffi unavailable, using fallbacks:', err)
@@ -161,6 +165,26 @@ export function desktopVisibleAt(px: number, py: number, ours: Set<number>): boo
   const n = api.GetClassNameW(root, buf, 256)
   const cls = buf.toString('utf16le', 0, Math.max(0, n) * 2)
   return cls === 'Progman' || cls === 'WorkerW'
+}
+
+/** Size and item count of the Recycle Bin across all drives, or null if unavailable. */
+export function recycleBinInfo(): { bytes: number; items: number } | null {
+  if (!api) return null
+  const info = Buffer.alloc(24) // SHQUERYRBINFO on x64: DWORD cbSize, (pad), __int64 size, __int64 items
+  info.writeUInt32LE(24, 0)
+  if (Number(api.SHQueryRecycleBinW(null, info)) !== 0) return null
+  return { bytes: Number(info.readBigInt64LE(8)), items: Number(info.readBigInt64LE(16)) }
+}
+
+/** Permanently empty the Recycle Bin (no confirmation UI, no sound). */
+export function emptyRecycleBin(): boolean {
+  if (!api) return false
+  const SHERB_NOCONFIRMATION = 0x1
+  const SHERB_NOPROGRESSUI = 0x2
+  const SHERB_NOSOUND = 0x4
+  const hr = Number(api.SHEmptyRecycleBinW(0, null, SHERB_NOCONFIRMATION | SHERB_NOPROGRESSUI | SHERB_NOSOUND))
+  // S_OK, or E_UNEXPECTED (0x8000FFFF) when it was already empty.
+  return hr === 0 || hr === -2147418113
 }
 
 /** Whether the (primary) taskbar is set to auto-hide. */

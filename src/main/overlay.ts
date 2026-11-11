@@ -1,19 +1,21 @@
 import { join } from 'node:path'
 import { BrowserWindow, ipcMain, screen, type IpcMainEvent } from 'electron'
-import { DESKTOP_REASSERT_MS, IPC, TOPMOST_REASSERT_MS } from '../shared/constants'
-import type { DisplayInfo, OverlayInit, PetPose, PetSnapshot, PetStatus, Settings, WindowLedge } from '../shared/types'
+import { DESKTOP_REASSERT_MS, IPC, PET_IDS, TOPMOST_REASSERT_MS } from '../shared/constants'
+import type { DisplayInfo, OverlayInit, PetId, PetPose, PetSnapshot, PetStatus, Settings, WindowLedge } from '../shared/types'
 import { getDisplayInfos } from './displays'
 import { desktopVisibleAt, forceTopmost, hwndOf, keepAboveDesktop, nativeAvailable } from './native'
 
 export interface OverlayOptions {
   getSettings: () => Settings
-  getStatus: () => PetStatus
+  getStatus: (id: PetId) => PetStatus
   getLedge: () => WindowLedge | null
-  /** Last known pet state (restored from disk on startup). */
-  initialSnapshot: PetSnapshot | null
-  onSnapshot?: (snap: PetSnapshot) => void
-  /** Catbot started (hwnd) or stopped (0) standing on a window. */
-  onStanding?: (hwnd: number) => void
+  /** Last known pet positions (restored from disk on startup). */
+  initialSnapshots: Record<PetId, PetSnapshot | null>
+  onSnapshot?: (id: PetId, snap: PetSnapshot) => void
+  /** A pet started (hwnd) or stopped (0) standing on a window. */
+  onStanding?: (id: PetId, hwnd: number) => void
+  /** A pet asked to open its page in the GitGremlin panel. */
+  onOpenHub?: (id: PetId) => void
 }
 
 interface Overlay {
@@ -23,28 +25,29 @@ interface Overlay {
 }
 
 /**
- * One transparent, frameless, click-through window per monitor. Exactly one
- * overlay "owns" the pet at a time and runs its simulation; the others sleep
- * until the pet walks onto their monitor.
+ * One transparent, frameless, click-through window per monitor, shared by all
+ * pets. For each pet exactly one overlay "owns" it and runs its simulation;
+ * when it walks onto another monitor, that overlay takes over.
  *
  * Layering:
  * - desktop mode (default): the overlays sit just above the desktop, so app
- *   windows cover the pet and it only shows where the wallpaper shows;
+ *   windows cover the pets and they only show where the wallpaper shows;
  * - on-top mode: the overlays sit at the top of the topmost band, above every
  *   app and the taskbar.
  */
 export class OverlayManager {
   private overlays = new Map<number, Overlay>()
   private displays: DisplayInfo[] = []
-  private ownerId = -1
-  private lastSnapshot: PetSnapshot | null
+  /** Which display owns each enabled pet. */
+  private owners = new Map<PetId, number>()
+  private snapshots: Record<PetId, PetSnapshot | null>
   private hidden = false
   private onTop: boolean
   private zTimer: NodeJS.Timeout | null = null
   private rebuildTimer: NodeJS.Timeout | null = null
 
   constructor(private opts: OverlayOptions) {
-    this.lastSnapshot = opts.initialSnapshot
+    this.snapshots = { ...opts.initialSnapshots }
     this.onTop = opts.getSettings().onTopOfApps
     this.registerIpc()
   }
@@ -63,30 +66,52 @@ export class OverlayManager {
     this.overlays.clear()
   }
 
+  private enabledPets(): PetId[] {
+    const s = this.opts.getSettings()
+    return PET_IDS.filter((id) => s.pets[id].enabled)
+  }
+
+  /** Re-read which pets are enabled: adopt newly enabled ones, release disabled ones. */
+  syncPets(): void {
+    const enabled = new Set(this.enabledPets())
+    for (const [id, displayId] of this.owners) {
+      if (enabled.has(id)) continue
+      this.owners.delete(id)
+      this.overlays.get(displayId)?.win.webContents.send(IPC.release, id)
+    }
+    this.assignOwners()
+  }
+
+  /** Give every enabled pet without an owner a monitor (where it was last, else the primary). */
+  private assignOwners(): void {
+    for (const id of this.enabledPets()) {
+      if (this.owners.has(id) && this.overlays.has(this.owners.get(id)!)) continue
+      const displayId = this.displayFor(this.snapshots[id])?.id ?? this.primaryId()
+      this.owners.set(id, displayId)
+      const o = this.overlays.get(displayId)
+      if (o && !o.win.webContents.isLoading()) o.win.webContents.send(IPC.adopt, id, this.clampSnapshot(this.snapshots[id], displayId), this.opts.getStatus(id))
+    }
+  }
+
   /** Switch between "only on the desktop" and "on top of every app". */
   setOnTop(onTop: boolean): void {
     if (onTop === this.onTop) return
     this.onTop = onTop
     for (const o of this.overlays.values()) {
-      if (o.win.isDestroyed()) continue
-      o.win.setAlwaysOnTop(onTop, 'screen-saver')
+      if (!o.win.isDestroyed()) o.win.setAlwaysOnTop(onTop, 'screen-saver')
     }
     this.startZTimer()
     this.reassertZ()
   }
 
-  get snapshot(): PetSnapshot | null {
-    return this.lastSnapshot
+  snapshot(id: PetId): PetSnapshot | null {
+    return this.snapshots[id]
   }
 
-  get ownerWindow(): BrowserWindow | null {
-    return this.overlays.get(this.ownerId)?.win ?? null
-  }
-
-  /** Send a message to whichever overlay currently owns the pet. */
-  sendToPet(channel: string, ...args: unknown[]): void {
-    const win = this.ownerWindow
-    if (win && !win.isDestroyed()) win.webContents.send(channel, ...args)
+  /** Send a pet-specific message to whichever overlay owns that pet. */
+  sendToPet(id: PetId, channel: string, ...args: unknown[]): void {
+    const o = this.overlays.get(this.owners.get(id) ?? -1)
+    if (o && !o.win.isDestroyed()) o.win.webContents.send(channel, id, ...args)
   }
 
   broadcast(channel: string, ...args: unknown[]): void {
@@ -142,11 +167,7 @@ export class OverlayManager {
       }
     }
 
-    // Pick (or re-pick) the owner: the monitor containing the pet, else primary.
-    if (!this.overlays.has(this.ownerId)) {
-      this.ownerId = this.displayForSnapshot(this.lastSnapshot)?.id ?? this.primaryId()
-      this.sendToPet(IPC.adopt, this.clampSnapshot(this.lastSnapshot, this.ownerId))
-    }
+    this.assignOwners()
 
     for (const o of this.overlays.values()) {
       if (!o.win.isDestroyed() && !o.win.webContents.isLoading()) {
@@ -226,26 +247,31 @@ export class OverlayManager {
     ipcMain.handle(IPC.getInit, (e): OverlayInit | null => {
       const o = this.overlayFor(e.sender.id)
       if (!o) return null
-      const isOwner = o.display.id === this.ownerId
       return {
         display: o.display,
         displays: this.displays,
-        isOwner,
-        snapshot: isOwner ? this.clampSnapshot(this.lastSnapshot, o.display.id) : null,
         settings: this.opts.getSettings(),
-        status: this.opts.getStatus(),
+        pets: this.enabledPets().map((id) => {
+          const isOwner = this.owners.get(id) === o.display.id
+          return {
+            id,
+            isOwner,
+            snapshot: isOwner ? this.clampSnapshot(this.snapshots[id], o.display.id) : null,
+            status: this.opts.getStatus(id)
+          }
+        }),
         ledge: this.opts.getLedge()
       }
     })
 
-    ipcMain.on(IPC.standing, (e: IpcMainEvent, hwnd: number) => {
-      const o = this.overlayFor(e.sender.id)
-      if (!o || o.display.id !== this.ownerId) return
-      this.opts.onStanding?.(hwnd)
+    ipcMain.on(IPC.standing, (e: IpcMainEvent, id: PetId, hwnd: number) => {
+      if (this.isOwner(e.sender.id, id)) this.opts.onStanding?.(id, hwnd)
     })
 
+    ipcMain.on(IPC.openHub, (_e: IpcMainEvent, id: PetId) => this.opts.onOpenHub?.(id))
+
     // Where the cursor is, and whether the desktop is what's visible under it
-    // (in desktop mode an app window may be covering Catbot).
+    // (in desktop mode an app window may be covering the pets).
     ipcMain.handle(IPC.cursor, () => {
       const p = screen.getCursorScreenPoint()
       let visible = true
@@ -263,35 +289,36 @@ export class OverlayManager {
       o.win.setIgnoreMouseEvents(!interactive, { forward: true })
     })
 
-    ipcMain.on(IPC.handoff, (e: IpcMainEvent, targetId: number, snap: PetSnapshot) => {
+    ipcMain.on(IPC.handoff, (e: IpcMainEvent, id: PetId, targetId: number, snap: PetSnapshot) => {
       const from = this.overlayFor(e.sender.id)
-      if (!from || from.display.id !== this.ownerId) return
+      if (!from || this.owners.get(id) !== from.display.id) return
       const target = this.overlays.get(targetId)
-      this.lastSnapshot = snap
+      this.snapshots[id] = snap
       if (!target) {
-        from.win.webContents.send(IPC.adopt, snap)
+        from.win.webContents.send(IPC.adopt, id, snap, this.opts.getStatus(id))
         return
       }
-      this.ownerId = targetId
-      from.win.webContents.send(IPC.release)
-      from.win.setIgnoreMouseEvents(true, { forward: true })
-      target.win.webContents.send(IPC.adopt, snap)
+      this.owners.set(id, targetId)
+      from.win.webContents.send(IPC.release, id)
+      target.win.webContents.send(IPC.adopt, id, snap, this.opts.getStatus(id))
     })
 
-    ipcMain.on(IPC.pose, (e: IpcMainEvent, pose: PetPose | null) => {
+    ipcMain.on(IPC.pose, (e: IpcMainEvent, id: PetId, pose: PetPose | null) => {
       for (const o of this.overlays.values()) {
-        if (o.win.webContents.id !== e.sender.id && !o.win.isDestroyed()) {
-          o.win.webContents.send(IPC.mirror, pose)
-        }
+        if (o.win.webContents.id !== e.sender.id && !o.win.isDestroyed()) o.win.webContents.send(IPC.mirror, id, pose)
       }
     })
 
-    ipcMain.on(IPC.snapshot, (e: IpcMainEvent, snap: PetSnapshot) => {
-      const o = this.overlayFor(e.sender.id)
-      if (!o || o.display.id !== this.ownerId) return
-      this.lastSnapshot = snap
-      this.opts.onSnapshot?.(snap)
+    ipcMain.on(IPC.snapshot, (e: IpcMainEvent, id: PetId, snap: PetSnapshot) => {
+      if (!this.isOwner(e.sender.id, id)) return
+      this.snapshots[id] = snap
+      this.opts.onSnapshot?.(id, snap)
     })
+  }
+
+  private isOwner(webContentsId: number, id: PetId): boolean {
+    const o = this.overlayFor(webContentsId)
+    return Boolean(o && this.owners.get(id) === o.display.id)
   }
 
   private overlayFor(webContentsId: number): Overlay | undefined {
@@ -305,7 +332,7 @@ export class OverlayManager {
     return this.displays.find((d) => d.primary)?.id ?? this.displays[0]?.id ?? -1
   }
 
-  private displayForSnapshot(snap: PetSnapshot | null): DisplayInfo | undefined {
+  private displayFor(snap: PetSnapshot | null): DisplayInfo | undefined {
     if (!snap) return undefined
     return this.displays.find(
       (d) =>
@@ -320,13 +347,13 @@ export class OverlayManager {
   private clampSnapshot(snap: PetSnapshot | null, displayId: number): PetSnapshot | null {
     const d = this.displays.find((x) => x.id === displayId)
     if (!snap || !d) return snap
-    if (this.displayForSnapshot(snap)?.id === displayId) return snap
+    if (this.displayFor(snap)?.id === displayId) return snap
     return { ...snap, x: d.workArea.x + d.workArea.width / 2, y: d.groundY, vx: 0, vy: 0, grounded: true }
   }
 }
 
 /**
- * Full display bounds (not the work area) so the pet can reach the taskbar in
+ * Full display bounds (not the work area) so pets can reach the taskbar in
  * on-top mode. One pixel shorter than the monitor so Windows doesn't treat the
  * overlay as a full-screen app (which can trigger Do Not Disturb or hide the taskbar).
  */

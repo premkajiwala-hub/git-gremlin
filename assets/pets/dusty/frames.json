@@ -1,0 +1,604 @@
+{
+  "cell": {
+    "w": 50,
+    "h": 38
+  },
+  "anchor": {
+    "x": 24,
+    "y": 36
+  },
+  "standHeight": 29,
+  "eyes": {
+    "w": 7,
+    "h": 3
+  },
+  "accent": null,
+  "anims": {
+    "idle": {
+      "fps": 3,
+      "loop": true,
+      "frames": [
+        {
+          "file": "idle-0.png",
+          "screen": [
+            33,
+            16
+          ],
+          "accent": null
+        },
+        {
+          "file": "idle-1.png",
+          "screen": [
+            33,
+            16
+          ],
+          "accent": null
+        },
+        {
+          "file": "idle-2.png",
+          "screen": [
+            33,
+            16
+          ],
+          "accent": null
+        },
+        {
+          "file": "idle-3.png",
+          "screen": [
+            33,
+            16
+          ],
+          "accent": null
+        }
+      ]
+    },
+    "idle_sad": {
+      "fps": 2,
+      "loop": true,
+      "frames": [
+        {
+          "file": "idle_sad-0.png",
+          "screen": [
+            33,
+            18
+          ],
+          "accent": null
+        },
+        {
+          "file": "idle_sad-1.png",
+          "screen": [
+            33,
+            18
+          ],
+          "accent": null
+        },
+        {
+          "file": "idle_sad-2.png",
+          "screen": [
+            33,
+            18
+          ],
+          "accent": null
+        },
+        {
+          "file": "idle_sad-3.png",
+          "screen": [
+            33,
+            18
+          ],
+          "accent": null
+        }
+      ]
+    },
+    "walk": {
+      "fps": 10,
+      "loop": true,
+      "frames": [
+        {
+          "file": "walk-0.png",
+          "screen": [
+            33,
+            16
+          ],
+          "accent": null
+        },
+        {
+          "file": "walk-1.png",
+          "screen": [
+            33,
+            16
+          ],
+          "accent": null
+        },
+        {
+          "file": "walk-2.png",
+          "screen": [
+            33,
+            17
+          ],
+          "accent": null
+        },
+        {
+          "file": "walk-3.png",
+          "screen": [
+            33,
+            16
+          ],
+          "accent": null
+        },
+        {
+          "file": "walk-4.png",
+          "screen": [
+            33,
+            16
+          ],
+          "accent": null
+        },
+        {
+          "file": "walk-5.png",
+          "screen": [
+            33,
+            17
+          ],
+          "accent": null
+        }
+      ]
+    },
+    "walk_sad": {
+      "fps": 7,
+      "loop": true,
+      "frames": [
+        {
+          "file": "walk_sad-0.png",
+          "screen": [
+            33,
+            18
+          ],
+          "accent": null
+        },
+        {
+          "file": "walk_sad-1.png",
+          "screen": [
+            33,
+            18
+          ],
+          "accent": null
+        },
+        {
+          "file": "walk_sad-2.png",
+          "screen": [
+            33,
+            18
+          ],
+          "accent": null
+        },
+        {
+          "file": "walk_sad-3.png",
+          "screen": [
+            33,
+            18
+          ],
+          "accent": null
+        },
+        {
+          "file": "walk_sad-4.png",
+          "screen": [
+            33,
+            18
+          ],
+          "accent": null
+        },
+        {
+          "file": "walk_sad-5.png",
+          "screen": [
+            33,
+            18
+          ],
+          "accent": null
+        }
+      ]
+    },
+    "run": {
+      "fps": 14,
+      "loop": true,
+      "frames": [
+        {
+          "file": "run-0.png",
+          "screen": [
+            33,
+            16
+          ],
+          "accent": null
+        },
+        {
+          "file": "run-1.png",
+          "screen": [
+            33,
+            15
+          ],
+          "accent": null
+        },
+        {
+          "file": "run-2.png",
+          "screen": [
+            33,
+            15
+          ],
+          "accent": null
+        },
+        {
+          "file": "run-3.png",
+          "screen": [
+            33,
+            16
+          ],
+          "accent": null
+        },
+        {
+          "file": "run-4.png",
+          "screen": [
+            33,
+            17
+          ],
+          "accent": null
+        },
+        {
+          "file": "run-5.png",
+          "screen": [
+            33,
+            16
+          ],
+          "accent": null
+        }
+      ]
+    },
+    "crawl": {
+      "fps": 6,
+      "loop": true,
+      "frames": [
+        {
+          "file": "crawl-0.png",
+          "screen": [
+            33,
+            20
+          ],
+          "accent": null
+        },
+        {
+          "file": "crawl-1.png",
+          "screen": [
+            33,
+            20
+          ],
+          "accent": null
+        },
+        {
+          "file": "crawl-2.png",
+          "screen": [
+            33,
+            20
+          ],
+          "accent": null
+        },
+        {
+          "file": "crawl-3.png",
+          "screen": [
+            33,
+            20
+          ],
+          "accent": null
+        },
+        {
+          "file": "crawl-4.png",
+          "screen": [
+            33,
+            20
+          ],
+          "accent": null
+        },
+        {
+          "file": "crawl-5.png",
+          "screen": [
+            33,
+            20
+          ],
+          "accent": null
+        }
+      ]
+    },
+    "sit": {
+      "fps": 1.5,
+      "loop": true,
+      "frames": [
+        {
+          "file": "sit-0.png",
+          "screen": [
+            30,
+            12
+          ],
+          "accent": null
+        },
+        {
+          "file": "sit-1.png",
+          "screen": [
+            30,
+            12
+          ],
+          "accent": null
+        }
+      ]
+    },
+    "wash": {
+      "fps": 6,
+      "loop": true,
+      "frames": [
+        {
+          "file": "wash-0.png",
+          "screen": [
+            30,
+            12
+          ],
+          "accent": null
+        },
+        {
+          "file": "wash-1.png",
+          "screen": [
+            30,
+            12
+          ],
+          "accent": null
+        }
+      ]
+    },
+    "sleep": {
+      "fps": 1.2,
+      "loop": true,
+      "frames": [
+        {
+          "file": "sleep-0.png",
+          "screen": [
+            32,
+            25
+          ],
+          "accent": null
+        },
+        {
+          "file": "sleep-1.png",
+          "screen": [
+            32,
+            25
+          ],
+          "accent": null
+        }
+      ]
+    },
+    "starving": {
+      "fps": 1,
+      "loop": true,
+      "frames": [
+        {
+          "file": "starving-0.png",
+          "screen": [
+            33,
+            28
+          ],
+          "accent": null
+        },
+        {
+          "file": "starving-1.png",
+          "screen": [
+            33,
+            28
+          ],
+          "accent": null
+        }
+      ]
+    },
+    "jump_up": {
+      "fps": 1,
+      "loop": false,
+      "frames": [
+        {
+          "file": "jump_up-0.png",
+          "screen": [
+            33,
+            16
+          ],
+          "accent": null
+        }
+      ]
+    },
+    "jump_down": {
+      "fps": 1,
+      "loop": false,
+      "frames": [
+        {
+          "file": "jump_down-0.png",
+          "screen": [
+            33,
+            16
+          ],
+          "accent": null
+        }
+      ]
+    },
+    "dragged": {
+      "fps": 4,
+      "loop": true,
+      "frames": [
+        {
+          "file": "dragged-0.png",
+          "screen": [
+            33,
+            16
+          ],
+          "accent": null
+        },
+        {
+          "file": "dragged-1.png",
+          "screen": [
+            33,
+            16
+          ],
+          "accent": null
+        }
+      ]
+    },
+    "eat": {
+      "fps": 8,
+      "loop": true,
+      "frames": [
+        {
+          "file": "eat-0.png",
+          "screen": [
+            34,
+            16
+          ],
+          "accent": null
+        },
+        {
+          "file": "eat-1.png",
+          "screen": [
+            34,
+            18
+          ],
+          "accent": null
+        },
+        {
+          "file": "eat-2.png",
+          "screen": [
+            34,
+            19
+          ],
+          "accent": null
+        },
+        {
+          "file": "eat-3.png",
+          "screen": [
+            34,
+            18
+          ],
+          "accent": null
+        }
+      ]
+    },
+    "rummage": {
+      "fps": 7,
+      "loop": true,
+      "frames": [
+        {
+          "file": "rummage-0.png",
+          "screen": [
+            34,
+            22
+          ],
+          "accent": null
+        },
+        {
+          "file": "rummage-1.png",
+          "screen": [
+            34,
+            22
+          ],
+          "accent": null
+        },
+        {
+          "file": "rummage-2.png",
+          "screen": [
+            34,
+            22
+          ],
+          "accent": null
+        },
+        {
+          "file": "rummage-3.png",
+          "screen": [
+            34,
+            22
+          ],
+          "accent": null
+        }
+      ]
+    },
+    "happy": {
+      "fps": 6,
+      "loop": true,
+      "frames": [
+        {
+          "file": "happy-0.png",
+          "screen": [
+            33,
+            16
+          ],
+          "accent": null
+        },
+        {
+          "file": "happy-1.png",
+          "screen": [
+            33,
+            16
+          ],
+          "accent": null
+        }
+      ]
+    },
+    "hurt": {
+      "fps": 8,
+      "loop": true,
+      "frames": [
+        {
+          "file": "hurt-0.png",
+          "screen": [
+            33,
+            16
+          ],
+          "accent": null
+        },
+        {
+          "file": "hurt-1.png",
+          "screen": [
+            33,
+            17
+          ],
+          "accent": null
+        }
+      ]
+    },
+    "tap": {
+      "fps": 7,
+      "loop": true,
+      "frames": [
+        {
+          "file": "tap-0.png",
+          "screen": [
+            33,
+            17
+          ],
+          "accent": null
+        },
+        {
+          "file": "tap-1.png",
+          "screen": [
+            33,
+            17
+          ],
+          "accent": null
+        }
+      ]
+    },
+    "curious": {
+      "fps": 1,
+      "loop": true,
+      "frames": [
+        {
+          "file": "curious-0.png",
+          "screen": [
+            33,
+            15
+          ],
+          "accent": null
+        }
+      ]
+    }
+  }
+}

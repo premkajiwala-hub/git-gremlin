@@ -1,13 +1,13 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { app } from 'electron'
-import { DEFAULT_SETTINGS, PET_SIZE_MAX, PET_SIZE_MIN } from '../shared/constants'
-import type { ContributionDay, GitHubSource, PetSnapshot, Settings } from '../shared/types'
+import { DEFAULT_SETTINGS, PET_IDS, PET_SIZE_MAX, PET_SIZE_MIN } from '../shared/constants'
+import type { CleanResult, ContributionDay, GitHubSource, PetConfig, PetId, PetSnapshot, ScanResult, Settings } from '../shared/types'
 
 export interface AppState {
-  version: 3
+  version: 4
   settings: Settings
-  /** How the GitHub account was linked (null = not linked). */
+  /** How Catbot's GitHub account was linked (null = not linked). */
   githubAuth: 'oauth' | 'gh' | null
   /** "Sign in with GitHub" token, encrypted with Electron safeStorage (base64), or null. */
   githubTokenEnc: string | null
@@ -20,17 +20,58 @@ export interface AppState {
     source: GitHubSource
     fetchedAt: number
   }
-  pet: PetSnapshot | null
+  /** Where each pet was, so it reappears there. */
+  pets: Record<PetId, PetSnapshot | null>
+  dusty: { lastScan: ScanResult | null; lastClean: CleanResult | null }
 }
+
+const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T
 
 function defaults(): AppState {
   return {
-    version: 3,
-    settings: { ...DEFAULT_SETTINGS },
+    version: 4,
+    settings: clone(DEFAULT_SETTINGS),
     githubAuth: null,
     githubTokenEnc: null,
     github: { login: null, name: null, avatarUrl: null, days: [], source: 'none', fetchedAt: 0 },
-    pet: null
+    pets: { catbot: null, dusty: null },
+    dusty: { lastScan: null, lastClean: null }
+  }
+}
+
+function petConfig(raw: Partial<PetConfig> | undefined, def: PetConfig): PetConfig {
+  const r = raw ?? {}
+  return {
+    enabled: typeof r.enabled === 'boolean' ? r.enabled : def.enabled,
+    name: typeof r.name === 'string' && r.name.trim() ? r.name.trim().slice(0, 24) : def.name,
+    petSize: Math.min(PET_SIZE_MAX, Math.max(PET_SIZE_MIN, Number(r.petSize) || def.petSize)),
+    petSpeed: Math.min(150, Math.max(10, Number(r.petSpeed) || def.petSpeed)),
+    movement: r.movement === 'ground' ? 'ground' : r.movement === 'roam' ? 'roam' : def.movement,
+    followCursor: typeof r.followCursor === 'boolean' ? r.followCursor : def.followCursor
+  }
+}
+
+/** Fill in / clamp settings from anything (old versions, hand edits, the panel). */
+export function normalizeSettings(raw: Partial<Settings> | undefined): Settings {
+  const d = DEFAULT_SETTINGS
+  const r = raw ?? {}
+  const dusty = r.dusty ?? d.dusty
+  return {
+    onTopOfApps: Boolean(r.onTopOfApps),
+    pets: {
+      catbot: petConfig(r.pets?.catbot, d.pets.catbot),
+      dusty: petConfig(r.pets?.dusty, d.pets.dusty)
+    },
+    dusty: {
+      mode: dusty.mode === 'auto' || dusty.mode === 'report' ? dusty.mode : 'ask',
+      targets: {
+        devCaches: Boolean(dusty.targets?.devCaches ?? d.dusty.targets.devCaches),
+        recycleBin: Boolean(dusty.targets?.recycleBin ?? d.dusty.targets.recycleBin),
+        temp: Boolean(dusty.targets?.temp ?? d.dusty.targets.temp),
+        browser: Boolean(dusty.targets?.browser ?? d.dusty.targets.browser)
+      },
+      scanEveryMinutes: Math.min(24 * 60, Math.max(15, Number(dusty.scanEveryMinutes) || d.dusty.scanEveryMinutes))
+    }
   }
 }
 
@@ -42,39 +83,45 @@ export class Store {
 
   load(): void {
     try {
-      const raw = JSON.parse(readFileSync(this.path, 'utf8')) as Partial<AppState> & { settings?: Partial<Settings>; version?: number }
+      const raw = JSON.parse(readFileSync(this.path, 'utf8')) as Record<string, any>
       const d = defaults()
-      // Only keep known settings (older versions had repo, hunger-hour and quiet-hour settings).
-      const settings = { ...d.settings }
-      for (const key of Object.keys(settings) as (keyof Settings)[]) {
-        if (raw.settings && key in raw.settings) (settings as Record<string, unknown>)[key] = raw.settings[key]
+      let settings: Settings
+      let pets: Record<PetId, PetSnapshot | null> = d.pets
+      if (raw.version === 4) {
+        settings = normalizeSettings(raw.settings)
+        for (const id of PET_IDS) pets[id] = raw.pets?.[id] ?? null
+      } else {
+        // Up to v3 there was one pet (Catbot) with flat settings.
+        const s = raw.settings ?? {}
+        settings = normalizeSettings({
+          onTopOfApps: s.onTopOfApps,
+          pets: {
+            catbot: {
+              ...d.settings.pets.catbot,
+              name: s.petName === 'Mossy' ? 'Catbot' : s.petName,
+              petSize: s.petSize,
+              petSpeed: s.petSpeed,
+              movement: s.movement,
+              followCursor: s.followCursor
+            },
+            dusty: d.settings.pets.dusty
+          }
+        })
+        pets = { catbot: raw.pet ?? null, dusty: null }
       }
-      // Version 2 linked GitHub silently (CLI token or a typed username). Linking now
-      // needs an explicit, authenticated sign-in, so start unlinked.
-      const linked = raw.version === 3 && (raw.githubAuth === 'oauth' || raw.githubAuth === 'gh')
+      const linked = (raw.version ?? 0) >= 3 && (raw.githubAuth === 'oauth' || raw.githubAuth === 'gh')
       this.state = {
-        version: 3,
+        version: 4,
         settings,
-        githubAuth: linked ? raw.githubAuth! : null,
+        githubAuth: linked ? raw.githubAuth : null,
         githubTokenEnc: linked ? (raw.githubTokenEnc ?? null) : null,
         github: linked ? { ...d.github, ...(raw.github ?? {}) } : d.github,
-        pet: raw.pet ?? null
+        pets,
+        dusty: { lastScan: raw.dusty?.lastScan ?? null, lastClean: raw.dusty?.lastClean ?? null }
       }
-      this.migrate()
     } catch {
       this.state = defaults()
     }
-  }
-
-  /** Mossy -> Catbot: carry over the old defaults to the new ones, keep anything customised. */
-  private migrate(): void {
-    const s = this.state.settings
-    if (s.petName === 'Mossy') s.petName = DEFAULT_SETTINGS.petName
-    if (s.petSize === 80) s.petSize = DEFAULT_SETTINGS.petSize
-    s.petSize = Math.min(PET_SIZE_MAX, Math.max(PET_SIZE_MIN, Number(s.petSize) || DEFAULT_SETTINGS.petSize))
-    if (s.movement !== 'ground') s.movement = 'roam'
-    s.onTopOfApps = Boolean(s.onTopOfApps)
-    if (typeof s.followCursor !== 'boolean') s.followCursor = DEFAULT_SETTINGS.followCursor
   }
 
   saveSoon(): void {
