@@ -17,8 +17,7 @@
     "build": "npm run typecheck && electron-vite build && electron-builder --win nsis --x64 --publish never"
   },
   "dependencies": {
-    "koffi": "^3.3.7",
-    "simple-git": "^4.0.2"
+    "koffi": "^3.3.7"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

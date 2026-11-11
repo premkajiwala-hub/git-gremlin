@@ -1,6 +1,6 @@
 # GitGremlin
 
-A Windows 11 desktop pet that roams your desktop and **gets hungry when you don't commit code**.
+A Windows 11 desktop pet that roams your desktop and **gets hungry on days you haven't contributed on GitHub**.
 
 Meet **Catbot**: a little 2D pixel-art robot cat with a white shell, orange ear tips and stripes, a striped cable tail, a collar bell that glows when it's well fed, and a dark face-screen whose glowing cyan eyes show how it feels (^ ^, — —, > <, x x, sad). Every frame is drawn in code and exported as PNGs you can repaint.
 
@@ -12,19 +12,19 @@ Meet **Catbot**: a little 2D pixel-art robot cat with a white shell, orange ear 
 
 - **Lives on your desktop.** By default Catbot sits just above the wallpaper: your app windows cover it and it shows wherever the desktop shows. Tick **Show on top of apps** in Settings to have it stay above everything instead.
 - **Follows your cursor.** Move the mouse over the desktop and Catbot walks (or runs, if you're far away) after it. Once it reaches the cursor it stops and looks up at you. Turn this off with **Follow my cursor** in Settings.
-- **Hover to read its mind.** Hover over Catbot and its message box pops up with its energy, mood and time since your last commit, for as long as you hover.
+- **Hover to read its mind.** Hover over Catbot and its message box pops up with today's contributions, its mood, your streak and the last 7 days as green squares, for as long as you hover.
 - **Roams freely.** On its own it walks, runs, sneaks (crawls) and hops anywhere on the screen, sits, naps, gets curious, and walks between monitors. Prefer the classic look? Set **Where it wanders** to *Only along the bottom of the screen*, and it walks on the taskbar's top edge.
 - **Window hopping.** Sometimes it jumps onto the top edge of the window you're working in and walks along it. If that window moves, closes or minimises, it falls.
 - **Pixel-art animations (2D, side view):** idle with blinks and tail sway, walk, run, crawl, sit, sleep (curled up with Zs), jump, eat (head dips, cube crumbs), happy hops with pixel hearts, hungry droop, starving flop, dangling while dragged, squash on landing, and a red flash with x x eyes when flicked hard. Always drawn in whole device pixels, so it stays crisp.
 - **Click-through.** The overlay ignores the mouse everywhere except over Catbot, so you can still click everything underneath it.
 - **Robot speech bubbles.** A little terminal in Catbot's colours: orange header with its name and a mood LED, a scanlined screen and cyan text that types itself out.
-- **Feeds on commits.** Watches your local git repos and eats every new commit you author.
+- **Linked to your GitHub account.** Its mood follows today's square on your GitHub contribution chart: no contributions today = hungry, and the greener the square, the happier and livelier it gets. New contributions feed it.
 
 ## Requirements
 
 - Windows 10 or 11 (x64)
 - [Node.js](https://nodejs.org/) 24 (23.6+ works; `npm run textures` needs Node's built-in TypeScript type stripping)
-- [Git](https://git-scm.com/) on your `PATH`
+- A GitHub account (and, ideally, the [GitHub CLI](https://cli.github.com/) signed in with `gh auth login`)
 
 ## Run it in dev mode
 
@@ -39,52 +39,45 @@ Catbot appears on your desktop and a catbot icon appears in the system tray. Rig
 
 While `npm start` runs, two dev pages are available in a browser:
 
-- <http://localhost:5173/preview.html>: a fake desktop with buttons to feed Catbot, change its hunger stage, toggle quiet hours, move the "window" it's standing on and switch movement modes. Hover, click, drag and cursor-following all work there.
+- <http://localhost:5173/preview.html>: a fake desktop with buttons to feed Catbot, set today's contribution level (starving, 0, 1 "Less" … 4 "More"), toggle quiet hours, move the "window" it's standing on and switch movement modes. Hover, click, drag and cursor-following all work there.
 - <http://localhost:5173/sheet.html?k=6>: every animation frame, enlarged (`k` = zoom), with its eyes and bell.
 
-## Feeding: adding repos
+## Linking your GitHub account
 
-1. Right-click the tray icon → **Add repo...** (or open **Settings...** → **Add repo...**).
-2. Pick any folder inside a git repository. GitGremlin checks it's a repo and watches its top-level folder.
-3. Commit as usual. Within a minute Catbot eats it: a golden commit cube appears, its head dips, crumbs fly, then it does a happy hop with hearts.
+Catbot reads your **GitHub contribution chart**, the green squares on your profile, and today's square sets its mood. It isn't tied to any one repo: every commit, PR, issue and review that counts on your profile counts for Catbot.
 
-Only commits **you** authored count: the author email must match `git config user.email` for that repo (override it in Settings). Existing history isn't food: only commits made after the repo was added, and less than 24 hours old, count. Every branch counts (`git log --all`), and amends and rebases aren't eaten twice.
+How it connects, with no setup if you already use the GitHub CLI:
 
-Remove repos from the tray (**Remove repo ▸**) or in Settings.
+1. **GitHub CLI**: if you've run `gh auth login`, Catbot uses that login automatically.
+2. **Personal access token**: Settings → GitHub → *Personal access token*. A read-only token also includes private contributions. It's stored encrypted on your PC (Windows DPAPI via Electron `safeStorage`).
+3. **Public profile**: just enter your GitHub username in Settings. Only public contributions count (plus private ones if your profile shows them).
 
-## How hunger works
+The chart is re-read every 3 minutes, when your PC wakes or unlocks, and from **Refresh GitHub now** in the tray. When today's count goes up, Catbot eats: a golden commit cube appears, its head dips, crumbs fly, "+N CONTRIBUTIONS", then a happy hop with hearts.
 
-Catbot's "energy" is measured as hours without food. Each new commit removes some:
+## How Catbot's mood works
 
-| | |
-|---|---|
-| Base meal per commit | 3 hours |
-| Big-diff bonus | +1 hour per 10× lines changed (10 lines ≈ +1h, 100 ≈ +2h), **capped at +3h** so one giant commit can't fill it up |
+It follows today's square on your chart, exactly like GitHub's *Less → More* scale:
 
-Stages (all configurable in Settings):
-
-| Stage | After | What Catbot does |
+| Today on your chart | Mood | What Catbot does |
 |---|---|---|
-| Full | 0 h | Bell glows; explores everywhere, runs, hops onto windows, naps |
-| Peckish | 2 h | The occasional "snack time?" |
-| Hungry | 4 h | Bell goes dark, sprite dims, head and ears droop, tail hangs, sad eyes, half walking speed, "LOW BATTERY... FEED ME COMMITS" |
-| Starving | 8 h | Flops over on the floor, twitches, now and then crawls over to the focused window's edge and taps on it |
+| ⬛ 0 contributions | **Hungry** | Dimmed, sad eyes, ears and tail droop, half speed, sits a lot, "NO CONTRIBUTIONS TODAY... FEED ME COMMITS" |
+| ⬛ 0 today **and** yesterday | **Starving** | Flops over, twitches, bell dark; now and then crawls to the focused window and taps on it |
+| 🟩 level 1 ("Less") | Fed, calm | ^ ^ eyes, bell lit, unhurried walk, plenty of sitting |
+| 🟩 level 2 | Fed, content | Normal speed; wanders, runs now and then, hops onto windows |
+| 🟩 level 3 | Happy | Faster, springy walk, more running and hopping, beams > < half the time, little happy dances |
+| 🟩 level 4 ("More") | Ecstatic | Fastest, zoomies, lots of hops and dances, beaming > < all the time |
 
-Hunger **pauses**:
+The levels are GitHub's own (they're relative to your usual activity), so Catbot matches the colour you see on your profile. "Today" is your PC's local date; if GitHub's calendar hasn't reached that date yet, its latest day is used. A new day starts hungry until you contribute again.
 
-- during quiet hours (default 23:00–08:00; Catbot sleeps),
-- while the PC is locked or asleep,
-- while **Pause hunger** is ticked in the tray,
-- while GitGremlin isn't running.
+During quiet hours (default 23:00–08:00) Catbot sleeps whatever its mood.
 
-State (hunger, last commit seen per repo, pet position, settings) is saved to `%APPDATA%\GitGremlin\state.json`.
-
+State (last chart data, pet position, settings, encrypted token) is saved to `%APPDATA%\GitGremlin\state.json`.
 ## Playing with Catbot
 
 | Do this | Catbot does this |
 |---|---|
 | Move the cursor over the desktop | Follows it, and stops once it reaches the cursor |
-| Hover over it | Stops, faces you and shows its message box (energy, mood, last commit, a random line) until you move away |
+| Hover over it | Stops, faces you and shows its message box (today's contributions, mood, streak, last 7 days, a random line) until you move away |
 | Click it | Looks up alert and shows the message box again with a fresh line |
 | Drag it | Legs dangle, tail hangs |
 | Toss it | Hops, slides and bounces off the screen edges; may land on a window. Flick it hard for a red flash and x x eyes |
@@ -101,13 +94,14 @@ Tray → **Settings...**
 | Where it wanders | Anywhere on the screen, or only along the bottom (the taskbar's top edge) | Anywhere |
 | Follow my cursor | Walks after the cursor while you move it over the desktop | On |
 | Show on top of apps | Off: lives on the desktop, behind your windows. On: above every app and the taskbar | Off |
-| Peckish / Hungry / Starving | Hours without commits before each stage | 2 / 4 / 8 h |
-| Quiet hours | Hunger pauses and Catbot sleeps | On, 23:00–08:00 |
-| Author email | Whose commits count; empty = each repo's `git config user.email` | (empty) |
-| Watched repos | Add / remove repos (applies immediately) | none |
+| GitHub username | Whose contribution chart to follow; empty = the account you're signed into with `gh` | (empty) |
+| Personal access token | Optional; read-only token for private contributions, stored encrypted | none |
+| Quiet hours | Catbot sleeps | On, 23:00–08:00 |
 | Start with Windows | Launch at sign-in | Off |
 
-Tray menu: Feed now (debug) · Add repo... · Remove repo ▸ · Pause hunger · Hide for 1 hour · Show pet · Settings... · Start with Windows · Quit
+The GitHub section also shows who Catbot is linked to, your last 7 days, today's count and streak, plus a **Refresh now** button.
+
+Tray menu: Refresh GitHub now · Feed now (debug) · Hide for 1 hour · Show pet · Settings... · Start with Windows · Quit
 
 A second launch passes flags to the running app: `--feed` (debug snack), `--say "text"`, `--settings`.
 
@@ -161,10 +155,10 @@ Your options:
 - **Rendering:** a small pet-sized 2D canvas moves around the overlay (not a full-screen canvas). Frames are scaled by a whole number of device pixels, so they stay crisp at any Windows scaling. It renders at about 30 fps, skips frames when nothing changed, drops to 10 fps when idle and stops completely when hidden. The other monitors' overlays sleep until Catbot walks over.
 - **Movement:** Catbot's position is a point on the "floor" (anywhere in the work area, the taskbar's top edge in bottom-only mode, or the top edge of the window it's standing on) plus a height for jumps, falls and tosses, with gravity, bounce and friction.
 - **Windows:** a small [koffi](https://koffi.dev/) FFI helper (prebuilt, no compiler) handles z-order, the focused window's bounds, whether the window Catbot stands on moved, and the taskbar auto-hide state.
-- **Git:** [simple-git](https://github.com/steveukx/git-js) runs `git log --all --no-merges --shortstat` every 60 s. No network access at runtime.
+- **GitHub:** the contribution calendar comes from the GitHub GraphQL API (`contributionsCollection.contributionCalendar`, using your saved token or the GitHub CLI's), or from the public `github.com/users/<name>/contributions` page as a fallback. It's polled every 3 minutes. This is the only network access the app makes.
 
 ```
-src/main/       overlay windows, z-order, tray, git watcher, hunger, state, settings, Win32 helper
+src/main/       overlay windows, z-order, tray, GitHub contributions + mood, state, settings, Win32 helper
 src/preload/    the IPC bridge exposed to renderers
 src/renderer/   2D sprite view, Catbot brain (movement/behaviour), particles, speech bubbles, settings page, dev pages
 src/shared/     config types and constants
@@ -182,8 +176,9 @@ docs/           design reference
 - Window hopping uses the **focused** window only, and skips maximised and full-screen windows (their top edge is the top of the screen).
 - Dragging is limited to the monitor Catbot is on. Toss it, or let it walk, to change monitors. On mixed-DPI setups the hop between monitors can be a little jumpy.
 - The overlays are 1 px shorter than each monitor, so Windows doesn't mistake them for a full-screen app (which can trigger Do Not Disturb or hide the taskbar).
-- Hunger doesn't grow while GitGremlin is closed. Commits made while it was closed are eaten on the next start if they're less than 24 hours old.
-- Watching a repo means running `git log` in it once a minute. Very large repos or network drives can make that slow.
+- GitHub can take a few minutes to show a pushed commit on your chart, and only contributions GitHub counts appear there (for example, commits to a fork's default branch or with an email not linked to your account don't count). Commits you haven't pushed don't feed Catbot.
+- Without a token or the GitHub CLI, only public contributions are visible (plus private ones if your profile is set to show them).
+- Offline, Catbot keeps the mood from the last successful check until it can refresh.
 - "Start with Windows" in dev mode starts the built app from this folder (`electron <project>`), so run `npm run compile` once after pulling changes.
 - Unsigned builds are blocked on PCs with Smart App Control (see [Smart App Control](#smart-app-control)).
 

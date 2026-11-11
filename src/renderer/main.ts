@@ -3,7 +3,7 @@ import type { PetPose, PetSnapshot, PetStatus, Settings } from '../shared/types'
 import { PetBrain, RANDOM_LINES, type RenderState } from './pet/brain'
 import { Particles } from './pet/particles'
 import { loadSprites } from './pet/sprites'
-import { SpeechBubble, type Mood } from './ui/bubble'
+import { GRID_MARK, SpeechBubble, type Mood } from './ui/bubble'
 import { PetView } from './view'
 import { World } from './world'
 
@@ -233,8 +233,7 @@ async function boot(): Promise<void> {
       hovered = over
       brain.setHovered(over)
       if (over) {
-        statusBubble = true
-        bubble.show(statusText(), 60_000, status.name, mood())
+        showStatus(60_000)
       } else if (statusBubble) {
         bubble.expireIn(1500)
       }
@@ -291,24 +290,39 @@ async function boot(): Promise<void> {
     } else if (pending) {
       // Click: look up and give the status report (with a fresh random line).
       brain.clicked()
-      statusBubble = true
-      bubble.show(statusText(), hovered ? 60_000 : 6000, status.name, mood())
+      showStatus(hovered ? 60_000 : 6000)
     }
     pending = null
     updateHover()
   })
 
+  /** The hover/click status report, built from today's square on the GitHub chart. */
   function statusText(): string {
-    const pct = Math.round(status.fullness * 100)
-    const filled = Math.round(status.fullness * 10)
-    const bar = '█'.repeat(filled) + '░'.repeat(10 - filled)
-    const moodText = status.paused ? `${status.stage} (PAUSED)` : status.quiet ? `${status.stage} (QUIET)` : status.stage
-    const last = status.lastCommitAt ? `${ago(Date.now() - status.lastCommitAt)} AGO` : 'NEVER'
+    if (!status.connected) {
+      return 'GITHUB NOT LINKED YET.\n\n> OPEN SETTINGS AND ADD YOUR GITHUB USERNAME (OR RUN GH AUTH LOGIN).'
+    }
+    const n = status.todayCount
+    const moodText =
+      status.stage === 'fed' ? `FED, LEVEL ${status.level}/4` : status.stage === 'hungry' ? 'HUNGRY' : 'STARVING'
+    const quiet = status.quiet ? ' (ZZZ)' : ''
     const tip =
-      status.repoCount === 0
-        ? 'ADD A REPO FROM THE TRAY MENU SO I CAN EAT!'
-        : RANDOM_LINES[Math.floor(Math.random() * RANDOM_LINES.length)]
-    return `ENERGY ${bar} ${pct}%\nMOOD: ${moodText}\nLAST COMMIT: ${last}\n\n> ${tip}`
+      status.stage === 'fed'
+        ? RANDOM_LINES[Math.floor(Math.random() * RANDOM_LINES.length)]
+        : 'NO CONTRIBUTIONS TODAY. ONE COMMIT WOULD FEED ME!'
+    return [
+      `TODAY: ${n} CONTRIBUTION${n === 1 ? '' : 'S'}`,
+      `MOOD: ${moodText}${quiet}`,
+      `STREAK: ${status.streak} DAY${status.streak === 1 ? '' : 'S'}`,
+      'LAST 7 DAYS:',
+      GRID_MARK,
+      '',
+      `> ${tip}`
+    ].join('\n')
+  }
+
+  function showStatus(ms: number): void {
+    statusBubble = true
+    bubble.show(statusText(), ms, status.name, mood(), status.week)
   }
 
   // --- lifecycle & messages from main --------------------------------------------------
@@ -353,15 +367,6 @@ async function boot(): Promise<void> {
 
 function renderKey(x: number, y: number, rs: RenderState): string {
   return `${Math.round(x)},${Math.round(y)},${rs.anim}${rs.frame},${Math.round(rs.z)},${Math.round(rs.bob)},${rs.mood},${rs.lookY},${rs.glow},${rs.dim},${rs.tint},${Math.round(rs.food * 10)},${Math.round(rs.squash * 10)},${rs.facing}`
-}
-
-function ago(ms: number): string {
-  const m = Math.floor(ms / 60000)
-  if (m < 1) return '<1M'
-  if (m < 60) return `${m}M`
-  const h = Math.floor(m / 60)
-  if (h < 48) return `${h}H ${m % 60}M`
-  return `${Math.floor(h / 24)}D`
 }
 
 void boot()

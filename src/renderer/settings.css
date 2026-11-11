@@ -117,6 +117,7 @@ label.check {
 
 input:not([type]),
 input[type='email'],
+input[type='password'],
 input[type='number'],
 input[type='time'] {
   background: var(--field);
@@ -234,4 +235,46 @@ footer {
 
 .saved {
   color: var(--cyan);
+}
+
+.gh-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 8px 0 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--field);
+}
+
+.gh-status .who {
+  color: var(--text);
+}
+
+.gh-status .err {
+  color: #ff8a8a;
+}
+
+.gh-week {
+  display: flex;
+  gap: 3px;
+}
+
+.gh-week span {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  outline: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.gh-week span.today {
+  outline: 1px solid var(--cyan);
+}
+
+.gh-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }

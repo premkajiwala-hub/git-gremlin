@@ -7,7 +7,6 @@ import type {
   PetPose,
   PetSnapshot,
   PetStatus,
-  RepoResult,
   Settings,
   SettingsView,
   WindowLedge
@@ -45,10 +44,10 @@ const api = {
 
   // Settings window
   getSettings: (): Promise<SettingsView> => ipcRenderer.invoke(IPC.settingsGet),
-  saveSettings: (s: Settings, startWithWindows: boolean): Promise<SettingsView> =>
-    ipcRenderer.invoke(IPC.settingsSave, s, startWithWindows),
-  pickRepo: (): Promise<RepoResult> => ipcRenderer.invoke(IPC.repoPick),
-  removeRepo: (path: string): Promise<SettingsView> => ipcRenderer.invoke(IPC.repoRemove, path)
+  /** token: a new personal access token, null to remove the saved one, undefined to leave it. */
+  saveSettings: (s: Settings, startWithWindows: boolean, token?: string | null): Promise<SettingsView> =>
+    ipcRenderer.invoke(IPC.settingsSave, s, startWithWindows, token),
+  refreshGitHub: (): Promise<SettingsView> => ipcRenderer.invoke(IPC.githubRefresh)
 }
 
 export type GremlinApi = typeof api

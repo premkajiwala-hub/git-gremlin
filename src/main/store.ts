@@ -2,34 +2,29 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { app } from 'electron'
 import { DEFAULT_SETTINGS, PET_SIZE_MAX, PET_SIZE_MIN } from '../shared/constants'
-import type { PetSnapshot, Settings } from '../shared/types'
-
-export interface RepoState {
-  /** Author timestamps (unix seconds) of the user's commits already eaten or ignored. */
-  seen: number[]
-  /** When the repo was added (ms); older commits never count as food. */
-  addedAt: number
-}
+import type { ContributionDay, GitHubSource, PetSnapshot, Settings } from '../shared/types'
 
 export interface AppState {
-  version: 1
+  version: 2
   settings: Settings
-  hunger: {
-    /** Effective hours without food (stage thresholds compare against this). */
-    hours: number
-    lastCommitAt: number | null
-    paused: boolean
+  /** Last contribution data, so Catbot's mood is right even before the first fetch. */
+  github: {
+    login: string | null
+    days: ContributionDay[]
+    source: GitHubSource
+    fetchedAt: number
   }
-  repos: Record<string, RepoState>
+  /** Personal access token, encrypted with Electron safeStorage (base64), or null. */
+  githubTokenEnc: string | null
   pet: PetSnapshot | null
 }
 
 function defaults(): AppState {
   return {
-    version: 1,
-    settings: { ...DEFAULT_SETTINGS, repos: [] },
-    hunger: { hours: 0, lastCommitAt: null, paused: false },
-    repos: {},
+    version: 2,
+    settings: { ...DEFAULT_SETTINGS },
+    github: { login: null, days: [], source: 'none', fetchedAt: 0 },
+    githubTokenEnc: null,
     pet: null
   }
 }
@@ -42,16 +37,20 @@ export class Store {
 
   load(): void {
     try {
-      const raw = JSON.parse(readFileSync(this.path, 'utf8')) as Partial<AppState>
+      const raw = JSON.parse(readFileSync(this.path, 'utf8')) as Partial<AppState> & { settings?: Partial<Settings> }
       const d = defaults()
+      // Only keep known settings (older versions had repo/hunger-hour settings).
+      const settings = { ...d.settings }
+      for (const key of Object.keys(settings) as (keyof Settings)[]) {
+        if (raw.settings && key in raw.settings) (settings as Record<string, unknown>)[key] = raw.settings[key]
+      }
       this.state = {
-        version: 1,
-        settings: { ...d.settings, ...(raw.settings ?? {}) },
-        hunger: { ...d.hunger, ...(raw.hunger ?? {}) },
-        repos: raw.repos ?? {},
+        version: 2,
+        settings,
+        github: { ...d.github, ...(raw.github ?? {}) },
+        githubTokenEnc: raw.githubTokenEnc ?? null,
         pet: raw.pet ?? null
       }
-      this.state.settings.repos = [...new Set(this.state.settings.repos ?? [])]
       this.migrate()
     } catch {
       this.state = defaults()
@@ -63,10 +62,11 @@ export class Store {
     const s = this.state.settings
     if (s.petName === 'Mossy') s.petName = DEFAULT_SETTINGS.petName
     if (s.petSize === 80) s.petSize = DEFAULT_SETTINGS.petSize
-    s.petSize = Math.min(PET_SIZE_MAX, Math.max(PET_SIZE_MIN, s.petSize))
+    s.petSize = Math.min(PET_SIZE_MAX, Math.max(PET_SIZE_MIN, Number(s.petSize) || DEFAULT_SETTINGS.petSize))
     if (s.movement !== 'ground') s.movement = 'roam'
     s.onTopOfApps = Boolean(s.onTopOfApps)
     if (typeof s.followCursor !== 'boolean') s.followCursor = DEFAULT_SETTINGS.followCursor
+    if (typeof s.githubUser !== 'string') s.githubUser = ''
   }
 
   saveSoon(): void {

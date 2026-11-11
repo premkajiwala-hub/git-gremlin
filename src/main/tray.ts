@@ -1,13 +1,11 @@
-import { basename, join } from 'node:path'
+import { join } from 'node:path'
 import { app, Menu, nativeImage, Tray } from 'electron'
 import { APP_NAME } from '../shared/constants'
 import type { PetStatus } from '../shared/types'
 
 export interface TrayActions {
   feedNow(): void
-  addRepo(): void
-  removeRepo(path: string): void
-  togglePause(): void
+  refreshGitHub(): void
   hideForHour(): void
   showPet(): void
   openSettings(): void
@@ -17,13 +15,17 @@ export interface TrayActions {
 
 export interface TrayState {
   status: PetStatus
-  repos: string[]
-  paused: boolean
   hidden: boolean
   startWithWindows: boolean
 }
 
-const STAGE_LABEL = { full: 'Full', peckish: 'Peckish', hungry: 'Hungry', starving: 'Starving' }
+const LEVEL_WORD = ['none', 'less', 'some', 'lots', 'more']
+
+export function moodLabel(s: PetStatus): string {
+  if (!s.connected) return 'GitHub not linked'
+  const stage = s.stage === 'fed' ? 'Fed' : s.stage === 'hungry' ? 'Hungry' : 'Starving'
+  return `${stage}, ${s.todayCount} contribution${s.todayCount === 1 ? '' : 's'} today (${LEVEL_WORD[s.level]})`
+}
 
 export class AppTray {
   private tray: Tray
@@ -35,24 +37,17 @@ export class AppTray {
   }
 
   update(s: TrayState): void {
-    const pct = Math.round(s.status.fullness * 100)
-    const mood = `${STAGE_LABEL[s.status.stage]} (${pct}% full)`
-    this.tray.setToolTip(`${APP_NAME}: ${s.status.name} is ${mood.toLowerCase()}`)
+    const label = moodLabel(s.status)
+    this.tray.setToolTip(`${APP_NAME}: ${s.status.name} (${label})`)
     const a = this.actions
     this.tray.setContextMenu(
       Menu.buildFromTemplate([
-        { label: `${s.status.name}: ${mood}`, enabled: false },
+        { label: `${s.status.name}: ${label}`, enabled: false },
+        { label: s.status.login ? `GitHub: ${s.status.login}` : 'GitHub: not linked', enabled: false },
         { type: 'separator' },
+        { label: 'Refresh GitHub now', click: () => a.refreshGitHub() },
         { label: 'Feed now (debug)', click: () => a.feedNow() },
-        { label: 'Add repo...', click: () => a.addRepo() },
-        {
-          label: 'Remove repo',
-          submenu: s.repos.length
-            ? s.repos.map((r) => ({ label: `${basename(r)}  (${r})`, click: () => a.removeRepo(r) }))
-            : [{ label: '(no repos watched)', enabled: false }]
-        },
         { type: 'separator' },
-        { label: 'Pause hunger', type: 'checkbox', checked: s.paused, click: () => a.togglePause() },
         { label: 'Hide for 1 hour', enabled: !s.hidden, click: () => a.hideForHour() },
         { label: 'Show pet', enabled: s.hidden, click: () => a.showPet() },
         { type: 'separator' },

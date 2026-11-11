@@ -2,11 +2,20 @@ import type { Settings, SettingsView } from '../shared/types'
 
 const api = window.gremlin
 const form = document.getElementById('form') as HTMLFormElement
-const reposEl = document.getElementById('repos')!
 const savedEl = document.getElementById('saved')!
-const emailHint = document.getElementById('emailHint')!
+const ghStatus = document.getElementById('ghStatus')!
+const userHint = document.getElementById('userHint')!
+const tokenHint = document.getElementById('tokenHint')!
+const tokenInput = document.getElementById('token') as HTMLInputElement
+const clearTokenBtn = document.getElementById('clearToken') as HTMLButtonElement
+const refreshBtn = document.getElementById('refresh') as HTMLButtonElement
 
 const field = <T extends HTMLInputElement>(name: string) => form.elements.namedItem(name) as T
+const GRID = ['#161b22', '#0e4429', '#006d32', '#26a641', '#39d353']
+const LEVEL_WORD = ['no', 'a few', 'some', 'lots of', 'loads of']
+const SOURCE = { token: 'your saved token', gh: 'the GitHub CLI login', public: 'your public profile', none: '' }
+
+let tokenAction: string | null | undefined
 
 function render(view: SettingsView): void {
   const s = view.settings
@@ -16,43 +25,64 @@ function render(view: SettingsView): void {
   ;(form.elements.namedItem('movement') as RadioNodeList).value = s.movement
   field('onTopOfApps').checked = s.onTopOfApps
   field('followCursor').checked = s.followCursor
-  field('peckishAfterHours').value = String(s.peckishAfterHours)
-  field('hungryAfterHours').value = String(s.hungryAfterHours)
-  field('starvingAfterHours').value = String(s.starvingAfterHours)
+  field('githubUser').value = s.githubUser
   field('quietHoursEnabled').checked = s.quietHoursEnabled
   field('quietStart').value = s.quietStart
   field('quietEnd').value = s.quietEnd
-  field('gitEmail').value = s.gitEmail
-  field('gitEmail').placeholder = view.detectedEmail || 'you@example.com'
   field('startWithWindows').checked = view.startWithWindows
-  emailHint.textContent = view.detectedEmail
-    ? `Leave empty to use each repo's git config email (globally: ${view.detectedEmail}).`
-    : "Leave empty to use each repo's git config email."
-  renderRepos(s.repos)
+  tokenInput.value = ''
+  tokenAction = undefined
+  renderGitHub(view)
   updateValues()
 }
 
-function renderRepos(repos: string[]): void {
-  reposEl.replaceChildren()
-  if (!repos.length) {
-    const li = document.createElement('li')
-    li.className = 'empty'
-    li.textContent = 'No repos yet. Add one so your catbot can eat.'
-    reposEl.append(li)
+function renderGitHub(view: SettingsView): void {
+  const g = view.github
+  field('githubUser').placeholder = g.login ?? 'your-github-username'
+  userHint.textContent = view.github.ghAvailable
+    ? 'Leave empty to use the account you are signed into with the GitHub CLI (gh).'
+    : 'Your GitHub username. Without a token only public contributions count.'
+  tokenHint.textContent = g.hasSavedToken
+    ? 'A token is saved (encrypted on this PC). Type a new one to replace it.'
+    : 'Optional: a fine-grained or classic token with read-only access, to include private contributions. Stored encrypted on this PC.'
+  clearTokenBtn.hidden = !g.hasSavedToken
+
+  ghStatus.replaceChildren()
+  if (g.source === 'none') {
+    const err = document.createElement('span')
+    err.className = 'err'
+    err.textContent = g.error ?? 'Not linked yet.'
+    ghStatus.append(err)
     return
   }
-  for (const repo of repos) {
-    const li = document.createElement('li')
-    const name = document.createElement('span')
-    name.textContent = repo
-    const btn = document.createElement('button')
-    btn.type = 'button'
-    btn.className = 'small'
-    btn.textContent = 'Remove'
-    btn.addEventListener('click', async () => render(await api.removeRepo(repo)))
-    li.append(name, btn)
-    reposEl.append(li)
+  const who = document.createElement('span')
+  who.className = 'who'
+  who.textContent = `@${g.login} via ${SOURCE[g.source]}`
+  const week = document.createElement('span')
+  week.className = 'gh-week'
+  week.title = 'Last 7 days, today on the right'
+  g.week.forEach((level, i) => {
+    const sq = document.createElement('span')
+    sq.style.background = GRID[level]
+    if (i === g.week.length - 1) sq.className = 'today'
+    week.append(sq)
+  })
+  const today = document.createElement('span')
+  const mood = g.todayCount === 0 ? 'Catbot is hungry' : `${LEVEL_WORD[g.level]} contributions, Catbot is fed`
+  today.textContent = `Today: ${g.todayCount} (${mood}) · streak ${g.streak} day${g.streak === 1 ? '' : 's'} · updated ${ago(g.fetchedAt)}`
+  ghStatus.append(who, week, today)
+  if (g.error) {
+    const err = document.createElement('span')
+    err.className = 'err'
+    err.textContent = `Last refresh failed: ${g.error}`
+    ghStatus.append(err)
   }
+}
+
+function ago(at: number): string {
+  if (!at) return 'never'
+  const m = Math.round((Date.now() - at) / 60000)
+  return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`
 }
 
 function updateValues(): void {
@@ -70,28 +100,38 @@ function collect(): Settings {
     movement: (form.elements.namedItem('movement') as RadioNodeList).value === 'ground' ? 'ground' : 'roam',
     onTopOfApps: field('onTopOfApps').checked,
     followCursor: field('followCursor').checked,
-    peckishAfterHours: Number(field('peckishAfterHours').value),
-    hungryAfterHours: Number(field('hungryAfterHours').value),
-    starvingAfterHours: Number(field('starvingAfterHours').value),
+    githubUser: field('githubUser').value,
     quietHoursEnabled: field('quietHoursEnabled').checked,
     quietStart: field('quietStart').value,
-    quietEnd: field('quietEnd').value,
-    gitEmail: field('gitEmail').value,
-    repos: []
+    quietEnd: field('quietEnd').value
   }
 }
 
 form.addEventListener('input', updateValues)
 form.addEventListener('submit', async (e) => {
   e.preventDefault()
-  render(await api.saveSettings(collect(), field('startWithWindows').checked))
-  savedEl.textContent = 'Saved'
-  setTimeout(() => (savedEl.textContent = ''), 2000)
+  savedEl.textContent = 'Saving...'
+  const token = tokenInput.value.trim() ? tokenInput.value.trim() : tokenAction
+  try {
+    render(await api.saveSettings(collect(), field('startWithWindows').checked, token))
+    savedEl.textContent = 'Saved'
+  } catch (err) {
+    savedEl.textContent = (err as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+  }
+  setTimeout(() => (savedEl.textContent = ''), 3000)
 })
-document.getElementById('addRepo')!.addEventListener('click', async () => {
-  const res = await api.pickRepo()
-  if (res.ok) render(await api.getSettings())
+clearTokenBtn.addEventListener('click', () => {
+  tokenAction = null
+  tokenInput.value = ''
+  tokenHint.textContent = 'The saved token will be removed when you click Save.'
 })
-api.onSettings((s) => renderRepos(s.repos))
+refreshBtn.addEventListener('click', async () => {
+  refreshBtn.disabled = true
+  refreshBtn.textContent = 'Refreshing...'
+  renderGitHub(await api.refreshGitHub())
+  refreshBtn.disabled = false
+  refreshBtn.textContent = 'Refresh now'
+})
+api.onSettings(() => void api.getSettings().then(renderGitHub))
 
 void api.getSettings().then(render)

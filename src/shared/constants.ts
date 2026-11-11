@@ -13,14 +13,8 @@ export const IDLE_FRAME_MS = 100
 export const TOPMOST_REASSERT_MS = 1500
 /** How often desktop-mode overlays are tucked back just above the desktop. */
 export const DESKTOP_REASSERT_MS = 600
-/** How often watched repos are checked for new commits. */
-export const GIT_POLL_MS = 60_000
-
-/** Food from one commit, in hours of hunger removed. */
-export const FOOD_BASE_HOURS = 3
-/** Extra food for bigger diffs: +1h per 10x lines changed, capped. */
-export const FOOD_BONUS_PER_DECADE = 1
-export const FOOD_BONUS_CAP_HOURS = 3
+/** How often the GitHub contribution chart is re-read. */
+export const GITHUB_POLL_MS = 3 * 60_000
 
 /** Allowed pet heights: big enough to see, small enough not to get in the way. */
 export const PET_SIZE_MIN = 48
@@ -33,14 +27,10 @@ export const DEFAULT_SETTINGS: Settings = {
   movement: 'roam',
   onTopOfApps: false,
   followCursor: true,
-  peckishAfterHours: 2,
-  hungryAfterHours: 4,
-  starvingAfterHours: 8,
+  githubUser: '',
   quietHoursEnabled: true,
   quietStart: '23:00',
-  quietEnd: '08:00',
-  gitEmail: '',
-  repos: []
+  quietEnd: '08:00'
 }
 
 /** IPC channel names, shared by main, preload and renderer. */
@@ -64,6 +54,5 @@ export const IPC = {
   settingsChanged: 'settings:changed',
   settingsGet: 'settings:get',
   settingsSave: 'settings:save',
-  repoPick: 'settings:repo-pick',
-  repoRemove: 'settings:repo-remove'
+  githubRefresh: 'settings:github-refresh'
 } as const

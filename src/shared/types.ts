@@ -52,25 +52,40 @@ export interface PetPose {
   model: Record<string, unknown>
 }
 
-export type HungerStage = 'full' | 'peckish' | 'hungry' | 'starving'
+/** GitHub's contribution levels: 0 = no contributions, 1..4 = "Less" .. "More" on the profile chart. */
+export type ContributionLevel = 0 | 1 | 2 | 3 | 4
+
+export interface ContributionDay {
+  date: string
+  count: number
+  level: ContributionLevel
+}
+
+/** Where the contribution data came from. */
+export type GitHubSource = 'token' | 'gh' | 'public' | 'none'
+
+export type HungerStage = 'fed' | 'hungry' | 'starving'
 
 export interface PetStatus {
   name: string
+  /** fed = contributed today; hungry = nothing today; starving = nothing today or yesterday. */
   stage: HungerStage
-  /** 1 = completely full, 0 = starving. */
-  fullness: number
-  /** Unix ms of the newest commit eaten, or null if none yet. */
-  lastCommitAt: number | null
+  /** Today's square on the contribution chart (0..4). */
+  level: ContributionLevel
+  todayCount: number
+  /** Consecutive days with contributions, up to today (or yesterday). */
+  streak: number
+  /** Levels of the last 7 days, oldest first. */
+  week: ContributionLevel[]
+  login: string | null
+  /** Whether contribution data has been loaded at least once. */
+  connected: boolean
   quiet: boolean
-  paused: boolean
-  repoCount: number
 }
 
 export interface FeedEvent {
+  /** New contributions since the last check. */
   commits: number
-  lines: number
-  /** Hours of hunger the meal removed. */
-  foodHours: number
   debug?: boolean
 }
 
@@ -88,16 +103,12 @@ export interface Settings {
   onTopOfApps: boolean
   /** Catbot follows the cursor while it moves over the desktop. */
   followCursor: boolean
-  peckishAfterHours: number
-  hungryAfterHours: number
-  starvingAfterHours: number
+  /** GitHub username whose contribution chart drives Catbot's mood (empty = the signed-in account). */
+  githubUser: string
   quietHoursEnabled: boolean
   /** "HH:MM", 24h clock. */
   quietStart: string
   quietEnd: string
-  /** Author email to count commits for; empty = use each repo's `git config user.email`. */
-  gitEmail: string
-  repos: string[]
 }
 
 export interface OverlayInit {
@@ -110,15 +121,22 @@ export interface OverlayInit {
   ledge: WindowLedge | null
 }
 
-export interface SettingsView {
-  settings: Settings
-  detectedEmail: string
-  startWithWindows: boolean
+export interface GitHubView {
+  login: string | null
+  source: GitHubSource
+  todayCount: number
+  level: ContributionLevel
+  streak: number
+  /** Levels of the last 7 days, oldest first. */
+  week: ContributionLevel[]
+  fetchedAt: number
+  error: string | null
+  hasSavedToken: boolean
+  ghAvailable: boolean
 }
 
-export interface RepoResult {
-  ok: boolean
-  path?: string
-  error?: string
-  canceled?: boolean
+export interface SettingsView {
+  settings: Settings
+  github: GitHubView
+  startWithWindows: boolean
 }

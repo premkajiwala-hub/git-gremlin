@@ -80,6 +80,7 @@ export const RANDOM_LINES = [
   'PURRING AT 60 HZ.'
 ]
 const HUNGRY_LINES = [
+  'NO CONTRIBUTIONS TODAY... FEED ME COMMITS',
   'LOW BATTERY... FEED ME COMMITS',
   '*WHIRRR* SO HUNGRY...',
   '*SIGH*',
@@ -87,9 +88,74 @@ const HUNGRY_LINES = [
   'GIT COMMIT -M "FOOD"?',
   'ERROR 404: SNACK NOT FOUND'
 ]
-const PECKISH_LINES = ['SNACK TIME SOON?', 'ENERGY DIPPING. A COMMIT WOULD BE NICE.', '*TUMMY BEEP*']
-const STARVING_LINES = ['...', 'B-BATTERY CRITICAL...', 'C-COMMIT... PLEASE...']
+/** Remarks when fed, by contribution level ('#' = today's count). */
+const FED_LINES: string[][] = [
+  [],
+  ['# CONTRIBUTIONS TODAY. A FEW MORE?', 'SNACKED. COULD EAT MORE COMMITS.', 'WARMING UP MY CIRCUITS...'],
+  ['# CONTRIBUTIONS! TASTY.', 'NICE AND STEADY TODAY.', 'PURR... COMMITS ARE GOOD.'],
+  ['# CONTRIBUTIONS! FULL BATTERY!', 'BIG DAY! ZOOMIES TIME!', 'YOUR GRAPH IS GLOWING GREEN!'],
+  ['# CONTRIBUTIONS?! LEGENDARY!', 'MAXIMUM GREEN ACHIEVED!', 'I AM POWERED BY YOUR COMMITS!']
+]
+const STARVING_LINES = ['...', 'B-BATTERY CRITICAL...', 'TWO DAYS WITHOUT COMMITS...', 'C-COMMIT... PLEASE...']
 const EAT_LINES = ['NOM.EXE COMPLETE!', 'CRUNCHY COMMIT!', 'BYTES DIGESTED!', 'MMM, FRESH CODE.']
+
+/**
+ * What Catbot chooses to do next, by today's contribution level:
+ * 0 = no contributions (hungry), 1 = "Less" ... 4 = "More" on the GitHub chart.
+ */
+const LEVEL_WEIGHTS: [string, number][][] = [
+  [
+    ['idle', 30],
+    ['walk', 35],
+    ['crawl', 10],
+    ['sit', 25]
+  ],
+  [
+    ['idle', 26],
+    ['walk', 34],
+    ['run', 4],
+    ['crawl', 8],
+    ['hop', 3],
+    ['window', 6],
+    ['sit', 14],
+    ['curious', 5]
+  ],
+  [
+    ['idle', 20],
+    ['walk', 30],
+    ['run', 9],
+    ['crawl', 7],
+    ['hop', 6],
+    ['window', 10],
+    ['sit', 10],
+    ['curious', 5],
+    ['nap', 3]
+  ],
+  [
+    ['idle', 14],
+    ['walk', 26],
+    ['run', 16],
+    ['crawl', 5],
+    ['hop', 11],
+    ['window', 12],
+    ['sit', 6],
+    ['curious', 5],
+    ['dance', 5]
+  ],
+  [
+    ['idle', 10],
+    ['walk', 22],
+    ['run', 22],
+    ['crawl', 3],
+    ['hop', 15],
+    ['window', 12],
+    ['sit', 4],
+    ['curious', 4],
+    ['dance', 8]
+  ]
+]
+/** Walking speed multiplier by contribution level (when fed). */
+const LEVEL_SPEED = [0.5, 0.85, 1, 1.15, 1.3]
 
 type Gait = 'walk' | 'run' | 'crawl'
 const GAIT_SPEED: Record<Gait, number> = { walk: 1, run: 2.4, crawl: 0.45 }
@@ -523,36 +589,8 @@ export class PetBrain {
       return this.walkOffWindow()
     }
 
-    const weights: [string, number][] =
-      this.stage === 'hungry'
-        ? [
-            ['idle', 30],
-            ['walk', 35],
-            ['crawl', 10],
-            ['sit', 25]
-          ]
-        : this.stage === 'peckish'
-          ? [
-              ['idle', 22],
-              ['walk', 32],
-              ['run', 6],
-              ['crawl', 10],
-              ['hop', 4],
-              ['window', 8],
-              ['sit', 12],
-              ['curious', 6]
-            ]
-          : [
-              ['idle', 18],
-              ['walk', 28],
-              ['run', 12],
-              ['crawl', 7],
-              ['hop', 7],
-              ['window', 12],
-              ['sit', 8],
-              ['curious', 4],
-              ['nap', 4]
-            ]
+    // Busier days on the contribution chart make a livelier Catbot.
+    const weights = this.stage === 'hungry' ? LEVEL_WEIGHTS[0] : LEVEL_WEIGHTS[Math.max(1, this.status.level)]
     let r = Math.random() * weights.reduce((s, [, w]) => s + w, 0)
     let choice = weights[0][0]
     for (const [name, w] of weights) {
@@ -578,6 +616,8 @@ export class PetBrain {
         return this.set('curious', 1.6)
       case 'nap':
         return this.set('sleep', rand(10, 25))
+      case 'dance':
+        return this.set('happy', rand(1.5, 2.5))
       default:
         return this.set('idle', rand(2, 5))
     }
@@ -721,7 +761,9 @@ export class PetBrain {
     this.jump = null
     this.following = false
     this.set('eat', 2.8)
-    const what = ev.debug ? 'NOM.EXE (DEBUG SNACK)' : `${pickOne(EAT_LINES)} +${ev.commits} COMMIT${ev.commits === 1 ? '' : 'S'}`
+    const what = ev.debug
+      ? 'NOM.EXE (DEBUG SNACK)'
+      : `${pickOne(EAT_LINES)} +${ev.commits} CONTRIBUTION${ev.commits === 1 ? '' : 'S'}`
     this.hooks.say(what, 2600)
   }
 
@@ -743,8 +785,8 @@ export class PetBrain {
 
   // --- movement & physics ------------------------------------------------------------------
   private speed(gait: Gait): number {
-    const stageMul = this.stage === 'hungry' ? 0.5 : this.stage === 'starving' ? 0.3 : 1
-    return this.settings.petSpeed * stageMul * GAIT_SPEED[gait]
+    const moodMul = this.stage === 'hungry' ? 0.5 : this.stage === 'starving' ? 0.3 : LEVEL_SPEED[Math.max(1, this.status.level)]
+    return this.settings.petSpeed * moodMul * GAIT_SPEED[gait]
   }
 
   /** Walk in a straight line toward (tx, ty). Returns true on arrival. */
@@ -940,29 +982,36 @@ export class PetBrain {
     } else if (this.stage === 'starving') {
       this.hooks.say(pickOne(STARVING_LINES), 2500)
       this.nagT = rand(60, 120)
-    } else if (this.stage === 'peckish') {
-      this.hooks.say(pickOne(PECKISH_LINES), 2500)
-      this.nagT = rand(240, 420)
     } else {
-      this.nagT = rand(30, 60)
+      // Fed: the occasional remark that matches how busy today has been.
+      const lines = FED_LINES[this.status.level] ?? FED_LINES[1]
+      const n = this.status.todayCount
+      const counted = `${n} CONTRIBUTION${n === 1 ? '' : 'S'}`
+      if (chance(0.5)) this.hooks.say(pickOne(lines).replace('# CONTRIBUTIONS', counted), 2600)
+      this.nagT = rand(150, 300)
     }
   }
 
   // --- what to draw ---------------------------------------------------------------------------
   render(): RenderState {
     const hungry = this.stage === 'hungry' || this.stage === 'starving'
+    const level = hungry ? 0 : Math.max(1, this.status.level)
     let anim: AnimName = hungry ? 'idle_sad' : 'idle'
     let rate = 1
-    let mood: Mood = this.blinking > 0 ? 'blink' : hungry ? 'sad' : 'idle'
+    // Face by contribution level: sad (none), calm ^ ^ (less/some), beaming > < more and more often (lots/more).
+    const beaming = level >= 4 || (level === 3 && Math.sin(this.clock * 0.8) > 0.2)
+    let mood: Mood = this.blinking > 0 ? 'blink' : hungry ? 'sad' : beaming ? 'happy' : 'idle'
     let bob = 0
     let food = 0
-    let glow = this.stage === 'full' || this.stage === 'peckish'
+    let glow = this.stage === 'fed'
     let fixedFrame: number | null = null
 
     switch (this.activity) {
       case 'walk':
         anim = hungry ? 'walk_sad' : 'walk'
         rate = this.speed('walk') / Math.max(1, this.settings.petSpeed) / (hungry ? 0.7 : 1)
+        // A spring in its step on good days.
+        if (level >= 3) bob = Math.abs(Math.sin(this.animT * Math.PI * 3)) * (level - 2)
         break
       case 'run':
         anim = 'run'

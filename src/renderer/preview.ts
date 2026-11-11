@@ -4,7 +4,7 @@
  * http://localhost:5173/preview.html while `npm start` is running.
  */
 import { DEFAULT_SETTINGS } from '../shared/constants'
-import type { DisplayInfo, FeedEvent, OverlayInit, PetStatus, Settings, WindowLedge } from '../shared/types'
+import type { ContributionLevel, DisplayInfo, FeedEvent, OverlayInit, PetStatus, Settings, WindowLedge } from '../shared/types'
 
 type Cb = (...args: any[]) => void
 const listeners: Record<string, Cb[]> = {}
@@ -26,7 +26,17 @@ const display: DisplayInfo = {
   groundY: H - 40
 }
 const settings: Settings = { ...DEFAULT_SETTINGS, petSize: 96 }
-let status: PetStatus = { name: 'Catbot', stage: 'full', fullness: 1, lastCommitAt: Date.now() - 3_600_000, quiet: false, paused: false, repoCount: 1 }
+let status: PetStatus = {
+  name: 'Catbot',
+  stage: 'fed',
+  level: 2,
+  todayCount: 5,
+  streak: 4,
+  week: [0, 1, 2, 2, 3, 1, 2],
+  login: 'preview-user',
+  connected: true,
+  quiet: false
+}
 const fake = document.getElementById('fakewin')!.getBoundingClientRect()
 const ledge: WindowLedge = { hwnd: 42, x: fake.left, y: fake.top, width: fake.width, height: fake.height }
 let cursor = { x: -1000, y: -1000 }
@@ -54,19 +64,27 @@ const init: OverlayInit = { display, displays: [display], isOwner: true, snapsho
   onSettings: on('settings')
 }
 
-function setStage(stage: PetStatus['stage'], fullness: number, quiet = false): void {
-  status = { ...status, stage, fullness, quiet }
+/** Set today's contribution count/level, like a square on the GitHub chart. */
+function setLevel(level: ContributionLevel, count: number, starving = false): void {
+  const week = [...status.week.slice(1, 6), starving ? 0 : 1, level] as ContributionLevel[]
+  status = { ...status, level, todayCount: count, stage: count > 0 ? 'fed' : starving ? 'starving' : 'hungry', week }
   emit('status', status)
 }
+const setStage = (stage: PetStatus['stage']) => setLevel(stage === 'fed' ? 2 : 0, stage === 'fed' ? 5 : 0, stage === 'starving')
 
 const actions: Record<string, () => void> = {
-  Feed: () => emit('feed', { commits: 2, lines: 80, foodHours: 5 } satisfies FeedEvent),
+  Feed: () => emit('feed', { commits: 2 } satisfies FeedEvent),
   Say: () => emit('say', 'HELLO! I AM CATBOT. BEEP BOOP, FEED ME COMMITS.'),
-  Full: () => setStage('full', 1),
-  Peckish: () => setStage('peckish', 0.7),
-  Hungry: () => setStage('hungry', 0.4),
-  Starving: () => setStage('starving', 0),
-  'Quiet hours': () => setStage(status.stage, status.fullness, !status.quiet),
+  Starving: () => setLevel(0, 0, true),
+  '0 (hungry)': () => setLevel(0, 0),
+  '1 Less': () => setLevel(1, 2),
+  '2': () => setLevel(2, 5),
+  '3': () => setLevel(3, 8),
+  '4 More': () => setLevel(4, 14),
+  'Quiet hours': () => {
+    status = { ...status, quiet: !status.quiet }
+    emit('status', status)
+  },
   'Window moved': () => emit('standingLost', 42),
   'Bottom only': () => emit('settings', { ...settings, movement: settings.movement === 'roam' ? 'ground' : 'roam' })
 }

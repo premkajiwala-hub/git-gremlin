@@ -22,6 +22,12 @@ const TAIL = 5
 const MAX_CHARS = 24
 const TYPE_RATE = 45 // characters per second
 
+/** A text line consisting of just this character is drawn as the contribution squares. */
+export const GRID_MARK = '▦'
+/** GitHub's dark-theme contribution colours, level 0..4. */
+const GRID = ['#161b22', '#0e4429', '#006d32', '#26a641', '#39d353']
+const GRID_EDGE = '#2d333b'
+
 export type Mood = 'ok' | 'warn' | 'bad'
 const LED: Record<Mood, string> = { ok: '#5ef2ff', warn: '#ffb21e', bad: '#ff4d5e' }
 
@@ -41,6 +47,7 @@ export class SpeechBubble {
   private cssW = 0
   private cssH = 0
   private lastKey = ''
+  private grid: number[] = []
   visible = false
 
   constructor(container: HTMLElement) {
@@ -49,7 +56,12 @@ export class SpeechBubble {
     container.appendChild(this.canvas)
   }
 
-  show(text: string, ms: number, title: string, mood: Mood): void {
+  /**
+   * Show a message. A line consisting of just GRID_MARK is drawn as a row of
+   * contribution squares from `grid` (levels 0-4, oldest first, today last).
+   */
+  show(text: string, ms: number, title: string, mood: Mood, grid: number[] = []): void {
+    this.grid = grid
     this.lines = wrap(text, MAX_CHARS)
     this.title = title.toUpperCase().slice(0, 18)
     this.mood = mood
@@ -173,7 +185,24 @@ export class SpeechBubble {
       return part
     })
     c.fillStyle = C.text
-    drawText(c, visible, sx + PAD, sy + PAD, px)
+    drawText(
+      c,
+      visible.map((v) => (v === GRID_MARK ? '' : v)),
+      sx + PAD,
+      sy + PAD,
+      px
+    )
+    // Contribution squares, GitHub-green, today last with a cyan underline.
+    visible.forEach((v, li) => {
+      if (v !== GRID_MARK) return
+      const y0 = sy + PAD + li * LINE_H
+      this.grid.forEach((level, i) => {
+        const x0 = sx + PAD + i * 8
+        rect(x0, y0, 7, 7, GRID_EDGE)
+        rect(x0 + 1, y0 + 1, 5, 5, GRID[Math.max(0, Math.min(4, level))])
+        if (i === this.grid.length - 1) rect(x0, y0 + 8, 7, 1, C.text)
+      })
+    })
     if (cursorOn) {
       let li = visible.findIndex((v, i) => v.length < this.lines[i].length)
       if (li < 0) li = visible.length - 1

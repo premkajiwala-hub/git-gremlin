@@ -1,9 +1,7 @@
-import { basename } from 'node:path'
-import { app, BrowserWindow, dialog, ipcMain, powerMonitor } from 'electron'
+import { app, ipcMain, powerMonitor } from 'electron'
 import { APP_ID, DEFAULT_SETTINGS, IPC, PET_SIZE_MAX, PET_SIZE_MIN } from '../shared/constants'
-import type { FeedEvent, PetStatus, RepoResult, Settings, SettingsView } from '../shared/types'
-import { GitWatcher, type NewCommit } from './git'
-import { Hunger } from './hunger'
+import type { FeedEvent, PetStatus, Settings, SettingsView } from '../shared/types'
+import { GitHubWatcher, localDate, moodFrom, type GitHubData } from './github'
 import { OverlayManager } from './overlay'
 import { openSettingsWindow, settingsWindow } from './settings-window'
 import { Store } from './store'
@@ -22,31 +20,24 @@ if (!app.requestSingleInstanceLock()) {
     // Chromium inserts its own --switches into argv, so take the first non-switch after --say.
     const sayAt = argv.indexOf('--say')
     const sayText = sayAt >= 0 ? argv.slice(sayAt + 1).find((a) => !a.startsWith('--')) : undefined
-    if (argv.includes('--feed')) feedNow()
+    if (argv.includes('--feed')) feedPet({ commits: 1, debug: true })
     else if (argv.includes('--settings')) openSettingsWindow()
     else if (sayText) overlays.sendToPet(IPC.say, sayText.toUpperCase())
     else setHidden(false)
   })
 }
 
-function feedNow(): void {
-  const foodHours = hunger.feed(40)
-  feedPet({ commits: 1, lines: 40, foodHours, debug: true })
-}
-
 let store: Store
-let hunger: Hunger
 let overlays: OverlayManager
 let tracker: WindowTracker
-let git: GitWatcher
+let github: GitHubWatcher
 let tray: AppTray
 let hideTimer: NodeJS.Timeout | null = null
-let lastStage = ''
+let hinted = false
 
 function start(): void {
   store = new Store()
   store.load()
-  hunger = new Hunger(store)
 
   tracker = new WindowTracker(
     (ledge) => overlays.broadcast(IPC.ledge, ledge),
@@ -63,18 +54,10 @@ function start(): void {
     },
     onStanding: (hwnd) => tracker.setStanding(hwnd)
   })
-  git = new GitWatcher(store, onCommits)
+  github = new GitHubWatcher(store, onGitHub)
   tray = new AppTray({
-    feedNow,
-    addRepo: () => void pickRepo(null),
-    removeRepo: (path) => {
-      git.removeRepo(path)
-      changed()
-    },
-    togglePause: () => {
-      hunger.setPaused(!hunger.paused)
-      changed()
-    },
+    feedNow: () => feedPet({ commits: 1, debug: true }),
+    refreshGitHub: () => void github.refresh(),
     hideForHour: () => setHidden(true, 60 * 60_000),
     showPet: () => setHidden(false),
     openSettings: () => openSettingsWindow(),
@@ -87,52 +70,79 @@ function start(): void {
 
   overlays.start()
   tracker.start()
-  git.start()
+  github.start()
   registerSettingsIpc()
 
-  // Hunger pauses while the PC is locked or asleep.
-  powerMonitor.on('lock-screen', () => hunger.setAsleep(true))
-  powerMonitor.on('unlock-screen', () => hunger.setAsleep(false))
-  powerMonitor.on('suspend', () => hunger.setAsleep(true))
-  powerMonitor.on('resume', () => hunger.setAsleep(false))
+  // Catch up as soon as the PC wakes or unlocks.
+  powerMonitor.on('unlock-screen', () => void github.refresh())
+  powerMonitor.on('resume', () => void github.refresh())
 
-  setInterval(() => {
-    hunger.tick()
-    pushStatus()
-  }, 30_000)
+  // Re-evaluate every minute (quiet hours, and the new day starting at midnight).
+  setInterval(pushStatus, 60_000)
   pushStatus()
-
-  if (store.state.settings.repos.length === 0) {
-    setTimeout(() => overlays.sendToPet(IPC.say, 'HI! RIGHT-CLICK MY TRAY ICON AND PICK "ADD REPO..." SO I CAN EAT YOUR COMMITS.'), 6000)
-  }
 }
 
+function inQuietHours(s: Settings, now = new Date()): boolean {
+  if (!s.quietHoursEnabled) return false
+  const toMin = (hhmm: string) => {
+    const [h, m] = hhmm.split(':').map(Number)
+    return (h || 0) * 60 + (m || 0)
+  }
+  const start = toMin(s.quietStart)
+  const end = toMin(s.quietEnd)
+  const cur = now.getHours() * 60 + now.getMinutes()
+  if (start === end) return false
+  return start < end ? cur >= start && cur < end : cur >= start || cur < end
+}
+
+/** Catbot's mood, straight from today's square on the GitHub contribution chart. */
 function status(): PetStatus {
+  const data = github.data
+  const mood = moodFrom(data.days)
   return {
     name: store.state.settings.petName,
-    stage: hunger.stage(),
-    fullness: hunger.fullness(),
-    lastCommitAt: store.state.hunger.lastCommitAt,
-    quiet: hunger.quiet(),
-    paused: hunger.paused,
-    repoCount: store.state.settings.repos.length
+    stage: mood.stage,
+    level: mood.level,
+    todayCount: mood.todayCount,
+    streak: mood.streak,
+    week: mood.week,
+    login: data.login,
+    connected: data.days.length > 0,
+    quiet: inQuietHours(store.state.settings)
   }
 }
 
 function pushStatus(): void {
   const s = status()
   overlays.broadcast(IPC.status, s)
-  tray.update({
-    status: s,
-    repos: store.state.settings.repos,
-    paused: hunger.paused,
-    hidden: overlays.isHidden,
-    startWithWindows: startWithWindows()
-  })
-  if (s.stage !== lastStage) {
-    lastStage = s.stage
-    store.saveSoon()
+  tray.update({ status: s, hidden: overlays.isHidden, startWithWindows: startWithWindows() })
+}
+
+/** New contribution data: update the mood, and feed Catbot for any new contributions today. */
+function onGitHub(data: GitHubData, previous: GitHubData): void {
+  const today = localDate()
+  const before = previous.days.find((d) => d.date === today)?.count ?? 0
+  const now = data.days.find((d) => d.date === today)?.count ?? 0
+  const sameAccount = previous.login === data.login && previous.days.length > 0
+  pushStatus()
+  if (sameAccount && now > before) {
+    feedPet({ commits: now - before })
+    const prevLevel = previous.days.find((d) => d.date === today)?.level ?? 0
+    const level = data.days.find((d) => d.date === today)?.level ?? 0
+    if (level > prevLevel && prevLevel > 0) {
+      setTimeout(() => overlays.sendToPet(IPC.say, `LEVEL UP! TODAY'S SQUARE IS NOW ${level}/4`), 4500)
+    }
   }
+  if (!data.days.length && !hinted) {
+    hinted = true
+    setTimeout(() => overlays.sendToPet(IPC.say, 'LINK YOUR GITHUB IN SETTINGS SO I KNOW IF YOU CODED TODAY!'), 5000)
+  }
+  settingsWindow()?.webContents.send(IPC.settingsChanged, store.state.settings)
+}
+
+/** Play the eating animation (contributions arrived, or a debug snack). */
+function feedPet(ev: FeedEvent): void {
+  overlays.sendToPet(IPC.feed, ev)
 }
 
 /** Something user-visible changed: tell everyone and save. */
@@ -141,22 +151,6 @@ function changed(): void {
   pushStatus()
   overlays.broadcast(IPC.settingsChanged, store.state.settings)
   settingsWindow()?.webContents.send(IPC.settingsChanged, store.state.settings)
-}
-
-function onCommits(commits: NewCommit[]): void {
-  let foodHours = 0
-  let lines = 0
-  for (const c of commits) {
-    foodHours += hunger.feed(c.linesChanged, c.at)
-    lines += c.linesChanged
-  }
-  feedPet({ commits: commits.length, lines, foodHours })
-}
-
-/** Hunger has already been updated; this plays the eat animation (off-screen if hidden). */
-function feedPet(ev: FeedEvent): void {
-  overlays.sendToPet(IPC.feed, ev)
-  pushStatus()
 }
 
 function setHidden(hidden: boolean, ms?: number): void {
@@ -185,29 +179,23 @@ function setStartWithWindows(on: boolean): void {
   app.setLoginItemSettings({ openAtLogin: on, ...loginItem() })
 }
 
-async function pickRepo(parent: BrowserWindow | null): Promise<RepoResult> {
-  const opts: Electron.OpenDialogOptions = {
-    title: 'Choose a git repository to watch',
-    properties: ['openDirectory']
-  }
-  const res = parent ? await dialog.showOpenDialog(parent, opts) : await dialog.showOpenDialog(opts)
-  if (res.canceled || !res.filePaths[0]) return { ok: false, canceled: true }
-  const result = await git.addRepo(res.filePaths[0])
-  if (!result.ok) {
-    const box: Electron.MessageBoxOptions = { type: 'warning', title: 'Not added', message: result.error ?? 'Could not add that folder.' }
-    if (parent) await dialog.showMessageBox(parent, box)
-    else await dialog.showMessageBox(box)
-    return result
-  }
-  changed()
-  overlays.sendToPet(IPC.say, `OOH, A NEW PANTRY: ${basename(result.path!)}!`)
-  return result
-}
-
 async function settingsView(): Promise<SettingsView> {
+  const data = github.data
+  const mood = moodFrom(data.days)
   return {
     settings: store.state.settings,
-    detectedEmail: await git.detectedEmail(),
+    github: {
+      login: data.login,
+      source: data.days.length ? data.source : 'none',
+      todayCount: mood.todayCount,
+      level: mood.level,
+      streak: mood.streak,
+      week: mood.week,
+      fetchedAt: data.fetchedAt,
+      error: data.error,
+      hasSavedToken: github.hasSavedToken,
+      ghAvailable: (await github.ghToken()) !== null
+    },
     startWithWindows: startWithWindows()
   }
 }
@@ -219,11 +207,7 @@ function sanitize(input: Settings): Settings {
     return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : def
   }
   const time = (v: unknown, def: string) => (typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : def)
-  const hours = [
-    num(input.peckishAfterHours, DEFAULT_SETTINGS.peckishAfterHours, 0.1, 72),
-    num(input.hungryAfterHours, DEFAULT_SETTINGS.hungryAfterHours, 0.1, 72),
-    num(input.starvingAfterHours, DEFAULT_SETTINGS.starvingAfterHours, 0.1, 72)
-  ].sort((a, b) => a - b)
+  const user = String(input.githubUser ?? '').trim().replace(/^@/, '')
   return {
     petName: String(input.petName ?? '').trim().slice(0, 24) || cur.petName,
     petSize: Math.round(num(input.petSize, DEFAULT_SETTINGS.petSize, PET_SIZE_MIN, PET_SIZE_MAX)),
@@ -231,31 +215,27 @@ function sanitize(input: Settings): Settings {
     movement: input.movement === 'ground' ? 'ground' : 'roam',
     onTopOfApps: Boolean(input.onTopOfApps),
     followCursor: Boolean(input.followCursor),
-    peckishAfterHours: hours[0],
-    hungryAfterHours: hours[1],
-    starvingAfterHours: hours[2],
+    githubUser: /^[A-Za-z0-9-]{1,39}$/.test(user) ? user : '',
     quietHoursEnabled: Boolean(input.quietHoursEnabled),
     quietStart: time(input.quietStart, cur.quietStart),
-    quietEnd: time(input.quietEnd, cur.quietEnd),
-    gitEmail: String(input.gitEmail ?? '').trim(),
-    repos: cur.repos // managed through add/remove
+    quietEnd: time(input.quietEnd, cur.quietEnd)
   }
 }
 
 function registerSettingsIpc(): void {
   ipcMain.handle(IPC.settingsGet, () => settingsView())
-  ipcMain.handle(IPC.settingsSave, async (_e, s: Settings, sww: boolean) => {
-    hunger.tick()
+  ipcMain.handle(IPC.settingsSave, async (_e, s: Settings, sww: boolean, token?: string | null) => {
+    const prevUser = store.state.settings.githubUser
     store.state.settings = sanitize(s)
     overlays.setOnTop(store.state.settings.onTopOfApps)
     if (sww !== startWithWindows()) setStartWithWindows(Boolean(sww))
+    github.setToken(token)
     changed()
+    if (token !== undefined || prevUser !== store.state.settings.githubUser) await github.refresh()
     return settingsView()
   })
-  ipcMain.handle(IPC.repoPick, (e) => pickRepo(BrowserWindow.fromWebContents(e.sender)))
-  ipcMain.handle(IPC.repoRemove, (_e, path: string) => {
-    git.removeRepo(path)
-    changed()
+  ipcMain.handle(IPC.githubRefresh, async () => {
+    await github.refresh()
     return settingsView()
   })
 }
@@ -265,10 +245,9 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
-  hunger?.tick()
   if (overlays?.snapshot) store.state.pet = overlays.snapshot
   store?.flush()
-  git?.stop()
+  github?.stop()
   tracker?.stop()
   overlays?.stop()
   tray?.destroy()
