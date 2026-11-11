@@ -104,7 +104,7 @@ Dusty scans a short list of **known junk locations** every hour (you can change 
 |---|---|---|
 | Developer caches | On | npm (`npm-cache\_cacache`), Yarn, pnpm metadata, pip, NuGet HTTP/plugins caches, Electron and electron-builder download caches |
 | Recycle Bin | On | Emptied through Windows itself. Permanent, so it's always confirmed |
-| Temp files | Off | Your `%TEMP%` folder, only entries older than a day |
+| Temp files | Off | Everything currently in your `%TEMP%` folder. Files that programs are using right now are skipped |
 | Browser caches | Off | Chrome, Edge, Brave (`Cache`, `Code Cache`, `GPUCache` per profile) and Firefox (`cache2`). Never history, passwords or cookies. Skipped while that browser is running |
 
 **Safety rules** (in [`src/main/junk.ts`](src/main/junk.ts)):
@@ -112,7 +112,7 @@ Dusty scans a short list of **known junk locations** every hour (you can change 
 - Only the locations above are ever touched, and only their *contents*: the folders themselves stay.
 - Every path must resolve inside `%LOCALAPPDATA%`, `%APPDATA%` or `%TEMP%`, or it's refused.
 - Links and junctions are never followed (deleting one removes the link, not what it points to).
-- Files in use are skipped and counted, nothing else happens.
+- Files in use are skipped one by one and counted; the rest of their folder is still cleaned.
 - Only categories from the latest scan can be cleaned, and the panel's Clean button always shows a confirmation listing exactly what goes.
 
 Dusty's mood follows how tidy things are: content when there's little junk, happiest right after a clean, a bit restless when junk piles up.

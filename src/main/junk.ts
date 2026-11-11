@@ -6,14 +6,14 @@
  *   *contents*: the folders themselves are left in place.
  * - Every path is checked to be inside %LOCALAPPDATA%, %APPDATA% or %TEMP%.
  * - Links/junctions are never followed (lstat + rm removes the link, not its target).
- * - Files in use are skipped (the error is counted, nothing else happens).
+ * - Files in use are skipped one by one (counted, nothing else happens), so
+ *   the rest of their folder is still cleaned.
  * - Browser caches are only cleaned while that browser is closed.
- * - Temp files are only removed when they're more than a day old.
  * - The Recycle Bin is emptied through Windows itself, and only when asked.
  */
 import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { lstat, readdir, rm } from 'node:fs/promises'
+import { lstat, readdir, rmdir, unlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve, sep } from 'node:path'
 import type { CleanResult, JunkCategory, JunkTarget, ScanResult } from '../shared/types'
@@ -22,7 +22,6 @@ import { emptyRecycleBin, recycleBinInfo } from './native'
 const LOCAL = process.env.LOCALAPPDATA ?? ''
 const ROAMING = process.env.APPDATA ?? ''
 const TEMP = tmpdir()
-const DAY = 24 * 3_600_000
 
 interface Location {
   id: string
@@ -30,8 +29,6 @@ interface Location {
   label: string
   /** Folders whose contents are junk. */
   roots: string[]
-  /** Only remove entries older than this (ms). */
-  minAgeMs?: number
   /** Browser process that must be closed first. */
   process?: string
   browserName?: string
@@ -71,7 +68,7 @@ async function locations(): Promise<Location[]> {
       label: 'Electron download cache',
       roots: [join(LOCAL, 'electron', 'Cache'), join(LOCAL, 'electron-builder', 'Cache')]
     },
-    { id: 'temp', target: 'temp', label: 'Temp files (older than a day)', roots: [TEMP], minAgeMs: DAY },
+    { id: 'temp', target: 'temp', label: 'Temp files', roots: [TEMP] },
     {
       id: 'chrome',
       target: 'browser',
@@ -155,23 +152,49 @@ async function measure(path: string, budget = { n: 0 }): Promise<{ bytes: number
   return { bytes, items }
 }
 
-/** The removable entries directly inside a root (respecting the minimum age). */
-async function entriesOf(root: string, minAgeMs?: number): Promise<string[]> {
+/** Everything currently directly inside a root. */
+async function entriesOf(root: string): Promise<string[]> {
   if (!isSafe(root) || !existsSync(root)) return []
-  const now = Date.now()
-  const out: string[] = []
-  for (const e of await readdir(root, { withFileTypes: true }).catch(() => [])) {
-    const p = join(root, e.name)
-    if (minAgeMs) {
-      try {
-        if (now - (await lstat(p)).mtimeMs < minAgeMs) continue
-      } catch {
-        continue
-      }
-    }
-    out.push(p)
+  return (await readdir(root).catch(() => [] as string[])).map((name) => join(root, name))
+}
+
+/**
+ * Delete a file or folder tree one entry at a time, without following links:
+ * a file that's in use is skipped (and counted) instead of stopping the rest.
+ * Folders are removed once they're empty. Returns how many entries failed.
+ */
+async function removeTree(path: string, budget = { n: 0 }): Promise<number> {
+  if (++budget.n % 200 === 0) await new Promise((r) => setImmediate(r))
+  let st
+  try {
+    st = await lstat(path)
+  } catch {
+    return 0 // already gone
   }
-  return out
+  if (st.isDirectory() && !st.isSymbolicLink()) {
+    let failed = 0
+    for (const name of await readdir(path).catch(() => [] as string[])) failed += await removeTree(join(path, name), budget)
+    if (failed) return failed
+    try {
+      await rmdir(path)
+      return 0
+    } catch {
+      return 1
+    }
+  }
+  try {
+    await unlink(path)
+    return 0
+  } catch {
+    if (!st.isSymbolicLink()) return 1
+  }
+  // A directory link or junction: rmdir removes the link itself, never what it points to.
+  try {
+    await rmdir(path)
+    return 0
+  } catch {
+    return 1
+  }
 }
 
 export class JunkScanner {
@@ -184,7 +207,7 @@ export class JunkScanner {
       let bytes = 0
       let items = 0
       for (const root of loc.roots) {
-        for (const entry of await entriesOf(root, loc.minAgeMs)) {
+        for (const entry of await entriesOf(root)) {
           const m = await measure(entry)
           bytes += m.bytes
           items += m.items
@@ -216,13 +239,8 @@ export class JunkScanner {
       if (!wanted.has(loc.id) || !targets[loc.target]) continue
       if (loc.process && running.has(loc.process)) continue
       for (const root of loc.roots) {
-        for (const entry of await entriesOf(root, loc.minAgeMs)) {
-          if (!isSafe(entry)) continue
-          try {
-            await rm(entry, { recursive: true, force: true, maxRetries: 1 })
-          } catch {
-            failed++
-          }
+        for (const entry of await entriesOf(root)) {
+          if (isSafe(entry)) failed += await removeTree(entry)
         }
       }
     }
