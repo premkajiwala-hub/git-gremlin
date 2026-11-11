@@ -1,6 +1,7 @@
-import { app, ipcMain, powerMonitor } from 'electron'
+import { app, BrowserWindow, clipboard, ipcMain, powerMonitor, shell } from 'electron'
 import { APP_ID, DEFAULT_SETTINGS, IPC, PET_SIZE_MAX, PET_SIZE_MIN } from '../shared/constants'
-import type { FeedEvent, PetStatus, Settings, SettingsView } from '../shared/types'
+import type { FeedEvent, PetStatus, Settings, SettingsView, SignInCode, SignInResult } from '../shared/types'
+import { clientId, DeviceFlow } from './github-auth'
 import { GitHubWatcher, localDate, moodFrom, type GitHubData } from './github'
 import { OverlayManager } from './overlay'
 import { openSettingsWindow, settingsWindow } from './settings-window'
@@ -71,28 +72,19 @@ function start(): void {
   overlays.start()
   tracker.start()
   github.start()
+  if (github.source === 'none') {
+    hinted = true
+    setTimeout(() => overlays.sendToPet(IPC.say, 'SIGN IN WITH GITHUB IN SETTINGS SO I KNOW IF YOU CODED TODAY!'), 6000)
+  }
   registerSettingsIpc()
 
   // Catch up as soon as the PC wakes or unlocks.
   powerMonitor.on('unlock-screen', () => void github.refresh())
   powerMonitor.on('resume', () => void github.refresh())
 
-  // Re-evaluate every minute (quiet hours, and the new day starting at midnight).
+  // Re-evaluate every minute (the new day starts at midnight).
   setInterval(pushStatus, 60_000)
   pushStatus()
-}
-
-function inQuietHours(s: Settings, now = new Date()): boolean {
-  if (!s.quietHoursEnabled) return false
-  const toMin = (hhmm: string) => {
-    const [h, m] = hhmm.split(':').map(Number)
-    return (h || 0) * 60 + (m || 0)
-  }
-  const start = toMin(s.quietStart)
-  const end = toMin(s.quietEnd)
-  const cur = now.getHours() * 60 + now.getMinutes()
-  if (start === end) return false
-  return start < end ? cur >= start && cur < end : cur >= start || cur < end
 }
 
 /** Catbot's mood, straight from today's square on the GitHub contribution chart. */
@@ -107,8 +99,7 @@ function status(): PetStatus {
     streak: mood.streak,
     week: mood.week,
     login: data.login,
-    connected: data.days.length > 0,
-    quiet: inQuietHours(store.state.settings)
+    connected: github.source !== 'none' && data.days.length > 0
   }
 }
 
@@ -133,9 +124,9 @@ function onGitHub(data: GitHubData, previous: GitHubData): void {
       setTimeout(() => overlays.sendToPet(IPC.say, `LEVEL UP! TODAY'S SQUARE IS NOW ${level}/4`), 4500)
     }
   }
-  if (!data.days.length && !hinted) {
+  if (github.source === 'none' && !hinted) {
     hinted = true
-    setTimeout(() => overlays.sendToPet(IPC.say, 'LINK YOUR GITHUB IN SETTINGS SO I KNOW IF YOU CODED TODAY!'), 5000)
+    setTimeout(() => overlays.sendToPet(IPC.say, 'SIGN IN WITH GITHUB IN SETTINGS SO I KNOW IF YOU CODED TODAY!'), 5000)
   }
   settingsWindow()?.webContents.send(IPC.settingsChanged, store.state.settings)
 }
@@ -181,19 +172,22 @@ function setStartWithWindows(on: boolean): void {
 
 async function settingsView(): Promise<SettingsView> {
   const data = github.data
+  const linked = github.source !== 'none'
   const mood = moodFrom(data.days)
   return {
     settings: store.state.settings,
     github: {
-      login: data.login,
-      source: data.days.length ? data.source : 'none',
+      login: linked ? data.login : null,
+      name: linked ? data.name : null,
+      avatarUrl: linked ? data.avatarUrl : null,
+      source: github.source,
       todayCount: mood.todayCount,
       level: mood.level,
       streak: mood.streak,
       week: mood.week,
       fetchedAt: data.fetchedAt,
       error: data.error,
-      hasSavedToken: github.hasSavedToken,
+      signInAvailable: clientId() !== '',
       ghAvailable: (await github.ghToken()) !== null
     },
     startWithWindows: startWithWindows()
@@ -206,37 +200,76 @@ function sanitize(input: Settings): Settings {
     const n = Number(v)
     return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : def
   }
-  const time = (v: unknown, def: string) => (typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : def)
-  const user = String(input.githubUser ?? '').trim().replace(/^@/, '')
   return {
     petName: String(input.petName ?? '').trim().slice(0, 24) || cur.petName,
     petSize: Math.round(num(input.petSize, DEFAULT_SETTINGS.petSize, PET_SIZE_MIN, PET_SIZE_MAX)),
     petSpeed: Math.round(num(input.petSpeed, DEFAULT_SETTINGS.petSpeed, 10, 150)),
     movement: input.movement === 'ground' ? 'ground' : 'roam',
     onTopOfApps: Boolean(input.onTopOfApps),
-    followCursor: Boolean(input.followCursor),
-    githubUser: /^[A-Za-z0-9-]{1,39}$/.test(user) ? user : '',
-    quietHoursEnabled: Boolean(input.quietHoursEnabled),
-    quietStart: time(input.quietStart, cur.quietStart),
-    quietEnd: time(input.quietEnd, cur.quietEnd)
+    followCursor: Boolean(input.followCursor)
   }
+}
+
+const deviceFlow = new DeviceFlow()
+
+/** Tell the settings window how a sign-in attempt ended. */
+function signInResult(win: BrowserWindow | null, result: SignInResult): void {
+  if (win && !win.isDestroyed()) win.webContents.send(IPC.githubAuthResult, result)
 }
 
 function registerSettingsIpc(): void {
   ipcMain.handle(IPC.settingsGet, () => settingsView())
-  ipcMain.handle(IPC.settingsSave, async (_e, s: Settings, sww: boolean, token?: string | null) => {
-    const prevUser = store.state.settings.githubUser
+  ipcMain.handle(IPC.settingsSave, async (_e, s: Settings, sww: boolean) => {
     store.state.settings = sanitize(s)
     overlays.setOnTop(store.state.settings.onTopOfApps)
     if (sww !== startWithWindows()) setStartWithWindows(Boolean(sww))
-    github.setToken(token)
     changed()
-    if (token !== undefined || prevUser !== store.state.settings.githubUser) await github.refresh()
     return settingsView()
   })
   ipcMain.handle(IPC.githubRefresh, async () => {
     await github.refresh()
     return settingsView()
+  })
+
+  // "Sign in with GitHub": get a one-time code, copy it, open github.com, then
+  // wait for the user to approve GitGremlin on GitHub.
+  ipcMain.handle(IPC.githubSignIn, async (e): Promise<SignInCode> => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const code = await deviceFlow.start(async ({ token, error }) => {
+      if (!token) return signInResult(win, { ok: false, error })
+      try {
+        await github.linkOAuth(token)
+        changed()
+        overlays.sendToPet(IPC.say, `LINKED TO @${github.data.login}! LET'S SEE YOUR SQUARES.`)
+        signInResult(win, { ok: true })
+      } catch (err) {
+        signInResult(win, { ok: false, error: (err as Error).message })
+      }
+    })
+    clipboard.writeText(code.userCode)
+    void shell.openExternal(code.verificationUri)
+    return code
+  })
+  ipcMain.handle(IPC.githubCancelSignIn, () => deviceFlow.cancel())
+  ipcMain.handle(IPC.githubUseCli, async (): Promise<SignInResult> => {
+    try {
+      await github.linkCli()
+      changed()
+      overlays.sendToPet(IPC.say, `LINKED TO @${github.data.login}! LET'S SEE YOUR SQUARES.`)
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, error: (err as Error).message }
+    }
+  })
+  ipcMain.handle(IPC.githubSignOut, async () => {
+    deviceFlow.cancel()
+    github.signOut()
+    changed()
+    return settingsView()
+  })
+  ipcMain.handle(IPC.openExternal, (_e, url: string) => {
+    // Only ever open GitHub pages from the settings window.
+    if (/^https:\/\/github\.com\//.test(url)) void shell.openExternal(url)
   })
 }
 

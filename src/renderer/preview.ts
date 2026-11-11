@@ -34,8 +34,7 @@ let status: PetStatus = {
   streak: 4,
   week: [0, 1, 2, 2, 3, 1, 2],
   login: 'preview-user',
-  connected: true,
-  quiet: false
+  connected: true
 }
 const fake = document.getElementById('fakewin')!.getBoundingClientRect()
 const ledge: WindowLedge = { hwnd: 42, x: fake.left, y: fake.top, width: fake.width, height: fake.height }
@@ -81,8 +80,8 @@ const actions: Record<string, () => void> = {
   '2': () => setLevel(2, 5),
   '3': () => setLevel(3, 8),
   '4 More': () => setLevel(4, 14),
-  'Quiet hours': () => {
-    status = { ...status, quiet: !status.quiet }
+  'Not linked': () => {
+    status = { ...status, connected: !status.connected }
     emit('status', status)
   },
   'Window moved': () => emit('standingLost', 42),

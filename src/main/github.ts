@@ -7,6 +7,8 @@ import type { Store } from './store'
 
 export interface GitHubData {
   login: string | null
+  name: string | null
+  avatarUrl: string | null
   days: ContributionDay[]
   source: GitHubSource
   fetchedAt: number
@@ -21,21 +23,25 @@ const LEVELS: Record<string, ContributionLevel> = {
   FOURTH_QUARTILE: 4
 }
 
-const QUERY = `query($login: String!) {
-  user(login: $login) { login contributionsCollection { contributionCalendar { weeks { contributionDays { date contributionCount contributionLevel } } } } }
-}`
+/** The signed-in user's own profile and contribution calendar. */
 const VIEWER_QUERY = `query {
-  viewer { login contributionsCollection { contributionCalendar { weeks { contributionDays { date contributionCount contributionLevel } } } } }
+  viewer {
+    login
+    name
+    avatarUrl(size: 96)
+    contributionsCollection { contributionCalendar { weeks { contributionDays { date contributionCount contributionLevel } } } }
+  }
 }`
 
 const GH_PATHS = ['gh', 'C:\\Program Files\\GitHub CLI\\gh.exe', `${process.env.LOCALAPPDATA}\\Programs\\GitHub CLI\\gh.exe`]
 
+const EMPTY: Omit<GitHubData, 'error'> = { login: null, name: null, avatarUrl: null, days: [], source: 'none', fetchedAt: 0 }
+
 /**
- * Reads the user's GitHub contribution calendar (the green squares on their
- * profile) a few times an hour. Sources, in order:
- *   1. a personal access token saved in Settings (encrypted with safeStorage),
- *   2. the GitHub CLI's login (`gh auth token`), so it just works if gh is set up,
- *   3. the public profile page for the configured username (public contributions only).
+ * Reads the linked GitHub account's contribution calendar (the green squares
+ * on its profile) a few times an hour. An account is only linked after the
+ * user authenticates with GitHub: either "Sign in with GitHub" (OAuth device
+ * flow, token stored encrypted) or explicitly choosing their GitHub CLI login.
  */
 export class GitHubWatcher {
   data: GitHubData
@@ -46,14 +52,8 @@ export class GitHubWatcher {
     private store: Store,
     private onUpdate: (data: GitHubData, previous: GitHubData) => void
   ) {
-    const cached = store.state.github
-    this.data = {
-      login: cached.login,
-      days: cached.days,
-      source: cached.source,
-      fetchedAt: cached.fetchedAt,
-      error: null
-    }
+    const auth = store.state.githubAuth
+    this.data = auth ? { ...store.state.github, source: auth, error: null } : { ...EMPTY, error: null }
   }
 
   start(): void {
@@ -65,33 +65,39 @@ export class GitHubWatcher {
     if (this.timer) clearInterval(this.timer)
   }
 
-  // --- token handling ----------------------------------------------------------------
-  get hasSavedToken(): boolean {
-    return Boolean(this.store.state.githubTokenEnc)
+  get source(): GitHubSource {
+    return this.store.state.githubAuth ?? 'none'
   }
 
-  /** Save (string), clear (null) or keep (undefined) the personal access token. */
-  setToken(token: string | null | undefined): void {
-    if (token === undefined) return
-    const t = token?.trim()
-    if (!t) {
-      this.store.state.githubTokenEnc = null
-    } else if (safeStorage.isEncryptionAvailable()) {
-      this.store.state.githubTokenEnc = safeStorage.encryptString(t).toString('base64')
-    } else {
-      throw new Error("Windows can't encrypt the token on this PC, so it wasn't saved.")
-    }
+  // --- linking -------------------------------------------------------------------------
+  /** Link with a token from "Sign in with GitHub". Verifies it before keeping it. */
+  async linkOAuth(token: string): Promise<void> {
+    if (!safeStorage.isEncryptionAvailable()) throw new Error("Windows can't encrypt the GitHub token on this PC.")
+    const data = await this.fetchViewer(token, 'oauth')
+    this.store.state.githubTokenEnc = safeStorage.encryptString(token).toString('base64')
+    this.store.state.githubAuth = 'oauth'
+    this.apply(data)
+  }
+
+  /** Link using the GitHub CLI's login (the user authenticated it with GitHub via gh auth login). */
+  async linkCli(): Promise<void> {
+    const token = await this.ghToken()
+    if (!token) throw new Error('The GitHub CLI is not signed in. Run "gh auth login" first.')
+    const data = await this.fetchViewer(token, 'gh')
+    this.store.state.githubTokenEnc = null
+    this.store.state.githubAuth = 'gh'
+    this.apply(data)
+  }
+
+  /** Unlink: forget the token and the cached contributions. */
+  signOut(): void {
+    const previous = this.data
+    this.store.state.githubTokenEnc = null
+    this.store.state.githubAuth = null
+    this.store.state.github = { ...EMPTY }
     this.store.saveSoon()
-  }
-
-  private savedToken(): string | null {
-    const enc = this.store.state.githubTokenEnc
-    if (!enc) return null
-    try {
-      return safeStorage.decryptString(Buffer.from(enc, 'base64'))
-    } catch {
-      return null
-    }
+    this.data = { ...EMPTY, error: null }
+    this.onUpdate(this.data, previous)
   }
 
   /** The GitHub CLI's token, if gh is installed and logged in. */
@@ -111,107 +117,88 @@ export class GitHubWatcher {
     })
   }
 
+  private async token(): Promise<string | null> {
+    const auth = this.store.state.githubAuth
+    if (auth === 'gh') return this.ghToken()
+    if (auth !== 'oauth' || !this.store.state.githubTokenEnc) return null
+    try {
+      return safeStorage.decryptString(Buffer.from(this.store.state.githubTokenEnc, 'base64'))
+    } catch {
+      return null
+    }
+  }
+
   // --- fetching ----------------------------------------------------------------------------
   async refresh(): Promise<GitHubData> {
-    if (this.busy) return this.data
+    if (this.busy || !this.store.state.githubAuth) return this.data
     this.busy = true
-    const previous = this.data
     try {
-      const wanted = this.store.state.settings.githubUser.trim() || null
-      let next: GitHubData | null = null
-      let lastError: string | null = null
-
-      const saved = this.savedToken()
-      const tokens: [string, GitHubSource][] = []
-      if (saved) tokens.push([saved, 'token'])
-      const gh = await this.ghToken()
-      if (gh) tokens.push([gh, 'gh'])
-
-      for (const [token, source] of tokens) {
-        try {
-          next = await this.fetchGraphQL(token, wanted, source)
-          break
-        } catch (err) {
-          lastError = (err as Error).message
-        }
-      }
-      if (!next && wanted) {
-        try {
-          next = await this.fetchPublic(wanted)
-        } catch (err) {
-          lastError = (err as Error).message
-        }
-      }
-
-      if (next) {
-        this.data = next
-        this.store.state.github = {
-          login: next.login,
-          days: next.days.slice(-30),
-          source: next.source,
-          fetchedAt: next.fetchedAt
-        }
-        this.store.saveSoon()
+      const token = await this.token()
+      if (!token) {
+        this.setError(this.source === 'gh' ? 'The GitHub CLI is no longer signed in.' : 'Your GitHub sign-in is missing. Please sign in again.')
       } else {
-        this.data = {
-          ...previous,
-          error: lastError ?? 'Not connected: sign in with the GitHub CLI (gh auth login), or add your username or a token in Settings.'
+        try {
+          this.apply(await this.fetchViewer(token, this.source))
+        } catch (err) {
+          this.setError((err as Error).message)
         }
       }
-      this.onUpdate(this.data, previous)
       return this.data
     } finally {
       this.busy = false
     }
   }
 
-  private async fetchGraphQL(token: string, login: string | null, source: GitHubSource): Promise<GitHubData> {
-    const res = await net.fetch('https://api.github.com/graphql', {
-      method: 'POST',
-      headers: {
-        Authorization: `bearer ${token}`,
-        'Content-Type': 'application/json',
-        'User-Agent': 'GitGremlin-desktop-pet'
-      },
-      body: JSON.stringify(login ? { query: QUERY, variables: { login } } : { query: VIEWER_QUERY })
-    })
-    if (res.status === 401) throw new Error(source === 'token' ? 'The saved GitHub token was rejected.' : 'The GitHub CLI login has expired (run gh auth login).')
-    if (!res.ok) throw new Error(`GitHub API error ${res.status}`)
-    const json = (await res.json()) as {
-      data?: Record<string, { login: string; contributionsCollection: { contributionCalendar: { weeks: { contributionDays: { date: string; contributionCount: number; contributionLevel: string }[] }[] } } } | null>
-      errors?: { message: string }[]
+  private apply(next: GitHubData): void {
+    const previous = this.data
+    this.data = next
+    this.store.state.github = {
+      login: next.login,
+      name: next.name,
+      avatarUrl: next.avatarUrl,
+      days: next.days.slice(-30),
+      source: next.source,
+      fetchedAt: next.fetchedAt
     }
-    const who = json.data?.[login ? 'user' : 'viewer']
-    if (!who) throw new Error(json.errors?.[0]?.message ?? `GitHub user "${login}" not found.`)
-    const days = who.contributionsCollection.contributionCalendar.weeks.flatMap((w) =>
-      w.contributionDays.map((d) => ({ date: d.date, count: d.contributionCount, level: LEVELS[d.contributionLevel] ?? 0 }))
-    )
-    return { login: who.login, days, source, fetchedAt: Date.now(), error: null }
+    this.store.saveSoon()
+    this.onUpdate(this.data, previous)
   }
 
-  /** Read the public contributions calendar HTML (what the profile page embeds). */
-  private async fetchPublic(login: string): Promise<GitHubData> {
-    const res = await net.fetch(`https://github.com/users/${encodeURIComponent(login)}/contributions`, {
-      headers: { 'User-Agent': 'GitGremlin-desktop-pet' }
+  private setError(error: string): void {
+    const previous = this.data
+    this.data = { ...previous, error }
+    this.onUpdate(this.data, previous)
+  }
+
+  private async fetchViewer(token: string, source: GitHubSource): Promise<GitHubData> {
+    const res = await net.fetch('https://api.github.com/graphql', {
+      method: 'POST',
+      headers: { Authorization: `bearer ${token}`, 'Content-Type': 'application/json', 'User-Agent': 'GitGremlin-desktop-pet' },
+      body: JSON.stringify({ query: VIEWER_QUERY })
     })
-    if (res.status === 404) throw new Error(`GitHub user "${login}" not found.`)
-    if (!res.ok) throw new Error(`GitHub returned ${res.status} for the public profile.`)
-    const html = await res.text()
-    const counts = new Map<string, number>()
-    for (const m of html.matchAll(/<tool-tip[^>]*\bfor="([^"]+)"[^>]*>([^<]*)<\/tool-tip>/g)) {
-      const n = /^(\d+) contribution/.exec(m[2].trim())
-      counts.set(m[1], n ? Number(n[1]) : 0)
+    if (res.status === 401) {
+      throw new Error(source === 'gh' ? 'The GitHub CLI login has expired (run gh auth login).' : 'GitHub sign-in expired or was revoked. Please sign in again.')
     }
-    const days: ContributionDay[] = []
-    for (const m of html.matchAll(/<td\b[^>]*\bdata-date="(\d{4}-\d{2}-\d{2})"[^>]*>/g)) {
-      const tag = m[0]
-      const id = /\bid="([^"]+)"/.exec(tag)?.[1] ?? ''
-      const level = Number(/\bdata-level="(\d)"/.exec(tag)?.[1] ?? 0) as ContributionLevel
-      days.push({ date: m[1], count: counts.get(id) ?? (level > 0 ? 1 : 0), level })
+    if (!res.ok) throw new Error(`GitHub API error ${res.status}`)
+    const json = (await res.json()) as {
+      data?: {
+        viewer: {
+          login: string
+          name: string | null
+          avatarUrl: string
+          contributionsCollection: {
+            contributionCalendar: { weeks: { contributionDays: { date: string; contributionCount: number; contributionLevel: string }[] }[] }
+          }
+        } | null
+      }
+      errors?: { message: string }[]
     }
-    if (!days.length) throw new Error("Couldn't read the public contribution calendar.")
-    days.sort((a, b) => a.date.localeCompare(b.date))
-    return { login, days, source: 'public', fetchedAt: Date.now(), error: null }
+    const v = json.data?.viewer
+    if (!v) throw new Error(json.errors?.[0]?.message ?? 'GitHub did not return your profile.')
+    const days = v.contributionsCollection.contributionCalendar.weeks.flatMap((w) =>
+      w.contributionDays.map((d) => ({ date: d.date, count: d.contributionCount, level: LEVELS[d.contributionLevel] ?? 0 }))
+    )
+    return { login: v.login, name: v.name, avatarUrl: v.avatarUrl, days, source, fetchedAt: Date.now(), error: null }
   }
 }
 

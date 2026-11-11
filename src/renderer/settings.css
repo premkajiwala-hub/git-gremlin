@@ -277,4 +277,105 @@ footer {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+button.github {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0f3f6;
+  border-color: #f0f3f6;
+  color: #1f2328;
+  font-weight: 600;
+  padding: 8px 14px;
+  margin-top: 6px;
+}
+
+button.github:hover {
+  background: #ffffff;
+}
+
+button.github:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--cyan);
+  text-decoration: underline;
+  margin-top: 6px;
+}
+
+.gh-pending p {
+  margin: 8px 0 4px;
+}
+
+.device-code {
+  font: 600 28px/1.2 Consolas, 'Cascadia Mono', monospace;
+  letter-spacing: 0.12em;
+  color: var(--cyan);
+  background: var(--field);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 14px;
+  display: inline-block;
+  user-select: all;
+}
+
+.waiting::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--orange);
+  animation: pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  from {
+    opacity: 0.3;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.gh-account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0;
+}
+
+.gh-account img {
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--field);
+}
+
+.gh-name {
+  font-weight: 600;
+}
+
+.gh-login {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+p.err {
+  color: #ff8a8a;
+  margin: 8px 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .waiting::before {
+    animation: none;
+  }
 }

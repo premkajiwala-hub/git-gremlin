@@ -9,6 +9,8 @@ import type {
   PetStatus,
   Settings,
   SettingsView,
+  SignInCode,
+  SignInResult,
   WindowLedge
 } from '../shared/types'
 
@@ -44,10 +46,16 @@ const api = {
 
   // Settings window
   getSettings: (): Promise<SettingsView> => ipcRenderer.invoke(IPC.settingsGet),
-  /** token: a new personal access token, null to remove the saved one, undefined to leave it. */
-  saveSettings: (s: Settings, startWithWindows: boolean, token?: string | null): Promise<SettingsView> =>
-    ipcRenderer.invoke(IPC.settingsSave, s, startWithWindows, token),
-  refreshGitHub: (): Promise<SettingsView> => ipcRenderer.invoke(IPC.githubRefresh)
+  saveSettings: (s: Settings, startWithWindows: boolean): Promise<SettingsView> =>
+    ipcRenderer.invoke(IPC.settingsSave, s, startWithWindows),
+  refreshGitHub: (): Promise<SettingsView> => ipcRenderer.invoke(IPC.githubRefresh),
+  /** Start "Sign in with GitHub"; resolves with the one-time code (already copied, github.com opened). */
+  signInWithGitHub: (): Promise<SignInCode> => ipcRenderer.invoke(IPC.githubSignIn),
+  cancelSignIn: (): Promise<void> => ipcRenderer.invoke(IPC.githubCancelSignIn),
+  useGitHubCli: (): Promise<SignInResult> => ipcRenderer.invoke(IPC.githubUseCli),
+  signOutGitHub: (): Promise<SettingsView> => ipcRenderer.invoke(IPC.githubSignOut),
+  openGitHub: (url: string): Promise<void> => ipcRenderer.invoke(IPC.openExternal, url),
+  onSignInResult: (cb: (result: SignInResult) => void): Unsub => on(IPC.githubAuthResult, cb)
 }
 
 export type GremlinApi = typeof api

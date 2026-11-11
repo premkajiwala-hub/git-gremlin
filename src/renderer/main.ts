@@ -299,19 +299,18 @@ async function boot(): Promise<void> {
   /** The hover/click status report, built from today's square on the GitHub chart. */
   function statusText(): string {
     if (!status.connected) {
-      return 'GITHUB NOT LINKED YET.\n\n> OPEN SETTINGS AND ADD YOUR GITHUB USERNAME (OR RUN GH AUTH LOGIN).'
+      return 'GITHUB NOT LINKED YET.\n\n> RIGHT-CLICK MY TRAY ICON, OPEN SETTINGS AND SIGN IN WITH GITHUB.'
     }
     const n = status.todayCount
     const moodText =
       status.stage === 'fed' ? `FED, LEVEL ${status.level}/4` : status.stage === 'hungry' ? 'HUNGRY' : 'STARVING'
-    const quiet = status.quiet ? ' (ZZZ)' : ''
     const tip =
       status.stage === 'fed'
         ? RANDOM_LINES[Math.floor(Math.random() * RANDOM_LINES.length)]
         : 'NO CONTRIBUTIONS TODAY. ONE COMMIT WOULD FEED ME!'
     return [
       `TODAY: ${n} CONTRIBUTION${n === 1 ? '' : 'S'}`,
-      `MOOD: ${moodText}${quiet}`,
+      `MOOD: ${moodText}`,
       `STREAK: ${status.streak} DAY${status.streak === 1 ? '' : 'S'}`,
       'LAST 7 DAYS:',
       GRID_MARK,

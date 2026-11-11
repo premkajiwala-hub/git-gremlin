@@ -61,8 +61,8 @@ export interface ContributionDay {
   level: ContributionLevel
 }
 
-/** Where the contribution data came from. */
-export type GitHubSource = 'token' | 'gh' | 'public' | 'none'
+/** How the GitHub account was linked: GitHub sign-in (OAuth device flow), the GitHub CLI's login, or not at all. */
+export type GitHubSource = 'oauth' | 'gh' | 'none'
 
 export type HungerStage = 'fed' | 'hungry' | 'starving'
 
@@ -78,9 +78,8 @@ export interface PetStatus {
   /** Levels of the last 7 days, oldest first. */
   week: ContributionLevel[]
   login: string | null
-  /** Whether contribution data has been loaded at least once. */
+  /** Whether a GitHub account is linked and its contributions have been loaded. */
   connected: boolean
-  quiet: boolean
 }
 
 export interface FeedEvent {
@@ -103,12 +102,6 @@ export interface Settings {
   onTopOfApps: boolean
   /** Catbot follows the cursor while it moves over the desktop. */
   followCursor: boolean
-  /** GitHub username whose contribution chart drives Catbot's mood (empty = the signed-in account). */
-  githubUser: string
-  quietHoursEnabled: boolean
-  /** "HH:MM", 24h clock. */
-  quietStart: string
-  quietEnd: string
 }
 
 export interface OverlayInit {
@@ -122,7 +115,10 @@ export interface OverlayInit {
 }
 
 export interface GitHubView {
+  /** The linked account, or null when not signed in. */
   login: string | null
+  name: string | null
+  avatarUrl: string | null
   source: GitHubSource
   todayCount: number
   level: ContributionLevel
@@ -131,7 +127,9 @@ export interface GitHubView {
   week: ContributionLevel[]
   fetchedAt: number
   error: string | null
-  hasSavedToken: boolean
+  /** "Sign in with GitHub" is available (an OAuth client ID is configured). */
+  signInAvailable: boolean
+  /** The GitHub CLI is installed and logged in. */
   ghAvailable: boolean
 }
 
@@ -139,4 +137,16 @@ export interface SettingsView {
   settings: Settings
   github: GitHubView
   startWithWindows: boolean
+}
+
+/** Shown while signing in: enter this code at the verification URL. */
+export interface SignInCode {
+  userCode: string
+  verificationUri: string
+  expiresIn: number
+}
+
+export interface SignInResult {
+  ok: boolean
+  error?: string
 }

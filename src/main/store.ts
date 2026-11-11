@@ -5,26 +5,31 @@ import { DEFAULT_SETTINGS, PET_SIZE_MAX, PET_SIZE_MIN } from '../shared/constant
 import type { ContributionDay, GitHubSource, PetSnapshot, Settings } from '../shared/types'
 
 export interface AppState {
-  version: 2
+  version: 3
   settings: Settings
+  /** How the GitHub account was linked (null = not linked). */
+  githubAuth: 'oauth' | 'gh' | null
+  /** "Sign in with GitHub" token, encrypted with Electron safeStorage (base64), or null. */
+  githubTokenEnc: string | null
   /** Last contribution data, so Catbot's mood is right even before the first fetch. */
   github: {
     login: string | null
+    name: string | null
+    avatarUrl: string | null
     days: ContributionDay[]
     source: GitHubSource
     fetchedAt: number
   }
-  /** Personal access token, encrypted with Electron safeStorage (base64), or null. */
-  githubTokenEnc: string | null
   pet: PetSnapshot | null
 }
 
 function defaults(): AppState {
   return {
-    version: 2,
+    version: 3,
     settings: { ...DEFAULT_SETTINGS },
-    github: { login: null, days: [], source: 'none', fetchedAt: 0 },
+    githubAuth: null,
     githubTokenEnc: null,
+    github: { login: null, name: null, avatarUrl: null, days: [], source: 'none', fetchedAt: 0 },
     pet: null
   }
 }
@@ -37,18 +42,22 @@ export class Store {
 
   load(): void {
     try {
-      const raw = JSON.parse(readFileSync(this.path, 'utf8')) as Partial<AppState> & { settings?: Partial<Settings> }
+      const raw = JSON.parse(readFileSync(this.path, 'utf8')) as Partial<AppState> & { settings?: Partial<Settings>; version?: number }
       const d = defaults()
-      // Only keep known settings (older versions had repo/hunger-hour settings).
+      // Only keep known settings (older versions had repo, hunger-hour and quiet-hour settings).
       const settings = { ...d.settings }
       for (const key of Object.keys(settings) as (keyof Settings)[]) {
         if (raw.settings && key in raw.settings) (settings as Record<string, unknown>)[key] = raw.settings[key]
       }
+      // Version 2 linked GitHub silently (CLI token or a typed username). Linking now
+      // needs an explicit, authenticated sign-in, so start unlinked.
+      const linked = raw.version === 3 && (raw.githubAuth === 'oauth' || raw.githubAuth === 'gh')
       this.state = {
-        version: 2,
+        version: 3,
         settings,
-        github: { ...d.github, ...(raw.github ?? {}) },
-        githubTokenEnc: raw.githubTokenEnc ?? null,
+        githubAuth: linked ? raw.githubAuth! : null,
+        githubTokenEnc: linked ? (raw.githubTokenEnc ?? null) : null,
+        github: linked ? { ...d.github, ...(raw.github ?? {}) } : d.github,
         pet: raw.pet ?? null
       }
       this.migrate()
@@ -66,7 +75,6 @@ export class Store {
     if (s.movement !== 'ground') s.movement = 'roam'
     s.onTopOfApps = Boolean(s.onTopOfApps)
     if (typeof s.followCursor !== 'boolean') s.followCursor = DEFAULT_SETTINGS.followCursor
-    if (typeof s.githubUser !== 'string') s.githubUser = ''
   }
 
   saveSoon(): void {

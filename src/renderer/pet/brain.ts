@@ -128,8 +128,7 @@ const LEVEL_WEIGHTS: [string, number][][] = [
     ['hop', 6],
     ['window', 10],
     ['sit', 10],
-    ['curious', 5],
-    ['nap', 3]
+    ['curious', 8]
   ],
   [
     ['idle', 14],
@@ -471,7 +470,7 @@ export class PetBrain {
           this.fxClock = 0
           this.hooks.spawn('zzz', this.facing * 10, -24)
         }
-        if (!this.status.quiet && this.t > this.dur) this.next()
+        if (this.t > this.dur) this.next()
         break
       case 'eat':
         if (this.fxClock > 0.24) {
@@ -518,7 +517,6 @@ export class PetBrain {
       this.settings.followCursor &&
       !this.hovered &&
       !this.pendingFeed &&
-      !this.status.quiet &&
       this.stage !== 'starving' &&
       PAUSABLE.includes(this.activity)
     const active = this.cursorIdle < FOLLOW_GRACE
@@ -578,7 +576,6 @@ export class PetBrain {
       this.pendingFeed = null
       return this.startEat(ev)
     }
-    if (this.status.quiet) return this.stand ? this.walkOffWindow() : this.set('sleep', 30)
     if (this.stage === 'starving') return this.stand ? this.walkOffWindow() : this.set('starving', rand(20, 50))
 
     if (this.stand) {
@@ -614,8 +611,6 @@ export class PetBrain {
         return this.set('sit', rand(4, 10))
       case 'curious':
         return this.set('curious', 1.6)
-      case 'nap':
-        return this.set('sleep', rand(10, 25))
       case 'dance':
         return this.set('happy', rand(1.5, 2.5))
       default:

@@ -3,19 +3,21 @@ import type { Settings, SettingsView } from '../shared/types'
 const api = window.gremlin
 const form = document.getElementById('form') as HTMLFormElement
 const savedEl = document.getElementById('saved')!
-const ghStatus = document.getElementById('ghStatus')!
-const userHint = document.getElementById('userHint')!
-const tokenHint = document.getElementById('tokenHint')!
-const tokenInput = document.getElementById('token') as HTMLInputElement
-const clearTokenBtn = document.getElementById('clearToken') as HTMLButtonElement
-const refreshBtn = document.getElementById('refresh') as HTMLButtonElement
+const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
+
+const signedOut = $('ghSignedOut')
+const pending = $('ghPending')
+const signedIn = $('ghSignedIn')
+const ghStatus = $('ghStatus')
+const ghError = $('ghError')
+const signInBtn = $<HTMLButtonElement>('signIn')
+const useCliBtn = $<HTMLButtonElement>('useCli')
+const refreshBtn = $<HTMLButtonElement>('refresh')
 
 const field = <T extends HTMLInputElement>(name: string) => form.elements.namedItem(name) as T
 const GRID = ['#161b22', '#0e4429', '#006d32', '#26a641', '#39d353']
 const LEVEL_WORD = ['no', 'a few', 'some', 'lots of', 'loads of']
-const SOURCE = { token: 'your saved token', gh: 'the GitHub CLI login', public: 'your public profile', none: '' }
-
-let tokenAction: string | null | undefined
+let verificationUri = 'https://github.com/login/device'
 
 function render(view: SettingsView): void {
   const s = view.settings
@@ -25,39 +27,40 @@ function render(view: SettingsView): void {
   ;(form.elements.namedItem('movement') as RadioNodeList).value = s.movement
   field('onTopOfApps').checked = s.onTopOfApps
   field('followCursor').checked = s.followCursor
-  field('githubUser').value = s.githubUser
-  field('quietHoursEnabled').checked = s.quietHoursEnabled
-  field('quietStart').value = s.quietStart
-  field('quietEnd').value = s.quietEnd
   field('startWithWindows').checked = view.startWithWindows
-  tokenInput.value = ''
-  tokenAction = undefined
   renderGitHub(view)
   updateValues()
 }
 
+function showError(msg: string | null | undefined): void {
+  ghError.hidden = !msg
+  ghError.textContent = msg ?? ''
+}
+
 function renderGitHub(view: SettingsView): void {
   const g = view.github
-  field('githubUser').placeholder = g.login ?? 'your-github-username'
-  userHint.textContent = view.github.ghAvailable
-    ? 'Leave empty to use the account you are signed into with the GitHub CLI (gh).'
-    : 'Your GitHub username. Without a token only public contributions count.'
-  tokenHint.textContent = g.hasSavedToken
-    ? 'A token is saved (encrypted on this PC). Type a new one to replace it.'
-    : 'Optional: a fine-grained or classic token with read-only access, to include private contributions. Stored encrypted on this PC.'
-  clearTokenBtn.hidden = !g.hasSavedToken
+  const linked = g.source !== 'none' && g.login
+  pending.hidden = true
+  signedOut.hidden = Boolean(linked)
+  signedIn.hidden = !linked
 
-  ghStatus.replaceChildren()
-  if (g.source === 'none') {
-    const err = document.createElement('span')
-    err.className = 'err'
-    err.textContent = g.error ?? 'Not linked yet.'
-    ghStatus.append(err)
+  if (!linked) {
+    signInBtn.disabled = !g.signInAvailable
+    $('signInHint').textContent = g.signInAvailable
+      ? 'Opens github.com in your browser. You approve GitGremlin on GitHub itself (read-only access to your profile), so your password never touches this app.'
+      : "GitHub sign-in isn't set up in this build yet: it needs GitGremlin's GitHub OAuth App client ID (see the README)."
+    useCliBtn.hidden = !g.ghAvailable
+    showError(null)
     return
   }
-  const who = document.createElement('span')
-  who.className = 'who'
-  who.textContent = `@${g.login} via ${SOURCE[g.source]}`
+
+  const avatar = $<HTMLImageElement>('avatar')
+  if (g.avatarUrl) avatar.src = g.avatarUrl
+  avatar.hidden = !g.avatarUrl
+  $('ghName').textContent = g.name || g.login
+  $('ghLogin').textContent = `@${g.login} · ${g.source === 'oauth' ? 'signed in with GitHub' : 'via the GitHub CLI login'}`
+
+  ghStatus.replaceChildren()
   const week = document.createElement('span')
   week.className = 'gh-week'
   week.title = 'Last 7 days, today on the right'
@@ -70,13 +73,8 @@ function renderGitHub(view: SettingsView): void {
   const today = document.createElement('span')
   const mood = g.todayCount === 0 ? 'Catbot is hungry' : `${LEVEL_WORD[g.level]} contributions, Catbot is fed`
   today.textContent = `Today: ${g.todayCount} (${mood}) · streak ${g.streak} day${g.streak === 1 ? '' : 's'} · updated ${ago(g.fetchedAt)}`
-  ghStatus.append(who, week, today)
-  if (g.error) {
-    const err = document.createElement('span')
-    err.className = 'err'
-    err.textContent = `Last refresh failed: ${g.error}`
-    ghStatus.append(err)
-  }
+  ghStatus.append(week, today)
+  showError(g.error ? `Last refresh failed: ${g.error}` : null)
 }
 
 function ago(at: number): string {
@@ -99,32 +97,53 @@ function collect(): Settings {
     petSpeed: Number(field('petSpeed').value),
     movement: (form.elements.namedItem('movement') as RadioNodeList).value === 'ground' ? 'ground' : 'roam',
     onTopOfApps: field('onTopOfApps').checked,
-    followCursor: field('followCursor').checked,
-    githubUser: field('githubUser').value,
-    quietHoursEnabled: field('quietHoursEnabled').checked,
-    quietStart: field('quietStart').value,
-    quietEnd: field('quietEnd').value
+    followCursor: field('followCursor').checked
   }
 }
+
+const cleanError = (err: unknown) => (err as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
 
 form.addEventListener('input', updateValues)
 form.addEventListener('submit', async (e) => {
   e.preventDefault()
-  savedEl.textContent = 'Saving...'
-  const token = tokenInput.value.trim() ? tokenInput.value.trim() : tokenAction
+  render(await api.saveSettings(collect(), field('startWithWindows').checked))
+  savedEl.textContent = 'Saved'
+  setTimeout(() => (savedEl.textContent = ''), 2000)
+})
+
+// --- GitHub sign-in ---------------------------------------------------------------------
+signInBtn.addEventListener('click', async () => {
+  showError(null)
+  signInBtn.disabled = true
   try {
-    render(await api.saveSettings(collect(), field('startWithWindows').checked, token))
-    savedEl.textContent = 'Saved'
+    const code = await api.signInWithGitHub()
+    verificationUri = code.verificationUri
+    $('deviceCode').textContent = code.userCode
+    signedOut.hidden = true
+    pending.hidden = false
   } catch (err) {
-    savedEl.textContent = (err as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+    showError(cleanError(err))
+  } finally {
+    signInBtn.disabled = false
   }
-  setTimeout(() => (savedEl.textContent = ''), 3000)
 })
-clearTokenBtn.addEventListener('click', () => {
-  tokenAction = null
-  tokenInput.value = ''
-  tokenHint.textContent = 'The saved token will be removed when you click Save.'
+$('openGitHub').addEventListener('click', () => void api.openGitHub(verificationUri))
+$('cancelSignIn').addEventListener('click', async () => {
+  await api.cancelSignIn()
+  renderGitHub(await api.getSettings())
 })
+api.onSignInResult(async (result) => {
+  const view = await api.getSettings()
+  renderGitHub(view)
+  if (!result.ok) showError(result.error ?? 'Sign-in failed.')
+})
+useCliBtn.addEventListener('click', async () => {
+  showError(null)
+  const result = await api.useGitHubCli()
+  renderGitHub(await api.getSettings())
+  if (!result.ok) showError(result.error ?? 'Could not use the GitHub CLI login.')
+})
+$('signOut').addEventListener('click', async () => renderGitHub(await api.signOutGitHub()))
 refreshBtn.addEventListener('click', async () => {
   refreshBtn.disabled = true
   refreshBtn.textContent = 'Refreshing...'
@@ -132,6 +151,8 @@ refreshBtn.addEventListener('click', async () => {
   refreshBtn.disabled = false
   refreshBtn.textContent = 'Refresh now'
 })
-api.onSettings(() => void api.getSettings().then(renderGitHub))
+api.onSettings(() => {
+  if (pending.hidden) void api.getSettings().then(renderGitHub)
+})
 
 void api.getSettings().then(render)
