@@ -1,10 +1,8 @@
 import { FRAME_MS, IDLE_FRAME_MS } from '../shared/constants'
 import type { PetPose, PetSnapshot, PetStatus, Settings } from '../shared/types'
-import { PetBrain, RANDOM_LINES } from './pet/brain'
-import { CatbotModel, MODEL_HEIGHT } from './pet/model'
+import { PetBrain, RANDOM_LINES, type RenderState } from './pet/brain'
 import { Particles } from './pet/particles'
-import { easePose, poseKey, type Pose } from './pet/pose'
-import { loadTextures } from './pet/textures'
+import { loadSprites } from './pet/sprites'
 import { SpeechBubble, type Mood } from './ui/bubble'
 import { PetView } from './view'
 import { World } from './world'
@@ -21,19 +19,21 @@ async function boot(): Promise<void> {
   let status: PetStatus = init.status
   const stage = document.getElementById('stage')!
   const world = new World(init.display, init.displays)
-  const view = new PetView(stage, settings.petSize, MODEL_HEIGHT)
-  const textures = await loadTextures()
-  const model = new CatbotModel(textures)
-  view.scene.add(model.root)
-  const particles = new Particles(view.scene, textures)
+  const sprites = await loadSprites()
+  const view = new PetView(stage, settings.petSize, sprites)
+  const particles = new Particles()
   const bubble = new SpeechBubble(stage)
 
   const mood = (): Mood => (status.stage === 'starving' ? 'bad' : status.stage === 'hungry' ? 'warn' : 'ok')
+  /** Whether the bubble on screen is the hover status report (as opposed to chatter). */
+  let statusBubble = false
   const say = (text: string, ms = 4000) => {
-    if (mode === 'owner') bubble.show(text, ms, status.name, mood())
+    if (mode !== 'owner') return
+    statusBubble = false
+    bubble.show(text, ms, status.name, mood())
   }
 
-  const brain = new PetBrain(world, settings, status, {
+  const brain = new PetBrain(world, settings, status, sprites, {
     say,
     spawn: (kind, x, y) => particles.spawn(kind, x, y),
     standing: (hwnd) => api.setStanding(hwnd),
@@ -45,7 +45,8 @@ async function boot(): Promise<void> {
     }
   })
   brain.ledge = init.ledge
-  if (import.meta.env.DEV) Object.assign(window, { __catbot: { brain, model, view, world } })
+  brain.size = view.displaySize
+  if (import.meta.env.DEV) Object.assign(window, { __catbot: { brain, view, world, bubble } })
 
   let mode: Mode = 'idle'
 
@@ -76,30 +77,31 @@ async function boot(): Promise<void> {
     const dt = Math.min(0.1, (now - last) / 1000)
     last = now
 
-    // Ask where the cursor is ~10x a second, so hover works even when Catbot
-    // walks under a cursor that isn't moving.
+    // Ask where the cursor is ~10x a second: hover works even when Catbot walks
+    // under a still cursor, and following works even without mouse events.
     cursorClock += dt
     if (cursorClock >= 0.1) {
       cursorClock = 0
       void api.getCursor().then((c) => {
+        const moved = Math.hypot(c.x - cursor.x, c.y - cursor.y) > 2
         cursor = { x: c.x, y: c.y }
         cursorVisible = c.visible
+        if (!dragging) brain.setCursor(c.x, c.y, moved && c.visible && onThisMonitor(c.x, c.y))
         updateHover()
       })
     }
 
     brain.update(dt)
     if (mode !== 'owner') return // handed off to another monitor
-    easePose(model.pose, brain.target, dt)
-    model.apply()
     particles.update(dt)
     updateHover()
+    const rs = brain.render()
 
     // Only redraw when something visible changed; drop to a slow tick when static.
-    const key = `${Math.round(brain.x)},${Math.round(brain.y - brain.z)},${poseKey(model.pose)}`
+    const key = renderKey(brain.x, brain.y, rs)
     if (key !== lastKey || particles.active) {
       lastKey = key
-      draw()
+      draw(rs)
       quietFrames = 0
     } else {
       quietFrames++
@@ -107,7 +109,7 @@ async function boot(): Promise<void> {
     const head = world.toLocal(brain.x, brain.hitBox().top)
     bubble.update(head.x, head.y, world.display.bounds.width, world.display.bounds.height)
 
-    shareEdgePose()
+    shareEdgePose(rs)
 
     snapshotClock += dt
     if (snapshotClock > 2) {
@@ -120,18 +122,18 @@ async function boot(): Promise<void> {
     timer = window.setTimeout(tick, Math.max(1, interval - (performance.now() - now)))
   }
 
-  function draw(): void {
-    const p = world.toLocal(brain.x, brain.y - brain.z)
+  function draw(rs: RenderState): void {
+    const p = world.toLocal(brain.x, brain.y)
     view.place(p.x, p.y)
-    view.render()
+    view.draw(rs, particles)
   }
 
   /** While part of Catbot hangs over a neighbouring monitor, let that overlay draw it too. */
-  function shareEdgePose(): void {
+  function shareEdgePose(rs: RenderState): void {
     const hb = brain.hitBox()
     const over = (hb.right > world.right && world.neighbor(1)) || (hb.left < world.left && world.neighbor(-1))
     if (over) {
-      const pose: PetPose = { x: brain.x, y: brain.y - brain.z, grounded: brain.z <= 0, model: { ...model.pose } }
+      const pose: PetPose = { x: brain.x, y: brain.y, grounded: brain.z <= 0, model: { ...rs } }
       api.sendPose(pose)
     } else if (straddling) {
       api.sendPose(null)
@@ -168,25 +170,27 @@ async function boot(): Promise<void> {
     setInteractive(false)
     dragging = false
     pending = null
-    hovered = false
+    if (hovered) {
+      hovered = false
+      brain.setHovered(false)
+    }
   }
 
   // --- mirroring (Catbot straddling the edge from a neighbouring monitor) ------------------
   api.onMirror((p) => {
     if (mode === 'owner') return
     if (mirrorTimeout !== null) window.clearTimeout(mirrorTimeout)
-    const hw = settings.petSize * 0.7
-    if (!p || !world.overlaps(p.x - hw, p.x + hw, p.y - settings.petSize, p.y)) {
+    const hw = view.displaySize
+    if (!p || !world.overlaps(p.x - hw, p.x + hw, p.y - view.displaySize * 1.5, p.y)) {
       mode = 'idle'
       view.setVisible(false)
       return
     }
     mode = 'mirror'
-    model.applyPose(p.model as unknown as Pose)
     const l = world.toLocal(p.x, p.y)
     view.setVisible(true)
     view.place(l.x, l.y)
-    view.render()
+    view.draw(p.model as unknown as RenderState, null)
     mirrorTimeout = window.setTimeout(() => {
       if (mode === 'mirror') {
         mode = 'idle'
@@ -203,7 +207,10 @@ async function boot(): Promise<void> {
   let cursor = { x: -1e6, y: -1e6 }
   let cursorVisible = true
   let cursorWasNear = false
-  const wiggle: { x: number; t: number; dir: number }[] = []
+
+  function onThisMonitor(gx: number, gy: number): boolean {
+    return gx >= world.left && gx < world.right && gy >= world.top && gy < world.bottom
+  }
 
   function setInteractive(on: boolean): void {
     if (on === interactive) return
@@ -218,56 +225,51 @@ async function boot(): Promise<void> {
     return gx >= b.left - 4 && gx <= b.right + 4 && gy >= b.top - 4 && gy <= b.bottom
   }
 
-  /** Recompute hover from the latest cursor position (called every tick). */
+  /** Recompute hover from the latest cursor position; hovering shows the status report. */
   function updateHover(): void {
     if (mode !== 'owner') return
-    const over = cursorVisible && hit(cursor.x, cursor.y)
+    const over = cursorVisible && !dragging && hit(cursor.x, cursor.y)
     if (over !== hovered) {
       hovered = over
       brain.setHovered(over)
+      if (over) {
+        statusBubble = true
+        bubble.show(statusText(), 60_000, status.name, mood())
+      } else if (statusBubble) {
+        bubble.expireIn(1500)
+      }
     }
     setInteractive(hovered || dragging || pending !== null)
   }
 
-  function trackCursor(gx: number, gy: number): void {
-    const cy = brain.y - brain.z - settings.petSize / 2
+  function trackNear(gx: number, gy: number): void {
+    const cy = brain.y - brain.z - view.displaySize / 2
     const dist = Math.hypot(gx - brain.x, gy - cy)
-    if (dist < settings.petSize * 1.4 && !cursorWasNear) {
+    if (dist < view.displaySize * 1.4 && !cursorWasNear) {
       cursorWasNear = true
       brain.cursorNear(gx)
-    } else if (dist > settings.petSize * 3.5) {
+    } else if (dist > view.displaySize * 3.5) {
       cursorWasNear = false
-    }
-    const now = performance.now()
-    while (wiggle.length && now - wiggle[0].t > 1500) wiggle.shift()
-    if (dist > 240) return
-    const lastPt = wiggle[wiggle.length - 1]
-    const dir = lastPt ? Math.sign(gx - lastPt.x) : 0
-    if (!lastPt || (dir !== 0 && Math.abs(gx - lastPt.x) > 6)) wiggle.push({ x: gx, t: now, dir })
-    let reversals = 0
-    for (let i = 2; i < wiggle.length; i++) if (wiggle[i].dir !== 0 && wiggle[i].dir !== wiggle[i - 1].dir) reversals++
-    if (reversals >= 4) {
-      wiggle.length = 0
-      brain.wiggled(gx, gy)
     }
   }
 
   window.addEventListener('mousemove', (e) => {
     const g = world.toGlobal(e.clientX, e.clientY)
+    const moved = Math.hypot(g.x - cursor.x, g.y - cursor.y) > 2
     cursor = g
-    brain.setCursor(g.x, g.y)
     if (mode !== 'owner') return
     if (pending && !dragging && (Math.hypot(e.clientX - pending.x, e.clientY - pending.y) > 5 || performance.now() - pending.at > 250)) {
       dragging = true
       document.body.classList.remove('grab')
       document.body.classList.add('grabbing')
       const start = world.toGlobal(pending.x, pending.y)
+      if (statusBubble) bubble.hide()
       brain.startDrag(start.x, start.y)
-      brain.setCursor(g.x, g.y)
     }
+    brain.setCursor(g.x, g.y, moved && cursorVisible && !dragging)
     if (!dragging && !pending) {
       updateHover()
-      if (cursorVisible) trackCursor(g.x, g.y)
+      if (cursorVisible) trackNear(g.x, g.y)
     }
   })
 
@@ -287,8 +289,10 @@ async function boot(): Promise<void> {
       dragging = false
       document.body.classList.remove('grabbing')
     } else if (pending) {
+      // Click: look up and give the status report (with a fresh random line).
       brain.clicked()
-      say(statusText(), 6000)
+      statusBubble = true
+      bubble.show(statusText(), hovered ? 60_000 : 6000, status.name, mood())
     }
     pending = null
     updateHover()
@@ -331,6 +335,7 @@ async function boot(): Promise<void> {
     settings = s
     brain.settings = s
     view.setPetSize(s.petSize)
+    brain.size = view.displaySize
     if (mode === 'owner' && movementChanged) brain.restore(brain.snapshot())
     lastKey = ''
   })
@@ -344,6 +349,10 @@ async function boot(): Promise<void> {
 
   if (init.isOwner) becomeOwner(init.snapshot)
   else becomeIdle()
+}
+
+function renderKey(x: number, y: number, rs: RenderState): string {
+  return `${Math.round(x)},${Math.round(y)},${rs.anim}${rs.frame},${Math.round(rs.z)},${Math.round(rs.bob)},${rs.mood},${rs.lookY},${rs.glow},${rs.dim},${rs.tint},${Math.round(rs.food * 10)},${Math.round(rs.squash * 10)},${rs.facing}`
 }
 
 function ago(ms: number): string {

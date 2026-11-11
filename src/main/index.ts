@@ -230,6 +230,7 @@ function sanitize(input: Settings): Settings {
     petSpeed: Math.round(num(input.petSpeed, DEFAULT_SETTINGS.petSpeed, 10, 150)),
     movement: input.movement === 'ground' ? 'ground' : 'roam',
     onTopOfApps: Boolean(input.onTopOfApps),
+    followCursor: Boolean(input.followCursor),
     peckishAfterHours: hours[0],
     hungryAfterHours: hours[1],
     starvingAfterHours: hours[2],

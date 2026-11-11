@@ -1,0 +1,703 @@
+{
+  "cell": {
+    "w": 50,
+    "h": 38
+  },
+  "anchor": {
+    "x": 24,
+    "y": 36
+  },
+  "standHeight": 32,
+  "standWidth": 32,
+  "eyes": {
+    "w": 8,
+    "h": 6
+  },
+  "anims": {
+    "idle": {
+      "fps": 3,
+      "loop": true,
+      "frames": [
+        {
+          "file": "idle-0.png",
+          "screen": [
+            32,
+            13
+          ],
+          "bell": [
+            31,
+            22
+          ]
+        },
+        {
+          "file": "idle-1.png",
+          "screen": [
+            32,
+            13
+          ],
+          "bell": [
+            31,
+            22
+          ]
+        },
+        {
+          "file": "idle-2.png",
+          "screen": [
+            32,
+            13
+          ],
+          "bell": [
+            31,
+            22
+          ]
+        },
+        {
+          "file": "idle-3.png",
+          "screen": [
+            32,
+            13
+          ],
+          "bell": [
+            31,
+            22
+          ]
+        }
+      ]
+    },
+    "idle_sad": {
+      "fps": 2,
+      "loop": true,
+      "frames": [
+        {
+          "file": "idle_sad-0.png",
+          "screen": [
+            32,
+            15
+          ],
+          "bell": [
+            31,
+            24
+          ]
+        },
+        {
+          "file": "idle_sad-1.png",
+          "screen": [
+            32,
+            15
+          ],
+          "bell": [
+            31,
+            24
+          ]
+        },
+        {
+          "file": "idle_sad-2.png",
+          "screen": [
+            32,
+            15
+          ],
+          "bell": [
+            31,
+            24
+          ]
+        },
+        {
+          "file": "idle_sad-3.png",
+          "screen": [
+            32,
+            15
+          ],
+          "bell": [
+            31,
+            24
+          ]
+        }
+      ]
+    },
+    "walk": {
+      "fps": 10,
+      "loop": true,
+      "frames": [
+        {
+          "file": "walk-0.png",
+          "screen": [
+            32,
+            13
+          ],
+          "bell": [
+            31,
+            22
+          ]
+        },
+        {
+          "file": "walk-1.png",
+          "screen": [
+            32,
+            13
+          ],
+          "bell": [
+            31,
+            22
+          ]
+        },
+        {
+          "file": "walk-2.png",
+          "screen": [
+            32,
+            14
+          ],
+          "bell": [
+            31,
+            23
+          ]
+        },
+        {
+          "file": "walk-3.png",
+          "screen": [
+            32,
+            13
+          ],
+          "bell": [
+            31,
+            22
+          ]
+        },
+        {
+          "file": "walk-4.png",
+          "screen": [
+            32,
+            13
+          ],
+          "bell": [
+            31,
+            22
+          ]
+        },
+        {
+          "file": "walk-5.png",
+          "screen": [
+            32,
+            14
+          ],
+          "bell": [
+            31,
+            23
+          ]
+        }
+      ]
+    },
+    "walk_sad": {
+      "fps": 7,
+      "loop": true,
+      "frames": [
+        {
+          "file": "walk_sad-0.png",
+          "screen": [
+            32,
+            15
+          ],
+          "bell": [
+            31,
+            24
+          ]
+        },
+        {
+          "file": "walk_sad-1.png",
+          "screen": [
+            32,
+            15
+          ],
+          "bell": [
+            31,
+            24
+          ]
+        },
+        {
+          "file": "walk_sad-2.png",
+          "screen": [
+            32,
+            15
+          ],
+          "bell": [
+            31,
+            24
+          ]
+        },
+        {
+          "file": "walk_sad-3.png",
+          "screen": [
+            32,
+            15
+          ],
+          "bell": [
+            31,
+            24
+          ]
+        },
+        {
+          "file": "walk_sad-4.png",
+          "screen": [
+            32,
+            15
+          ],
+          "bell": [
+            31,
+            24
+          ]
+        },
+        {
+          "file": "walk_sad-5.png",
+          "screen": [
+            32,
+            15
+          ],
+          "bell": [
+            31,
+            24
+          ]
+        }
+      ]
+    },
+    "run": {
+      "fps": 14,
+      "loop": true,
+      "frames": [
+        {
+          "file": "run-0.png",
+          "screen": [
+            32,
+            13
+          ],
+          "bell": [
+            31,
+            22
+          ]
+        },
+        {
+          "file": "run-1.png",
+          "screen": [
+            32,
+            12
+          ],
+          "bell": [
+            31,
+            21
+          ]
+        },
+        {
+          "file": "run-2.png",
+          "screen": [
+            32,
+            12
+          ],
+          "bell": [
+            31,
+            21
+          ]
+        },
+        {
+          "file": "run-3.png",
+          "screen": [
+            32,
+            13
+          ],
+          "bell": [
+            31,
+            22
+          ]
+        },
+        {
+          "file": "run-4.png",
+          "screen": [
+            32,
+            14
+          ],
+          "bell": [
+            31,
+            23
+          ]
+        },
+        {
+          "file": "run-5.png",
+          "screen": [
+            32,
+            13
+          ],
+          "bell": [
+            31,
+            22
+          ]
+        }
+      ]
+    },
+    "crawl": {
+      "fps": 6,
+      "loop": true,
+      "frames": [
+        {
+          "file": "crawl-0.png",
+          "screen": [
+            32,
+            17
+          ],
+          "bell": [
+            31,
+            26
+          ]
+        },
+        {
+          "file": "crawl-1.png",
+          "screen": [
+            32,
+            17
+          ],
+          "bell": [
+            31,
+            26
+          ]
+        },
+        {
+          "file": "crawl-2.png",
+          "screen": [
+            32,
+            17
+          ],
+          "bell": [
+            31,
+            26
+          ]
+        },
+        {
+          "file": "crawl-3.png",
+          "screen": [
+            32,
+            17
+          ],
+          "bell": [
+            31,
+            26
+          ]
+        },
+        {
+          "file": "crawl-4.png",
+          "screen": [
+            32,
+            17
+          ],
+          "bell": [
+            31,
+            26
+          ]
+        },
+        {
+          "file": "crawl-5.png",
+          "screen": [
+            32,
+            17
+          ],
+          "bell": [
+            31,
+            26
+          ]
+        }
+      ]
+    },
+    "sit": {
+      "fps": 1.5,
+      "loop": true,
+      "frames": [
+        {
+          "file": "sit-0.png",
+          "screen": [
+            30,
+            11
+          ],
+          "bell": [
+            29,
+            20
+          ]
+        },
+        {
+          "file": "sit-1.png",
+          "screen": [
+            30,
+            11
+          ],
+          "bell": [
+            29,
+            20
+          ]
+        }
+      ]
+    },
+    "sleep": {
+      "fps": 1.2,
+      "loop": true,
+      "frames": [
+        {
+          "file": "sleep-0.png",
+          "screen": [
+            31,
+            25
+          ],
+          "bell": [
+            30,
+            34
+          ]
+        },
+        {
+          "file": "sleep-1.png",
+          "screen": [
+            31,
+            25
+          ],
+          "bell": [
+            30,
+            34
+          ]
+        }
+      ]
+    },
+    "starving": {
+      "fps": 1,
+      "loop": true,
+      "frames": [
+        {
+          "file": "starving-0.png",
+          "screen": [
+            33,
+            27
+          ],
+          "bell": [
+            32,
+            36
+          ]
+        },
+        {
+          "file": "starving-1.png",
+          "screen": [
+            33,
+            27
+          ],
+          "bell": [
+            32,
+            36
+          ]
+        }
+      ]
+    },
+    "jump_up": {
+      "fps": 1,
+      "loop": false,
+      "frames": [
+        {
+          "file": "jump_up-0.png",
+          "screen": [
+            32,
+            13
+          ],
+          "bell": [
+            31,
+            22
+          ]
+        }
+      ]
+    },
+    "jump_down": {
+      "fps": 1,
+      "loop": false,
+      "frames": [
+        {
+          "file": "jump_down-0.png",
+          "screen": [
+            32,
+            13
+          ],
+          "bell": [
+            31,
+            22
+          ]
+        }
+      ]
+    },
+    "dragged": {
+      "fps": 4,
+      "loop": true,
+      "frames": [
+        {
+          "file": "dragged-0.png",
+          "screen": [
+            32,
+            13
+          ],
+          "bell": [
+            31,
+            22
+          ]
+        },
+        {
+          "file": "dragged-1.png",
+          "screen": [
+            32,
+            13
+          ],
+          "bell": [
+            31,
+            22
+          ]
+        }
+      ]
+    },
+    "eat": {
+      "fps": 8,
+      "loop": true,
+      "frames": [
+        {
+          "file": "eat-0.png",
+          "screen": [
+            33,
+            13
+          ],
+          "bell": [
+            32,
+            22
+          ]
+        },
+        {
+          "file": "eat-1.png",
+          "screen": [
+            33,
+            15
+          ],
+          "bell": [
+            32,
+            24
+          ]
+        },
+        {
+          "file": "eat-2.png",
+          "screen": [
+            33,
+            17
+          ],
+          "bell": [
+            32,
+            26
+          ]
+        },
+        {
+          "file": "eat-3.png",
+          "screen": [
+            33,
+            15
+          ],
+          "bell": [
+            32,
+            24
+          ]
+        }
+      ]
+    },
+    "happy": {
+      "fps": 6,
+      "loop": true,
+      "frames": [
+        {
+          "file": "happy-0.png",
+          "screen": [
+            32,
+            13
+          ],
+          "bell": [
+            31,
+            22
+          ]
+        },
+        {
+          "file": "happy-1.png",
+          "screen": [
+            32,
+            13
+          ],
+          "bell": [
+            31,
+            22
+          ]
+        }
+      ]
+    },
+    "hurt": {
+      "fps": 8,
+      "loop": true,
+      "frames": [
+        {
+          "file": "hurt-0.png",
+          "screen": [
+            32,
+            13
+          ],
+          "bell": [
+            31,
+            22
+          ]
+        },
+        {
+          "file": "hurt-1.png",
+          "screen": [
+            32,
+            14
+          ],
+          "bell": [
+            31,
+            23
+          ]
+        }
+      ]
+    },
+    "tap": {
+      "fps": 7,
+      "loop": true,
+      "frames": [
+        {
+          "file": "tap-0.png",
+          "screen": [
+            32,
+            14
+          ],
+          "bell": [
+            31,
+            23
+          ]
+        },
+        {
+          "file": "tap-1.png",
+          "screen": [
+            32,
+            14
+          ],
+          "bell": [
+            31,
+            23
+          ]
+        }
+      ]
+    },
+    "curious": {
+      "fps": 1,
+      "loop": true,
+      "frames": [
+        {
+          "file": "curious-0.png",
+          "screen": [
+            32,
+            12
+          ],
+          "bell": [
+            31,
+            21
+          ]
+        }
+      ]
+    }
+  }
+}

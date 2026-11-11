@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Catbot sprite sheet</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 12px;
+        background: #3a4552;
+        color: #e6eaef;
+        font: 12px 'Segoe UI', sans-serif;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 4px;
+      }
+      .row span {
+        width: 70px;
+      }
+      canvas {
+        image-rendering: pixelated;
+        background: #4b5866;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Dev-only: open http://localhost:5173/sheet.html while `npm start` runs. -->
+    <div id="rows"></div>
+    <script type="module" src="./sheet.ts"></script>
+  </body>
+</html>

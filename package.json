@@ -22,11 +22,9 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
-    "@types/three": "^0.187.0",
     "electron": "^45.2.3",
     "electron-builder": "^26.18.0",
     "electron-vite": "^6.0.0",
-    "three": "^0.187.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.7"
   },

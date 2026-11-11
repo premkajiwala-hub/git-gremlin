@@ -86,6 +86,8 @@ export interface Settings {
   movement: Movement
   /** true = drawn on top of every app; false = only on the desktop, behind app windows. */
   onTopOfApps: boolean
+  /** Catbot follows the cursor while it moves over the desktop. */
+  followCursor: boolean
   peckishAfterHours: number
   hungryAfterHours: number
   starvingAfterHours: number

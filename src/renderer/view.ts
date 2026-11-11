@@ -1,81 +1,64 @@
-﻿import * as THREE from 'three'
+﻿import type { RenderState } from './pet/brain'
+import type { Particles } from './pet/particles'
+import { pixelScale, type SpriteSet } from './pet/sprites'
 
-/** Camera elevation (looking slightly down at the pet). */
-const ELEVATION = THREE.MathUtils.degToRad(18)
+/** Extra room around the frame for food, hearts, Zs and hops (sprite pixels). */
+const SIDE = 22
+const TOP = 30
+const BOTTOM = 4
 
 /**
- * A small transparent WebGL canvas that follows the pet around the overlay.
- * Rendering only a pet-sized canvas (instead of a full-screen one) keeps GPU
- * and compositor work tiny.
+ * A small transparent 2D canvas that follows Catbot around the overlay. It
+ * draws in whole device pixels so the pixel art is always crisp.
  */
 export class PetView {
   readonly canvas: HTMLCanvasElement
-  readonly scene = new THREE.Scene()
-  readonly camera: THREE.OrthographicCamera
-  private renderer: THREE.WebGLRenderer
+  private ctx: CanvasRenderingContext2D
+  private sprite = document.createElement('canvas')
+  private sctx = this.sprite.getContext('2d')!
   private visible = true
+  private dpr = window.devicePixelRatio
+  /** Device pixels per sprite pixel. */
+  s = 2
+  /** Feet position inside the canvas, in device pixels. */
+  private ax = 0
+  private ay = 0
 
-  /** Canvas size in CSS px, and where the pet's feet sit inside it. */
-  width = 0
-  height = 0
-  anchorX = 0
-  anchorY = 0
-  petSize = 0
-
-  /**
-   * @param petSize on-screen height of the pet in DIP
-   * @param modelHeight height of the pet model in world units
-   */
   constructor(
     container: HTMLElement,
     petSize: number,
-    private modelHeight: number
+    private sprites: SpriteSet
   ) {
     this.canvas = document.createElement('canvas')
     container.appendChild(this.canvas)
-    this.renderer = new THREE.WebGLRenderer({
-      canvas: this.canvas,
-      alpha: true,
-      antialias: false,
-      premultipliedAlpha: true,
-      powerPreference: 'low-power'
-    })
-    this.renderer.setClearColor(0x000000, 0)
-    this.renderer.setPixelRatio(window.devicePixelRatio)
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace
-    this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 1000)
-    const dist = 300
-    this.camera.position.set(0, Math.sin(ELEVATION) * dist, Math.cos(ELEVATION) * dist)
-    this.camera.lookAt(0, 0, 0)
+    this.ctx = this.canvas.getContext('2d')!
     this.setPetSize(petSize)
   }
 
+  /** On-screen standing height in CSS px (the requested size, snapped to crisp pixels). */
+  get displaySize(): number {
+    return (this.sprites.standHeight * this.s) / this.dpr
+  }
+
   setPetSize(size: number): void {
-    this.petSize = size
-    this.width = Math.round(size * 3.4)
-    this.height = Math.round(size * 3.2)
-    this.anchorX = Math.round(this.width / 2)
-    this.anchorY = Math.round(this.height * 0.72)
-    this.renderer.setSize(this.width, this.height, true)
-    const ppu = this.ppu
-    this.camera.left = -this.anchorX / ppu
-    this.camera.right = (this.width - this.anchorX) / ppu
-    this.camera.top = this.anchorY / ppu
-    this.camera.bottom = -(this.height - this.anchorY) / ppu
-    this.camera.updateProjectionMatrix()
+    const sp = this.sprites
+    this.dpr = window.devicePixelRatio
+    this.s = pixelScale(size, sp.standHeight, this.dpr)
+    const s = this.s
+    this.canvas.width = (sp.cellW + SIDE * 2) * s
+    this.canvas.height = (sp.cellH + TOP + BOTTOM) * s
+    this.canvas.style.width = `${this.canvas.width / this.dpr}px`
+    this.canvas.style.height = `${this.canvas.height / this.dpr}px`
+    this.ax = (SIDE + sp.anchorX) * s
+    this.ay = (TOP + sp.anchorY) * s
+    this.sprite.width = sp.cellW * s
+    this.sprite.height = sp.cellH * s
   }
 
-  /** Pixels per world unit at the current size. */
-  get ppu(): number {
-    return this.petSize / this.modelHeight
-  }
-
-  /** Position the canvas so the pet's feet land on (lx, ly) in overlay-local px. */
+  /** Position the canvas so Catbot's feet land on (lx, ly) in overlay-local CSS px. */
   place(lx: number, ly: number): void {
-    const dpr = window.devicePixelRatio
-    // Snap to device pixels so the pixel art stays crisp.
-    const tx = Math.round((lx - this.anchorX) * dpr) / dpr
-    const ty = Math.round((ly - this.anchorY) * dpr) / dpr
+    const tx = Math.round(lx * this.dpr - this.ax) / this.dpr
+    const ty = Math.round(ly * this.dpr - this.ay) / this.dpr
     this.canvas.style.transform = `translate3d(${tx}px, ${ty}px, 0)`
   }
 
@@ -85,7 +68,62 @@ export class PetView {
     this.canvas.style.display = v ? 'block' : 'none'
   }
 
-  render(): void {
-    if (this.visible) this.renderer.render(this.scene, this.camera)
+  draw(rs: RenderState, particles: Particles | null): void {
+    if (!this.visible) return
+    const sp = this.sprites
+    const s = this.s
+    const ctx = this.ctx
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+    ctx.imageSmoothingEnabled = false
+
+    // Pixel shadow on the floor, smaller the higher Catbot is.
+    const lift = Math.min(0.7, rs.z / 160 + (rs.lifted ? 0.4 : 0))
+    const half = Math.max(3, Math.round(12 * (1 - lift)))
+    ctx.fillStyle = `rgba(0, 0, 0, ${0.25 * (1 - lift)})`
+    ctx.fillRect(this.ax - half * s, this.ay - s, half * 2 * s, s)
+    ctx.fillRect(this.ax - (half - 2) * s, this.ay - 2 * s, (half - 2) * 2 * s, s)
+
+    // The commit cube being eaten, in front of Catbot.
+    if (rs.food > 0) {
+      const fs = Math.max(2, Math.round(10 * rs.food)) * s
+      const fx = this.ax + rs.facing * 20 * s - fs / 2
+      ctx.drawImage(sp.food, Math.round(fx), this.ay - fs, fs, fs)
+    }
+
+    // Compose the frame, its face-screen expression and the lit bell.
+    const frame = sp.anims[rs.anim].frames[rs.frame] ?? sp.anims.idle.frames[0]
+    const sc = this.sctx
+    sc.setTransform(1, 0, 0, 1, 0, 0)
+    sc.globalCompositeOperation = 'source-over'
+    sc.imageSmoothingEnabled = false
+    sc.clearRect(0, 0, this.sprite.width, this.sprite.height)
+    sc.drawImage(frame.img, 0, 0, sp.cellW * s, sp.cellH * s)
+    const eyes = sp.eyes[rs.mood]
+    sc.drawImage(eyes, frame.screen[0] * s, (frame.screen[1] + rs.lookY) * s, eyes.width * s, eyes.height * s)
+    if (rs.glow) sc.drawImage(sp.bellOn, frame.bell[0] * s, frame.bell[1] * s, 3 * s, 3 * s)
+    if (rs.dim > 0 || rs.tint > 0) {
+      sc.globalCompositeOperation = 'source-atop'
+      if (rs.dim > 0) {
+        sc.fillStyle = `rgba(28, 36, 48, ${rs.dim})`
+        sc.fillRect(0, 0, this.sprite.width, this.sprite.height)
+      }
+      if (rs.tint > 0) {
+        sc.fillStyle = 'rgba(255, 40, 40, 0.55)'
+        sc.fillRect(0, 0, this.sprite.width, this.sprite.height)
+      }
+      sc.globalCompositeOperation = 'source-over'
+    }
+
+    // Blit it, mirrored around the feet when facing left, lifted by z / hop.
+    const up = Math.round(rs.z * this.dpr) + Math.round(rs.bob) * s
+    ctx.save()
+    ctx.translate(this.ax, this.ay - up)
+    if (rs.facing < 0) ctx.scale(-1, 1)
+    if (rs.squash > 0) ctx.scale(1 + 0.12 * rs.squash, 1 - 0.18 * rs.squash)
+    ctx.drawImage(this.sprite, -sp.anchorX * s, -sp.anchorY * s)
+    ctx.restore()
+
+    particles?.draw(ctx, this.ax, this.ay, s, sp)
   }
 }

@@ -32,6 +32,7 @@ export const DEFAULT_SETTINGS: Settings = {
   petSpeed: 45,
   movement: 'roam',
   onTopOfApps: false,
+  followCursor: true,
   peckishAfterHours: 2,
   hungryAfterHours: 4,
   starvingAfterHours: 8,

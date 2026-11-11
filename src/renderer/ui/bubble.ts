@@ -80,6 +80,13 @@ export class SpeechBubble {
     this.canvas.style.display = 'none'
   }
 
+  /** Let the current bubble go away after at most `ms` (once it has finished typing). */
+  expireIn(ms: number): void {
+    if (!this.visible) return
+    const typed = this.shownAt + (this.total / TYPE_RATE) * 1000
+    this.hideAt = Math.min(this.hideAt, Math.max(typed, performance.now()) + ms)
+  }
+
   /** Still typing (needs redraws every frame)? */
   get busy(): boolean {
     return this.visible && performance.now() - this.shownAt < (this.total / TYPE_RATE) * 1000 + 1600

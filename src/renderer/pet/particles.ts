@@ -1,66 +1,43 @@
-import * as THREE from 'three'
-import type { TextureSet } from './textures'
-
 export type ParticleKind = 'heart' | 'zzz' | 'crumb'
 
 interface Particle {
-  obj: THREE.Object3D
   kind: ParticleKind
+  /** Position relative to Catbot's feet, in sprite pixels (y up is negative). */
+  x: number
+  y: number
   vx: number
   vy: number
-  vz: number
   age: number
   life: number
-  spin: number
 }
 
-const GRAVITY = 260 // model units / s^2
+const GRAVITY = 160 // sprite px / s^2
 
-/**
- * Pixel hearts, sleepy Zs and tiny commit-cube crumbs. Positions are in the
- * pet's scene space (origin = between its feet, units = model texels).
- */
+/** Pixel hearts, sleepy Zs and commit-cube crumbs, drawn on Catbot's canvas. */
 export class Particles {
   private live: Particle[] = []
-  private crumbGeo = new THREE.BoxGeometry(2, 2, 2)
-  private crumbMat: THREE.MeshBasicMaterial
-  private heartMat: THREE.SpriteMaterial
-  private zMat: THREE.SpriteMaterial
-
-  constructor(
-    private scene: THREE.Scene,
-    tex: TextureSet
-  ) {
-    this.crumbMat = new THREE.MeshBasicMaterial({ map: tex.food })
-    this.heartMat = new THREE.SpriteMaterial({ map: tex.heart, transparent: true, alphaTest: 0.5 })
-    this.zMat = new THREE.SpriteMaterial({ map: tex.zzz, transparent: true, alphaTest: 0.5 })
-  }
 
   get active(): boolean {
     return this.live.length > 0
   }
 
-  spawn(kind: ParticleKind, x: number, y: number, z = 6): void {
-    if (this.live.length > 60) return
-    let obj: THREE.Object3D
-    const p: Particle = { obj: null!, kind, vx: 0, vy: 0, vz: 0, age: 0, life: 1, spin: 0 }
+  /** Spawn at (x, y) sprite pixels from the feet; x is already flipped for facing. */
+  spawn(kind: ParticleKind, x: number, y: number): void {
+    if (this.live.length > 40) return
+    const p: Particle = { kind, x, y, vx: 0, vy: 0, age: 0, life: 1.5 }
     if (kind === 'crumb') {
-      obj = new THREE.Mesh(this.crumbGeo, this.crumbMat)
-      p.vx = (Math.random() - 0.5) * 70
-      p.vy = 50 + Math.random() * 60
-      p.vz = (Math.random() - 0.2) * 40
-      p.life = 1.4
-      p.spin = (Math.random() - 0.5) * 12
+      p.vx = (Math.random() - 0.5) * 30
+      p.vy = -(20 + Math.random() * 25)
+      p.life = 1.1
+    } else if (kind === 'heart') {
+      p.vx = (Math.random() - 0.5) * 4
+      p.vy = -12 - Math.random() * 4
+      p.life = 1.6
     } else {
-      obj = new THREE.Sprite(kind === 'heart' ? this.heartMat.clone() : this.zMat.clone())
-      obj.scale.setScalar(kind === 'heart' ? 8 : 7)
-      p.vx = kind === 'zzz' ? 6 + Math.random() * 4 : (Math.random() - 0.5) * 10
-      p.vy = kind === 'zzz' ? 9 : 18 + Math.random() * 8
-      p.life = kind === 'zzz' ? 2.6 : 1.6
+      p.vx = 3 + Math.random() * 2
+      p.vy = -5
+      p.life = 2.6
     }
-    obj.position.set(x, y, z)
-    p.obj = obj
-    this.scene.add(obj)
     this.live.push(p)
   }
 
@@ -68,36 +45,45 @@ export class Particles {
     for (let i = this.live.length - 1; i >= 0; i--) {
       const p = this.live[i]
       p.age += dt
-      const o = p.obj
       if (p.kind === 'crumb') {
-        p.vy -= GRAVITY * dt
-        o.position.x += p.vx * dt
-        o.position.y += p.vy * dt
-        o.position.z += p.vz * dt
-        o.rotation.x += p.spin * dt
-        o.rotation.y += p.spin * dt
-        if (o.position.y < 1) {
-          o.position.y = 1
-          p.vy = Math.abs(p.vy) * 0.3
+        p.vy += GRAVITY * dt
+        p.x += p.vx * dt
+        p.y += p.vy * dt
+        if (p.y > 0) {
+          p.y = 0
+          p.vy = -Math.abs(p.vy) * 0.3
           p.vx *= 0.6
-          p.vz *= 0.6
         }
       } else {
-        o.position.x += (p.vx + Math.sin(p.age * 5) * 6) * dt
-        o.position.y += p.vy * dt
-        if (p.kind === 'zzz') o.scale.setScalar(5 + p.age * 2)
-        ;(o as THREE.Sprite).material.opacity = Math.min(1, (p.life - p.age) * 2)
+        p.x += (p.vx + Math.sin(p.age * 5) * 3) * dt
+        p.y += p.vy * dt
       }
-      if (p.age >= p.life) {
-        this.scene.remove(o)
-        if (o instanceof THREE.Sprite) o.material.dispose()
-        this.live.splice(i, 1)
-      }
+      if (p.age >= p.life) this.live.splice(i, 1)
     }
   }
 
+  /** Draw at whole-device-pixel positions; (ax, ay) is the feet in device px, s = device px per sprite px. */
+  draw(
+    ctx: CanvasRenderingContext2D,
+    ax: number,
+    ay: number,
+    s: number,
+    sprites: { heart: HTMLImageElement; food: HTMLImageElement; zzz: HTMLImageElement }
+  ): void {
+    for (const p of this.live) {
+      ctx.globalAlpha = Math.min(1, (p.life - p.age) * 2.5)
+      const img = p.kind === 'heart' ? sprites.heart : p.kind === 'zzz' ? sprites.zzz : sprites.food
+      const w = p.kind === 'crumb' ? 2 : img.width
+      const h = p.kind === 'crumb' ? 2 : img.height
+      const x = Math.round(ax + (p.x - w / 2) * s)
+      const y = Math.round(ay + (p.y - h) * s)
+      if (p.kind === 'crumb') ctx.drawImage(img, 3, 3, 3, 3, x, y, w * s, h * s)
+      else ctx.drawImage(img, x, y, w * s, h * s)
+    }
+    ctx.globalAlpha = 1
+  }
+
   clear(): void {
-    for (const p of this.live) this.scene.remove(p.obj)
     this.live = []
   }
 }

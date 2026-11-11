@@ -1,19 +1,19 @@
 /**
- * Draws Catbot's pixel-art textures in code and writes them as PNGs to
- * assets/textures/ (plus the tray icon and installer icon). Run with:
+ * Draws Catbot, a 2D pixel-art robot cat, entirely in code and exports every
+ * animation frame as a PNG so you can repaint them in Aseprite or Piskel:
  *
- *   npm run textures
+ *   assets/catbot/<anim>-<n>.png   50x38 side-view frames, facing right
+ *   assets/catbot/eyes_<mood>.png  8x6 face-screen expressions (overlaid at runtime)
+ *   assets/catbot/bell_on.png      lit collar bell (overlaid when well fed)
+ *   assets/catbot/frames.json      animations, frame rates, anchor, screen/bell positions
+ *   assets/textures/*.png          particles: food cube, heart, Z
+ *   assets/icon.png, build/icon.png  tray and installer icons
  *
- * The app only loads the PNGs at runtime, so you can repaint them in Aseprite
- * or Piskel afterwards. Re-running this script overwrites your edits.
- *
- * Every texture is 16x16. Each box face shows the TOP-LEFT W x H texels of its
- * PNG, where W x H is the face's size in texels (1 texel = 1 model unit);
- * faces longer than 16 repeat. TEXTURES.txt lists the visible region per file.
+ * Run with:  npm run textures   (overwrites repainted files)
  *
  * Self-contained: only Node built-ins (Node 23.6+ strips TS types natively).
  */
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { deflateSync } from 'node:zlib'
@@ -21,38 +21,35 @@ import { deflateSync } from 'node:zlib'
 type RGBA = [number, number, number, number]
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const OUT = join(ROOT, 'assets', 'textures')
+const OUT = join(ROOT, 'assets', 'catbot')
+const TEX = join(ROOT, 'assets', 'textures')
 
-// --- palette: white robot shell, orange accents, dark face-screen, cyan glow ----
-const SHELL = ['#dde1e6', '#e6e9ed', '#eef0f3', '#f6f7f9']
-const SHELL_SHADE = '#c3c9d0'
-const SEAM = '#a9b1ba'
-const METAL = ['#7b848e', '#8a939c', '#99a1a9']
-const DARK = ['#353b43', '#3e454e']
-const ORANGE = ['#f2861a', '#ff9a2e', '#ffad52']
+// --- palette ------------------------------------------------------------------------
+const INK = '#1b2026'
+const SHELL = '#eef0f3'
+const SHELL_HI = '#fbfcfd'
+const SHELL_MID = '#dde1e6'
+const SHADE = '#bcc3cb'
+const SEAM = '#aab2bb'
+const METAL = '#7b848e'
+const PAW = '#3b4149'
+const PAW_FAR = '#2c3137'
+const ORANGE = '#ff9a2e'
+const ORANGE_DARK = '#d97716'
+const ORANGE_FAR = '#d98a3a'
 const SCREEN = '#0a1b21'
-const SCREEN_EDGE = '#14303a'
-const GLINT = '#21505c'
+const SCREEN_EDGE = '#1d3a44'
+const GLINT = '#2a5a66'
 const CYAN = '#5ef2ff'
 const CYAN_DIM = '#2ab3c4'
-const BELL_ON = ['#ffc23d', '#ffd66b', '#ffe9a6']
-const BELL_OFF = ['#7a5a2a', '#8a6630', '#6b4e24']
-const GOLD = ['#d99a1c', '#e9ac2a', '#f5c040', '#ffd75e']
+const BELL_OFF = '#8a6630'
+const BELL_OFF_HI = '#a57a3a'
+const BELL_ON = '#ffc23d'
+const BELL_ON_HI = '#fff0b0'
 
-// --- tiny image + RNG helpers ------------------------------------------------------
+// --- image helpers ------------------------------------------------------------------------
 function rgba(hex: string): RGBA {
   return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16), 255]
-}
-
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0
-    let t = a
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
 }
 
 class Img {
@@ -64,59 +61,62 @@ class Img {
     this.h = h
     this.data = new Uint8Array(w * h * 4)
   }
-  set(x: number, y: number, c: string | RGBA): void {
+  set(x: number, y: number, c: string): void {
+    x = Math.round(x)
+    y = Math.round(y)
     if (x < 0 || y < 0 || x >= this.w || y >= this.h) return
-    this.data.set(typeof c === 'string' ? rgba(c) : c, (y * this.w + x) * 4)
+    this.data.set(rgba(c), (y * this.w + x) * 4)
   }
-  get(x: number, y: number): RGBA {
-    const i = (y * this.w + x) * 4
-    return [this.data[i], this.data[i + 1], this.data[i + 2], this.data[i + 3]]
+  rect(x: number, y: number, w: number, h: number, c: string): void {
+    for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) this.set(xx, yy, c)
+  }
+  /** Rectangle with its four corner pixels knocked off. */
+  round(x: number, y: number, w: number, h: number, c: string): void {
+    this.rect(x + 1, y, w - 2, h, c)
+    this.rect(x, y + 1, w, h - 2, c)
   }
   alpha(x: number, y: number): number {
     if (x < 0 || y < 0 || x >= this.w || y >= this.h) return 0
     return this.data[(y * this.w + x) * 4 + 3]
   }
-  rect(x0: number, y0: number, w: number, h: number, c: string): void {
-    for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) this.set(x, y, c)
+  get(x: number, y: number): RGBA {
+    const i = (y * this.w + x) * 4
+    return [this.data[i], this.data[i + 1], this.data[i + 2], this.data[i + 3]]
+  }
+  /** Add a 1px dark outline around everything drawn so far. */
+  outline(c = INK): this {
+    const marks: [number, number][] = []
+    for (let y = 0; y < this.h; y++)
+      for (let x = 0; x < this.w; x++) {
+        if (this.alpha(x, y)) continue
+        if (this.alpha(x + 1, y) || this.alpha(x - 1, y) || this.alpha(x, y + 1) || this.alpha(x, y - 1)) marks.push([x, y])
+      }
+    for (const [x, y] of marks) this.set(x, y, c)
+    return this
+  }
+  over(top: Img): this {
+    for (let y = 0; y < this.h; y++)
+      for (let x = 0; x < this.w; x++) if (top.alpha(x, y)) this.data.set(top.get(x, y), (y * this.w + x) * 4)
+    return this
+  }
+  mirror(): Img {
+    const out = new Img(this.w, this.h)
+    for (let y = 0; y < this.h; y++) for (let x = 0; x < this.w; x++) out.data.set(this.get(x, y), (y * this.w + this.w - 1 - x) * 4)
+    return out
   }
 }
 
-/** Pick from a palette with a gentle bias, for a slightly noisy hand-placed look. */
-function pick(pal: string[], rnd: () => number): string {
-  return pal[Math.min(pal.length - 1, Math.floor(((rnd() + rnd()) / 2) * pal.length))]
-}
-
-function fill(img: Img, pal: string[], rnd: () => number): void {
-  for (let y = 0; y < img.h; y++) for (let x = 0; x < img.w; x++) img.set(x, y, pick(pal, rnd))
-}
-
-/** Plastic shell: light noise plus a few scuffs. */
-function shell(img: Img, rnd: () => number): void {
-  fill(img, SHELL, rnd)
-  for (let i = 0; i < 5; i++) img.set(Math.floor(rnd() * img.w), Math.floor(rnd() * img.h), SHELL_SHADE)
-}
-
-/** Draw a pixel pattern ('X' = main colour, 'o' = secondary) at (x0, y0). */
-function stamp(img: Img, rows: string[], x0: number, y0: number, main: string, second = main): void {
+/** Draw a pixel pattern ('X' = colour a, 'o' = colour b). */
+function stamp(img: Img, rows: string[], x0: number, y0: number, a: string, b = a): void {
   rows.forEach((row, y) =>
     [...row].forEach((ch, x) => {
-      if (ch === 'X') img.set(x0 + x, y0 + y, main)
-      else if (ch === 'o') img.set(x0 + x, y0 + y, second)
+      if (ch === 'X') img.set(x0 + x, y0 + y, a)
+      else if (ch === 'o') img.set(x0 + x, y0 + y, b)
     })
   )
 }
 
-function outline(img: Img, color: string): void {
-  const marks: [number, number][] = []
-  for (let y = 0; y < img.h; y++)
-    for (let x = 0; x < img.w; x++) {
-      if (img.alpha(x, y)) continue
-      if (img.alpha(x + 1, y) || img.alpha(x - 1, y) || img.alpha(x, y + 1) || img.alpha(x, y - 1)) marks.push([x, y])
-    }
-  for (const [x, y] of marks) img.set(x, y, color)
-}
-
-// --- PNG encoder -----------------------------------------------------------------------
+// --- PNG encoder ------------------------------------------------------------------------------
 const CRC_TABLE = (() => {
   const t = new Uint32Array(256)
   for (let n = 0; n < 256; n++) {
@@ -126,13 +126,11 @@ const CRC_TABLE = (() => {
   }
   return t
 })()
-
 function crc32(buf: Uint8Array): number {
   let c = 0xffffffff
   for (const b of buf) c = CRC_TABLE[(c ^ b) & 0xff] ^ (c >>> 8)
   return (c ^ 0xffffffff) >>> 0
 }
-
 function chunk(type: string, data: Uint8Array): Buffer {
   const len = Buffer.alloc(4)
   len.writeUInt32BE(data.length)
@@ -141,8 +139,7 @@ function chunk(type: string, data: Uint8Array): Buffer {
   crc.writeUInt32BE(crc32(td))
   return Buffer.concat([len, td, crc])
 }
-
-function encodePng(img: Img): Buffer {
+function png(img: Img): Buffer {
   const ihdr = Buffer.alloc(13)
   ihdr.writeUInt32BE(img.w, 0)
   ihdr.writeUInt32BE(img.h, 4)
@@ -157,211 +154,418 @@ function encodePng(img: Img): Buffer {
     chunk('IEND', new Uint8Array(0))
   ])
 }
-
 function scale(img: Img, k: number): Img {
   const out = new Img(img.w * k, img.h * k)
-  for (let y = 0; y < out.h; y++) for (let x = 0; x < out.w; x++) out.set(x, y, img.get(Math.floor(x / k), Math.floor(y / k)))
+  for (let y = 0; y < out.h; y++) for (let x = 0; x < out.w; x++) out.data.set(img.get(Math.floor(x / k), Math.floor(y / k)), (y * out.w + x) * 4)
   return out
 }
 
-// --- textures --------------------------------------------------------------------------
-const textures: Record<string, { img: Img; used: string }> = {}
-function add(name: string, used: string, draw: (img: Img, rnd: () => number) => void, size = 16): Img {
-  const img = new Img(size, size)
-  const seed = [...name].reduce((s, ch) => (s * 31 + ch.charCodeAt(0)) >>> 0, 11)
-  draw(img, mulberry32(seed))
-  textures[name] = { img, used }
-  return img
+// --- the catbot ---------------------------------------------------------------------------------
+const W = 50
+const H = 38
+/** Bottom row of the feet. */
+const GROUND = 35
+const ANCHOR = { x: 24, y: GROUND + 1 }
+
+interface Leg {
+  /** Left column of the 3px-wide leg at the hip. */
+  x: number
+  /** Horizontal swing of the paw (the hip stays put). */
+  dx?: number
+  /** How far the paw is lifted off the ground. */
+  lift?: number
+  /** Extra length (dangling legs). */
+  extra?: number
 }
 
-// Head: a 16-unit cube whose front is a dark face-screen.
-const SCREEN_X0 = 2
-const SCREEN_Y0 = 3
-const SCREEN_W = 12
-const SCREEN_H = 10
-add('head_front', '16x16', (img, rnd) => {
-  shell(img, rnd)
-  img.rect(0, 15, 16, 1, SHELL_SHADE)
-  img.rect(SCREEN_X0, SCREEN_Y0, SCREEN_W, SCREEN_H, SCREEN_EDGE)
-  img.rect(SCREEN_X0 + 1, SCREEN_Y0 + 1, SCREEN_W - 2, SCREEN_H - 2, SCREEN)
-  // Rounded screen corners.
-  for (const [x, y] of [
-    [SCREEN_X0, SCREEN_Y0],
-    [SCREEN_X0 + SCREEN_W - 1, SCREEN_Y0],
-    [SCREEN_X0, SCREEN_Y0 + SCREEN_H - 1],
-    [SCREEN_X0 + SCREEN_W - 1, SCREEN_Y0 + SCREEN_H - 1]
-  ])
-    img.set(x, y, SHELL_SHADE)
-  // A little glass glint in the top-left.
-  img.set(4, 4, GLINT)
-  img.set(5, 4, GLINT)
-  img.set(4, 5, GLINT)
-})
-add('head_side', '16x16', (img, rnd) => {
-  shell(img, rnd)
-  img.rect(0, 15, 16, 1, SHELL_SHADE)
-  // Orange cheek panel and a row of vents, like a robot's ear-plate.
-  img.rect(3, 8, 7, 2, ORANGE[1])
-  img.rect(3, 10, 7, 1, ORANGE[0])
-  for (const x of [11, 13]) {
-    img.set(x, 8, METAL[0])
-    img.set(x, 9, METAL[0])
+interface Pose {
+  kind?: 'stand' | 'sit' | 'loaf' | 'flop'
+  /** Whole-body vertical offset (positive = down). */
+  dy?: number
+  head?: { dx?: number; dy?: number }
+  ears?: 'up' | 'back' | 'perk'
+  /** Near-front, far-front, near-back, far-back. */
+  legs?: [Leg, Leg, Leg, Leg]
+  /** Tail: base angle in degrees (90 = straight up, 180 = straight back), curl per segment, length. */
+  tail?: { angle: number; curl?: number; len?: number }
+  /** Body squash for crouching (rows removed from the body height). */
+  low?: number
+}
+
+interface FrameInfo {
+  img: Img
+  screen: [number, number]
+  bell: [number, number]
+}
+
+const STAND_LEGS = (): [Leg, Leg, Leg, Leg] => [{ x: 25 }, { x: 22 }, { x: 13 }, { x: 16 }]
+
+function drawLeg(img: Img, leg: Leg, top: number, far: boolean): void {
+  const len = GROUND - top + 1 + (leg.extra ?? 0)
+  const lift = leg.lift ?? 0
+  const dx = leg.dx ?? 0
+  const vis = len - lift
+  for (let r = 0; r < vis; r++) {
+    const x = leg.x + Math.round((dx * r) / Math.max(1, len - 1))
+    const color = r < vis - 3 ? (far ? SHADE : SHELL) : r === vis - 3 ? (far ? ORANGE_FAR : ORANGE) : far ? PAW_FAR : PAW
+    img.rect(x, top + r, 3, 1, color)
   }
-})
-add('head_top', '16x16', (img, rnd) => {
-  shell(img, rnd)
-  img.rect(0, 7, 16, 1, SEAM)
-})
-add('head_back', '16x16', (img, rnd) => {
-  shell(img, rnd)
-  img.rect(0, 15, 16, 1, SHELL_SHADE)
-  img.rect(6, 6, 4, 2, ORANGE[1])
-  img.rect(5, 11, 6, 1, SEAM)
-})
-add('head_bottom', '16x16', (img, rnd) => fill(img, [SHELL_SHADE, SEAM], rnd))
-
-// Face-screen expressions: transparent overlays drawn at full brightness so they glow.
-const EYES: Record<string, { rows: string[]; y: number }> = {
-  eyes_idle: { rows: ['.XX.', 'X..X'], y: 7 }, // ^ ^
-  eyes_blink: { rows: ['XXXX'], y: 8 }, // - -
-  eyes_happy: { rows: ['XX..', '..XX', 'XX..'], y: 6 }, // > <  (right eye mirrored)
-  eyes_hurt: { rows: ['X.X', '.X.', 'X.X'], y: 6 }, // x x
-  eyes_alert: { rows: ['XX', 'XX', 'XX'], y: 6 }, // tall glowing blocks
-  eyes_sad: { rows: ['XX..', '..XX'], y: 7 } // droopy
 }
-for (const [name, e] of Object.entries(EYES)) {
-  add(name, '16x16 overlay (transparent except the eyes)', (img) => {
-    const w = e.rows[0].length
-    // Centre each eye in its half of the screen, symmetric around the middle.
-    const left = Math.floor(4.5 - w / 2) + 1
-    const right = 16 - left - w
-    stamp(img, e.rows, left, e.y, CYAN)
-    // Mirror the right eye so asymmetric shapes make a symmetric face.
-    const mirrored = e.rows.map((r) => [...r].reverse().join(''))
-    stamp(img, mirrored, right, e.y, CYAN)
-    // Soft glow directly under the eyes (collected first so it doesn't cascade).
-    const glow: [number, number][] = []
-    for (let y = 0; y < img.h; y++)
-      for (let x = 0; x < img.w; x++) if (img.alpha(x, y) && !img.alpha(x, y + 1) && y + 1 < 12) glow.push([x, y + 1])
-    for (const [x, y] of glow) img.set(x, y, CYAN_DIM)
+
+function drawTail(img: Img, x0: number, y0: number, t: { angle: number; curl?: number; len?: number }): void {
+  const len = t.len ?? 9
+  let x = x0
+  let y = y0
+  let a = t.angle
+  for (let i = 0; i < len; i++) {
+    const rad = (a * Math.PI) / 180
+    x += Math.cos(rad) * 1.5
+    y -= Math.sin(rad) * 1.5
+    a += t.curl ?? -6
+    const tip = i >= len - 2
+    const color = tip ? ORANGE : Math.floor(i / 2) % 2 === 0 ? SHELL_MID : METAL
+    img.rect(Math.round(x), Math.round(y), tip && i === len - 1 ? 3 : 2, tip && i === len - 1 ? 3 : 2, color)
+  }
+}
+
+function drawEar(img: Img, x: number, y: number, style: 'up' | 'back' | 'perk', far: boolean): void {
+  const body = far ? SHADE : SHELL
+  const inner = far ? ORANGE_FAR : ORANGE
+  if (style === 'back') {
+    stamp(img, ['XXX..', 'XXXXX'], x - 1, y - 2, body)
+    img.set(x + 1, y - 1, inner)
+    return
+  }
+  const rows = style === 'perk' ? ['.X..', '.XX.', '.XoX', '.XoX', 'XXXX'] : ['.X..', '.XX.', '.XoX', 'XXXX']
+  stamp(img, rows, x, y - rows.length, body, inner)
+}
+
+/** The head (with face-screen and ears) at (hx, hy). Returns the screen-interior origin. */
+function drawHead(img: Img, hx: number, hy: number, ears: 'up' | 'back' | 'perk'): [number, number] {
+  drawEar(img, hx + 3, hy, ears, true)
+  img.round(hx, hy, 16, 13, SHELL)
+  img.rect(hx + 1, hy + 11, 14, 1, SHELL_MID)
+  img.rect(hx + 1, hy + 1, 13, 1, SHELL_HI)
+  // Cheek panel and vent on the side of the head.
+  img.rect(hx + 1, hy + 6, 3, 2, ORANGE)
+  img.rect(hx + 1, hy + 8, 3, 1, ORANGE_DARK)
+  img.set(hx + 2, hy + 10, METAL)
+  // Face-screen.
+  img.round(hx + 5, hy + 2, 10, 9, SCREEN_EDGE)
+  img.rect(hx + 6, hy + 3, 8, 7, SCREEN)
+  img.set(hx + 6, hy + 3, GLINT)
+  img.set(hx + 7, hy + 3, GLINT)
+  img.set(hx + 6, hy + 4, GLINT)
+  drawEar(img, hx + 9, hy, ears, false)
+  return [hx + 6, hy + 4]
+}
+
+function drawBody(img: Img, bx: number, by: number, bw: number, bh: number): void {
+  img.round(bx, by, bw, bh, SHELL)
+  img.rect(bx + 1, by, bw - 2, 1, SHELL_HI)
+  img.rect(bx + 1, by + bh - 1, bw - 2, 1, SHADE)
+  img.rect(bx + 4, by + 2, 5, 2, ORANGE)
+  img.rect(bx + 4, by + 4, 5, 1, ORANGE_DARK)
+  img.rect(bx + 11, by + 2, 1, Math.max(1, bh - 4), SEAM)
+}
+
+function drawCollar(img: Img, hx: number, hy: number): [number, number] {
+  img.rect(hx + 1, hy + 13, 7, 1, PAW)
+  const bx = hx + 5
+  const by = hy + 13
+  img.rect(bx, by, 3, 3, BELL_OFF)
+  img.set(bx, by, BELL_OFF_HI)
+  return [bx, by]
+}
+
+/** Draw one frame from a pose, layer by layer, each outlined so the parts read clearly. */
+function frame(p: Pose): FrameInfo {
+  const kind = p.kind ?? 'stand'
+  const dy = p.dy ?? 0
+  const ears = p.ears ?? 'up'
+  const back = new Img(W, H)
+  const body = new Img(W, H)
+  const near = new Img(W, H)
+  const head = new Img(W, H)
+  let screen: [number, number]
+  let bell: [number, number]
+
+  if (kind === 'stand') {
+    const low = p.low ?? 0
+    const bx = 12
+    const by = 18 + dy + low
+    const bh = 9 - Math.min(low, 3)
+    const legs = p.legs ?? STAND_LEGS()
+    const legTop = by + bh - 1
+    drawLeg(back, legs[1], legTop, true)
+    drawLeg(back, legs[3], legTop, true)
+    drawTail(back, bx + 1, by + 2, p.tail ?? { angle: 115 })
+    drawBody(body, bx, by, 18, bh)
+    drawLeg(near, legs[0], legTop, false)
+    drawLeg(near, legs[2], legTop, false)
+    const hx = 26 + (p.head?.dx ?? 0)
+    const hy = 9 + dy + low + (p.head?.dy ?? 0)
+    screen = drawHead(head, hx, hy, ears)
+    bell = drawCollar(head, hx, hy)
+  } else if (kind === 'sit') {
+    // Haunches down, front legs straight, tail curled along the ground.
+    drawTail(back, 13, 32, p.tail ?? { angle: 180, curl: -14, len: 8 })
+    body.round(11, 23, 11, 12, SHADE)
+    body.round(14, 17, 14, 13, SHELL)
+    body.rect(15, 17, 12, 1, SHELL_HI)
+    body.rect(17, 20, 4, 2, ORANGE)
+    body.rect(17, 22, 4, 1, ORANGE_DARK)
+    body.rect(11, 33, 6, 2, PAW)
+    drawLeg(near, { x: 24 }, 27, false)
+    drawLeg(back, { x: 21 }, 27, true)
+    const hx = 24 + (p.head?.dx ?? 0)
+    const hy = 7 + (p.head?.dy ?? 0)
+    screen = drawHead(head, hx, hy, ears)
+    bell = drawCollar(head, hx, hy)
+  } else if (kind === 'loaf') {
+    // Lying down like a loaf, paws tucked, tail wrapped round the front.
+    const breathe = dy
+    drawTail(back, 9, 31, p.tail ?? { angle: 200, curl: 12, len: 9 })
+    drawBody(body, 9, 25 - breathe, 21, 11 + breathe)
+    near.rect(27, 34, 4, 2, PAW)
+    near.rect(10, 34, 4, 2, PAW)
+    const hx = 25 + (p.head?.dx ?? 0)
+    const hy = 21 + (p.head?.dy ?? 0)
+    screen = drawHead(head, hx, hy, ears)
+    bell = [hx + 5, hy + 13]
+  } else {
+    // Flopped over: legs splayed out along the ground, head down.
+    const tw = dy
+    back.rect(31, 31 - tw, 6, 3, SHADE)
+    back.rect(36, 31 - tw, 2, 3, PAW_FAR)
+    back.rect(3, 32, 7, 3, SHADE)
+    back.rect(2, 32, 2, 3, PAW_FAR)
+    drawTail(back, 9, 33, p.tail ?? { angle: 175, curl: 2, len: 8 })
+    drawBody(body, 8, 27, 22, 9)
+    near.rect(29, 33, 8, 3, SHELL)
+    near.rect(35, 33, 1, 3, ORANGE)
+    near.rect(36, 33, 3, 3, PAW)
+    near.rect(4, 34, 7, 2, SHELL)
+    near.rect(2, 34, 2, 2, PAW)
+    const hx = 27 + (p.head?.dx ?? 0)
+    const hy = 23 + (p.head?.dy ?? 0)
+    screen = drawHead(head, hx, hy, 'back')
+    bell = [hx + 5, hy + 13]
+  }
+
+  const img = new Img(W, H)
+  img.over(back.outline()).over(body.outline()).over(near.outline()).over(head.outline())
+  return { img, screen, bell }
+}
+
+// --- animations ---------------------------------------------------------------------------------
+const L = (x: number, dx = 0, lift = 0, extra = 0): Leg => ({ x, dx, lift, extra })
+
+/** Walk/run/crawl cycles: diagonal leg pairs swing together. */
+function gait(steps: number[], lifts: number[], opts: { bob?: number[]; tail: Pose['tail']; ears?: Pose['ears']; low?: number; head?: Pose['head'] }): Pose[] {
+  return steps.map((s, i) => ({
+    dy: opts.bob?.[i] ?? 0,
+    low: opts.low,
+    ears: opts.ears,
+    head: opts.head,
+    tail: opts.tail,
+    legs: [L(25, s, lifts[i]), L(22, -s, lifts[(i + steps.length / 2) % steps.length]), L(13, -s, lifts[(i + steps.length / 2) % steps.length]), L(16, s, lifts[i])]
+  }))
+}
+
+const WALK = [2, 1, -1, -2, -1, 1]
+const WALK_LIFT = [0, 1, 1, 0, 0, 0]
+const RUN = [4, 2, -1, -4, -2, 1]
+const RUN_LIFT = [0, 2, 2, 0, 0, 0]
+
+const ANIMS: Record<string, { fps: number; loop: boolean; poses: Pose[] }> = {
+  idle: {
+    fps: 3,
+    loop: true,
+    poses: [112, 118, 124, 118].map((a, i) => ({ tail: { angle: a, curl: -7 }, dy: i === 2 ? 0 : 0 }))
+  },
+  idle_sad: {
+    fps: 2,
+    loop: true,
+    poses: [196, 200, 204, 200].map((a) => ({ tail: { angle: a, curl: 3 }, ears: 'back' as const, head: { dy: 2 } }))
+  },
+  walk: { fps: 10, loop: true, poses: gait(WALK, WALK_LIFT, { bob: [0, 0, 1, 0, 0, 1], tail: { angle: 125, curl: -6 } }) },
+  walk_sad: {
+    fps: 7,
+    loop: true,
+    poses: gait(WALK, WALK_LIFT, { tail: { angle: 200, curl: 3 }, ears: 'back', head: { dy: 2 } })
+  },
+  run: {
+    fps: 14,
+    loop: true,
+    poses: gait(RUN, RUN_LIFT, { bob: [0, -1, -1, 0, 1, 0], tail: { angle: 165, curl: -2 }, ears: 'back' })
+  },
+  crawl: {
+    fps: 6,
+    loop: true,
+    poses: gait([1, 1, 0, -1, -1, 0], [0, 1, 0, 0, 0, 0], { low: 3, tail: { angle: 175, curl: -2 }, ears: 'back', head: { dy: 1 } })
+  },
+  sit: { fps: 1.5, loop: true, poses: [{ kind: 'sit' }, { kind: 'sit', tail: { angle: 180, curl: -16, len: 8 } }] },
+  sleep: {
+    fps: 1.2,
+    loop: true,
+    poses: [
+      { kind: 'loaf', ears: 'back', dy: 0 },
+      { kind: 'loaf', ears: 'back', dy: 1 }
+    ]
+  },
+  starving: { fps: 1, loop: true, poses: [{ kind: 'flop', dy: 0 }, { kind: 'flop', dy: 1 }] },
+  jump_up: {
+    fps: 1,
+    loop: false,
+    poses: [{ tail: { angle: 150, curl: -3 }, legs: [L(25, 3, 2), L(22, 3, 2), L(13, -3, 1), L(16, -3, 1)], ears: 'perk' }]
+  },
+  jump_down: {
+    fps: 1,
+    loop: false,
+    poses: [{ tail: { angle: 105, curl: -4 }, legs: [L(25, 1), L(22, 1), L(13, -1), L(16, -1)] }]
+  },
+  dragged: {
+    fps: 4,
+    loop: true,
+    poses: [-1, 1].map((s) => ({
+      tail: { angle: 255, curl: s * 4 },
+      ears: 'back' as const,
+      legs: [L(25, s, 0, 1), L(22, s, 0, 1), L(13, s, 0, 1), L(16, s, 0, 1)] as [Leg, Leg, Leg, Leg]
+    }))
+  },
+  eat: {
+    fps: 8,
+    loop: true,
+    poses: [0, 2, 4, 2].map((d) => ({ head: { dx: 1, dy: d }, tail: { angle: 110, curl: -7 }, legs: [L(25, 1), L(22, 1), L(13), L(16)] as [Leg, Leg, Leg, Leg] }))
+  },
+  happy: {
+    fps: 6,
+    loop: true,
+    poses: [95, 80].map((a) => ({ tail: { angle: a, curl: -9 }, ears: 'perk' as const }))
+  },
+  hurt: {
+    fps: 8,
+    loop: true,
+    poses: [0, 1].map((d) => ({ dy: d, ears: 'back' as const, tail: { angle: 190, curl: 2 }, legs: [L(25, 1), L(22, 1), L(13, -1), L(16, -1)] as [Leg, Leg, Leg, Leg] }))
+  },
+  tap: {
+    fps: 7,
+    loop: true,
+    poses: [3, 1].map((lift) => ({ tail: { angle: 200, curl: 3 }, ears: 'back' as const, head: { dy: 1 }, legs: [L(25, 2, lift), L(22), L(13), L(16)] as [Leg, Leg, Leg, Leg] }))
+  },
+  curious: {
+    fps: 1,
+    loop: true,
+    poses: [{ ears: 'perk', head: { dy: -1 }, tail: { angle: 100, curl: -10 } }]
+  }
+}
+
+// --- face-screen expressions (8x6, left eye cols 0-2, right eye cols 5-7) --------------------------
+const EYES: Record<string, string[]> = {
+  idle: ['........', '.X....X.', 'X.X..X.X', '........', '........', '........'],
+  blink: ['........', '........', '........', 'XXX..XXX', '........', '........'],
+  happy: ['........', 'X......X', '.X....X.', 'X......X', '........', '........'],
+  hurt: ['........', 'X.X..X.X', '.X....X.', 'X.X..X.X', '........', '........'],
+  alert: ['........', '.XX..XX.', '.XX..XX.', '.XX..XX.', '........', '........'],
+  sad: ['........', '........', 'XX....XX', '..X..X..', '........', '........']
+}
+
+// --- write everything -------------------------------------------------------------------------
+rmSync(OUT, { recursive: true, force: true })
+mkdirSync(OUT, { recursive: true })
+mkdirSync(TEX, { recursive: true })
+
+const meta: {
+  cell: { w: number; h: number }
+  anchor: { x: number; y: number }
+  standHeight: number
+  standWidth: number
+  eyes: { w: number; h: number }
+  anims: Record<string, { fps: number; loop: boolean; frames: { file: string; screen: [number, number]; bell: [number, number] }[] }>
+} = { cell: { w: W, h: H }, anchor: ANCHOR, standHeight: 0, standWidth: 0, eyes: { w: 8, h: 6 }, anims: {} }
+
+let firstIdle: FrameInfo | null = null
+for (const [name, a] of Object.entries(ANIMS)) {
+  meta.anims[name] = { fps: a.fps, loop: a.loop, frames: [] }
+  a.poses.forEach((pose, i) => {
+    const f = frame(pose)
+    if (name === 'idle' && i === 0) firstIdle = f
+    const file = `${name}-${i}.png`
+    writeFileSync(join(OUT, file), png(f.img))
+    meta.anims[name].frames.push({ file, screen: f.screen, bell: f.bell })
   })
 }
 
-// Ears: a 3 x 4 x 5 shell base with an orange inner panel, topped by a 2 x 3 x 3 orange tip.
-add('ear_front', '5x4 (top-left)', (img, rnd) => {
-  shell(img, rnd)
-  stamp(img, ['.XXX.', '.XXX.', '.oXo.'], 0, 0, ORANGE[1], ORANGE[0])
-})
-add('ear_side', '3x4 (top-left)', (img, rnd) => shell(img, rnd))
-add('ear_tip', '3x3 (top-left)', (img, rnd) => {
-  fill(img, ORANGE, rnd)
-  img.set(0, 0, ORANGE[2])
-})
-
-// Body: 24 long x 10 tall x 14 wide.
-add('body_side', '16x10 (top 10 rows), repeats along the length', (img, rnd) => {
-  shell(img, rnd)
-  img.rect(0, 0, 16, 1, SHELL[3])
-  img.rect(3, 3, 6, 2, ORANGE[1])
-  img.rect(3, 5, 6, 1, ORANGE[0])
-  img.rect(12, 2, 1, 6, SEAM)
-  img.rect(0, 9, 16, 1, SHELL_SHADE)
-})
-add('body_top', '16x14 (top 14 rows), repeats along the length', (img, rnd) => {
-  shell(img, rnd)
-  img.rect(0, 6, 16, 2, SHELL_SHADE)
-  img.set(5, 6, ORANGE[2])
-})
-add('body_end', '14x10 (top-left)', (img, rnd) => {
-  shell(img, rnd)
-  img.rect(0, 9, 16, 1, SHELL_SHADE)
-  img.rect(5, 3, 4, 3, SEAM)
-})
-add('body_bottom', '16x14, repeats along the length', (img, rnd) => fill(img, METAL, rnd))
-
-// Legs: 5 x 7 x 5. White upper, orange cuff, dark paw pads.
-add('leg_side', '5x7 (top-left)', (img, rnd) => {
-  shell(img, rnd)
-  img.rect(0, 0, 16, 1, SHELL_SHADE)
-  img.rect(0, 4, 16, 1, ORANGE[1])
-  img.rect(0, 5, 16, 2, DARK[1])
-  img.rect(0, 6, 16, 1, DARK[0])
-})
-add('leg_top', '5x5 (top-left)', (img, rnd) => fill(img, [SHELL_SHADE, SEAM], rnd))
-add('leg_bottom', '5x5 (top-left)', (img, rnd) => fill(img, DARK, rnd))
-
-// Tail: striped cable segments (3 x 4 x 3) with an orange tip.
-add('tail_light', '3x4 (top-left)', (img, rnd) => fill(img, SHELL.slice(0, 3), rnd))
-add('tail_dark', '3x4 (top-left)', (img, rnd) => fill(img, METAL, rnd))
-add('tail_tip', '3x4 (top-left)', (img, rnd) => {
-  fill(img, ORANGE, rnd)
-  img.set(0, 0, ORANGE[2])
-})
-
-// Collar and bell. The bell lights up when Catbot is well fed.
-add('collar', '15x3 (top-left)', (img, rnd) => {
-  fill(img, DARK, rnd)
-  for (let x = 1; x < 16; x += 4) img.set(x, 1, METAL[2])
-})
-add('bell_on', '3x3 (top-left)', (img, rnd) => {
-  fill(img, BELL_ON, rnd)
-  img.set(0, 0, '#fff6d6')
-})
-add('bell_off', '3x3 (top-left)', (img, rnd) => fill(img, BELL_OFF, rnd))
-
-// Food: a golden "commit cube" (box scaled down in the scene, full 16x16 visible).
-add('food', '16x16', (img, rnd) => {
-  fill(img, GOLD, rnd)
-  img.rect(0, 7, 16, 1, '#8a5a10')
-  img.rect(0, 8, 16, 1, '#a8701a')
-  img.rect(0, 15, 16, 1, '#b07a14')
-  for (let y = 5; y <= 10; y++)
-    for (let x = 5; x <= 10; x++) {
-      const d = Math.hypot(x - 7.5, y - 7.5)
-      if (d < 3.2) img.set(x, y, d < 1.7 ? '#fff0b0' : '#8a5a10')
-    }
-})
-
-// Particle sprites (8x8).
-add(
-  'heart',
-  '8x8 sprite',
-  (img) => {
-    stamp(img, ['.XX.XX..', 'XoXXXXX.', 'XXXXXXX.', 'XXXXXXX.', '.XXXXX..', '..XXX...', '...X....'], 0, 0, '#ff5b6e', '#ffc0c7')
-    outline(img, '#4a0e18')
-  },
-  8
-)
-add(
-  'zzz',
-  '8x8 sprite',
-  (img) => {
-    stamp(img, ['........', '.XXXXX..', '....X...', '...X....', '..X.....', '.XXXXX..'], 0, 0, CYAN)
-    outline(img, '#0a2a33')
-  },
-  8
-)
-
-// --- write ------------------------------------------------------------------------------
-mkdirSync(OUT, { recursive: true })
-const manifest: string[] = []
-for (const [name, { img, used }] of Object.entries(textures)) {
-  writeFileSync(join(OUT, `${name}.png`), encodePng(img))
-  manifest.push(`${name}.png`.padEnd(22) + used)
+// Standing size, measured from the first idle frame.
+{
+  const img = firstIdle!.img
+  let top = H
+  let left = W
+  let right = 0
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++)
+      if (img.alpha(x, y)) {
+        top = Math.min(top, y)
+        left = Math.min(left, x)
+        right = Math.max(right, x)
+      }
+  meta.standHeight = ANCHOR.y - top
+  meta.standWidth = right - left + 1
 }
-writeFileSync(join(OUT, 'TEXTURES.txt'), `Visible region of each PNG (see scripts/generate-textures.ts):\n\n${manifest.join('\n')}\n`)
 
-// Icon: the face-screen with happy eyes, orange ears poking up, on a dark tile.
-const icon = new Img(16, 16)
-icon.rect(0, 0, 16, 16, '#11161c')
-const face = textures.head_front.img
-for (let y = 0; y < 13; y++) for (let x = 0; x < 14; x++) icon.set(x + 1, y + 3, face.get(x + 1, y + 1))
-const eyes = textures.eyes_idle.img
-for (let y = 0; y < 13; y++) for (let x = 0; x < 14; x++) if (eyes.alpha(x + 1, y + 1)) icon.set(x + 1, y + 3, eyes.get(x + 1, y + 1))
-stamp(icon, ['XX', 'XoX'], 2, 1, SHELL[2], ORANGE[1])
-stamp(icon, ['.XX', 'XoX'], 11, 1, SHELL[2], ORANGE[1])
-writeFileSync(join(ROOT, 'assets', 'icon.png'), encodePng(scale(icon, 2)))
+for (const [mood, rows] of Object.entries(EYES)) {
+  const img = new Img(8, 6)
+  stamp(img, rows, 0, 0, CYAN)
+  // A dim glow pixel under each lit pixel that has nothing below it.
+  const glow: [number, number][] = []
+  for (let y = 0; y < 5; y++) for (let x = 0; x < 8; x++) if (img.alpha(x, y) && !img.alpha(x, y + 1)) glow.push([x, y + 1])
+  for (const [x, y] of glow) img.set(x, y, CYAN_DIM)
+  writeFileSync(join(OUT, `eyes_${mood}.png`), png(img))
+}
+
+const bellOn = new Img(3, 3)
+bellOn.rect(0, 0, 3, 3, BELL_ON)
+bellOn.set(0, 0, BELL_ON_HI)
+writeFileSync(join(OUT, 'bell_on.png'), png(bellOn))
+writeFileSync(join(OUT, 'frames.json'), JSON.stringify(meta, null, 2))
+
+// Particles.
+const food = new Img(8, 8)
+food.rect(0, 0, 8, 8, '#e9ac2a')
+food.rect(0, 0, 8, 1, '#ffd75e')
+food.rect(0, 7, 8, 1, '#b07a14')
+food.rect(0, 3, 8, 1, '#8a5a10')
+food.rect(3, 2, 2, 3, '#fff0b0')
+food.outline('#5a3a08')
+const foodPad = new Img(10, 10)
+for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if (food.alpha(x, y)) foodPad.data.set(food.get(x, y), ((y + 1) * 10 + x + 1) * 4)
+foodPad.outline('#5a3a08')
+writeFileSync(join(TEX, 'food.png'), png(foodPad))
+
+const heart = new Img(9, 8)
+stamp(heart, ['.XX.XX.', 'XoXXXXX', 'XXXXXXX', '.XXXXX.', '..XXX..', '...X...'], 1, 1, '#ff5b6e', '#ffc0c7')
+heart.outline('#4a0e18')
+writeFileSync(join(TEX, 'heart.png'), png(heart))
+
+const zzz = new Img(7, 7)
+stamp(zzz, ['XXXXX', '...X.', '..X..', '.X...', 'XXXXX'], 1, 1, CYAN)
+zzz.outline('#0a2a33')
+writeFileSync(join(TEX, 'zzz.png'), png(zzz))
+
+// Icons: the catbot's head and ears on a dark rounded tile.
+const iconHead = new Img(20, 20)
+drawHead(iconHead, 2, 6, 'up')
+iconHead.outline()
+const eyeImg = new Img(8, 6)
+stamp(eyeImg, EYES.idle, 0, 0, CYAN)
+for (let y = 0; y < 6; y++) for (let x = 0; x < 8; x++) if (eyeImg.alpha(x, y)) iconHead.set(8 + x, 10 + y, CYAN)
+const icon = new Img(20, 20)
+icon.round(0, 0, 20, 20, '#11161c')
+icon.over(iconHead)
+writeFileSync(join(ROOT, 'assets', 'icon.png'), png(scale(icon, 2)))
 mkdirSync(join(ROOT, 'build'), { recursive: true })
-writeFileSync(join(ROOT, 'build', 'icon.png'), encodePng(scale(icon, 16)))
+writeFileSync(join(ROOT, 'build', 'icon.png'), png(scale(icon, 13)))
 
-console.log(`Wrote ${Object.keys(textures).length} textures to ${OUT}, plus assets/icon.png and build/icon.png`)
+const count = Object.values(meta.anims).reduce((n, a) => n + a.frames.length, 0)
+console.log(`Drew ${count} catbot frames (${W}x${H}, stand height ${meta.standHeight}px) into ${OUT}`)

@@ -66,6 +66,7 @@ export class Store {
     s.petSize = Math.min(PET_SIZE_MAX, Math.max(PET_SIZE_MIN, s.petSize))
     if (s.movement !== 'ground') s.movement = 'roam'
     s.onTopOfApps = Boolean(s.onTopOfApps)
+    if (typeof s.followCursor !== 'boolean') s.followCursor = DEFAULT_SETTINGS.followCursor
   }
 
   saveSoon(): void {

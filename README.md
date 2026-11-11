@@ -2,7 +2,7 @@
 
 A Windows 11 desktop pet that roams your desktop and **gets hungry when you don't commit code**.
 
-Meet **Catbot**: a blocky little robot cat with a white shell, orange ear tips and stripes, a striped cable tail, a collar bell that glows when it's well fed, and a dark face-screen whose glowing cyan eyes show how it feels (^ ^, — —, > <, x x, sad). It's built entirely in code: box parts with 16×16 pixel-art textures, rendered with three.js.
+Meet **Catbot**: a little 2D pixel-art robot cat with a white shell, orange ear tips and stripes, a striped cable tail, a collar bell that glows when it's well fed, and a dark face-screen whose glowing cyan eyes show how it feels (^ ^, — —, > <, x x, sad). Every frame is drawn in code and exported as PNGs you can repaint.
 
 <!-- Screenshot / GIF placeholder: record Catbot on your desktop and save it as docs/screenshot.gif, then replace this comment with:
 ![Catbot on the desktop](docs/screenshot.gif) -->
@@ -11,12 +11,12 @@ Meet **Catbot**: a blocky little robot cat with a white shell, orange ear tips a
 ## Features
 
 - **Lives on your desktop.** By default Catbot sits just above the wallpaper: your app windows cover it and it shows wherever the desktop shows. Tick **Show on top of apps** in Settings to have it stay above everything instead.
-- **Roams freely.** It walks, runs, sneaks (crawls) and hops anywhere on the screen, sits, naps, gets curious, and walks between monitors. Prefer the classic look? Set **Where it wanders** to *Only along the bottom of the screen*, and it walks on the taskbar's top edge.
+- **Follows your cursor.** Move the mouse over the desktop and Catbot walks (or runs, if you're far away) after it. Once it reaches the cursor it stops and looks up at you. Turn this off with **Follow my cursor** in Settings.
+- **Hover to read its mind.** Hover over Catbot and its message box pops up with its energy, mood and time since your last commit, for as long as you hover.
+- **Roams freely.** On its own it walks, runs, sneaks (crawls) and hops anywhere on the screen, sits, naps, gets curious, and walks between monitors. Prefer the classic look? Set **Where it wanders** to *Only along the bottom of the screen*, and it walks on the taskbar's top edge.
 - **Window hopping.** Sometimes it jumps onto the top edge of the window you're working in and walks along it. If that window moves, closes or minimises, it falls.
-- **Blocky 3D pixel art.** Separate box parts on their own pivots (head, body, two ears, four legs, a five-segment tail, collar and bell), 16×16 nearest-filtered textures, flat per-face shading (top 100%, front 80%, sides 60%), an orthographic camera at a 3/4 angle.
-- **Animations.** Idle look-around, blinks, ear twitches and tail sway; walking and running with diagonal leg pairs; crawling low; hopping; eating (head dips, cube crumbs); happy hops with pixel hearts; sleeping with drifting Zs; hungry droop; starving flop; dangling while dragged; squash on landing; a red flash and x x eyes when flicked hard.
+- **Pixel-art animations (2D, side view):** idle with blinks and tail sway, walk, run, crawl, sit, sleep (curled up with Zs), jump, eat (head dips, cube crumbs), happy hops with pixel hearts, hungry droop, starving flop, dangling while dragged, squash on landing, and a red flash with x x eyes when flicked hard. Always drawn in whole device pixels, so it stays crisp.
 - **Click-through.** The overlay ignores the mouse everywhere except over Catbot, so you can still click everything underneath it.
-- **Play with it.** Hover over it and it stops and looks up at you. Click it for a status report. Drag and toss it. Wiggle your cursor near it and it may chase it.
 - **Robot speech bubbles.** A little terminal in Catbot's colours: orange header with its name and a mood LED, a scanlined screen and cyan text that types itself out.
 - **Feeds on commits.** Watches your local git repos and eats every new commit you author.
 
@@ -37,7 +37,10 @@ Catbot appears on your desktop and a catbot icon appears in the system tray. Rig
 
 > npm 11+ may block install scripts. If `npm install` says `koffi` or `electron-winstaller` scripts were blocked, run `npm install-scripts approve koffi electron-winstaller` and `npm rebuild`. (They're already listed in `allowScripts` in `package.json`.)
 
-**Preview page:** while `npm start` runs, open <http://localhost:5173/preview.html> in a browser for a fake desktop with buttons to feed Catbot, change its hunger stage, toggle quiet hours, move the "window" it's standing on and switch movement modes. Handy for tweaking the model or textures.
+While `npm start` runs, two dev pages are available in a browser:
+
+- <http://localhost:5173/preview.html>: a fake desktop with buttons to feed Catbot, change its hunger stage, toggle quiet hours, move the "window" it's standing on and switch movement modes. Hover, click, drag and cursor-following all work there.
+- <http://localhost:5173/sheet.html?k=6>: every animation frame, enlarged (`k` = zoom), with its eyes and bell.
 
 ## Feeding: adding repos
 
@@ -62,10 +65,10 @@ Stages (all configurable in Settings):
 
 | Stage | After | What Catbot does |
 |---|---|---|
-| Full | 0 h | Bell glows bright; explores everywhere, runs, hops onto windows, naps |
-| Peckish | 2 h | Bell dims a little; the occasional "snack time?" |
-| Hungry | 4 h | Head and ears droop, tail hangs, sad eyes, half walking speed, sighs, "LOW BATTERY... FEED ME COMMITS" |
-| Starving | 8 h | Bell goes dark; flops on its side, twitches, now and then crawls over to the focused window's edge and taps on it |
+| Full | 0 h | Bell glows; explores everywhere, runs, hops onto windows, naps |
+| Peckish | 2 h | The occasional "snack time?" |
+| Hungry | 4 h | Bell goes dark, sprite dims, head and ears droop, tail hangs, sad eyes, half walking speed, "LOW BATTERY... FEED ME COMMITS" |
+| Starving | 8 h | Flops over on the floor, twitches, now and then crawls over to the focused window's edge and taps on it |
 
 Hunger **pauses**:
 
@@ -80,12 +83,11 @@ State (hunger, last commit seen per repo, pet position, settings) is saved to `%
 
 | Do this | Catbot does this |
 |---|---|
-| Hover over it | Stops what it's doing and looks up at you |
-| Click it | Its terminal shows energy, mood, time since your last commit and a random line |
-| Move the cursor close | Sometimes tilts its head, curious |
-| Drag it | Legs dangle and swing with your mouse; the tail streams behind |
+| Move the cursor over the desktop | Follows it, and stops once it reaches the cursor |
+| Hover over it | Stops, faces you and shows its message box (energy, mood, last commit, a random line) until you move away |
+| Click it | Looks up alert and shows the message box again with a fresh line |
+| Drag it | Legs dangle, tail hangs |
 | Toss it | Hops, slides and bounces off the screen edges; may land on a window. Flick it hard for a red flash and x x eyes |
-| Wiggle the cursor near it | Sometimes chases your cursor for a few seconds |
 
 ## Settings
 
@@ -94,9 +96,10 @@ Tray → **Settings...**
 | Setting | What it does | Default |
 |---|---|---|
 | Name | Shown in the speech bubble header and the tray | Catbot |
-| Size | Catbot's height on screen (48–112 px, so it never gets too tiny or in the way) | 72 px |
+| Size | Catbot's height on screen (48–112 px). It snaps to the nearest crisp whole-pixel scale | 72 px |
 | Walking speed | Running is ~2.4×, crawling ~0.45× | 45 px/s |
 | Where it wanders | Anywhere on the screen, or only along the bottom (the taskbar's top edge) | Anywhere |
+| Follow my cursor | Walks after the cursor while you move it over the desktop | On |
 | Show on top of apps | Off: lives on the desktop, behind your windows. On: above every app and the taskbar | Off |
 | Peckish / Hungry / Starving | Hours without commits before each stage | 2 / 4 / 8 h |
 | Quiet hours | Hunger pauses and Catbot sleeps | On, 23:00–08:00 |
@@ -110,21 +113,24 @@ A second launch passes flags to the running app: `--feed` (debug snack), `--say 
 
 ## Repainting Catbot
 
-All textures are 16×16 PNGs in [`assets/textures/`](assets/textures), drawn by [`scripts/generate-textures.ts`](scripts/generate-textures.ts). Edit them in Aseprite, Piskel or any pixel editor and restart the app (or rebuild the installer).
+[`scripts/generate-textures.ts`](scripts/generate-textures.ts) draws Catbot in code (a little puppet: head with face-screen, ears, body, four legs, a segmented tail, collar and bell, posed per frame) and writes:
 
-- Every box face shows the **top-left W×H texels** of its PNG, where W×H is the face size (1 texel = 1 model unit). The body is 24 long, so its side texture repeats. [`TEXTURES.txt`](assets/textures/TEXTURES.txt) lists the visible region of each file.
-- `head_front.png` is the face-screen. The `eyes_*.png` files are transparent overlays drawn on it at full brightness, so the eyes glow: `eyes_idle` (^ ^), `eyes_blink` (— —, also sleeping), `eyes_happy` (> <), `eyes_hurt` (x x), `eyes_alert` (looking at you, curious, being carried) and `eyes_sad` (hungry, starving).
-- `bell_on.png` / `bell_off.png` are the collar bell when fed and when starving.
-- `food.png` is the commit cube Catbot eats (and its crumbs); `heart.png` and `zzz.png` are particle sprites.
-- `assets/icon.png` and `build/icon.png` are the tray and installer icons.
+| File | What it is |
+|---|---|
+| `assets/catbot/<animation>-<n>.png` | 50×38 side-view frames, facing right (mirrored at runtime for left): `idle`, `idle_sad`, `walk`, `walk_sad`, `run`, `crawl`, `sit`, `sleep`, `starving`, `jump_up`, `jump_down`, `dragged`, `eat`, `happy`, `hurt`, `tap`, `curious` |
+| `assets/catbot/eyes_*.png` | 8×6 face-screen expressions drawn over each frame at full brightness: `idle` (^ ^), `blink` (— —, also sleeping), `happy` (> <), `hurt` (x x), `alert` (looking at you), `sad` |
+| `assets/catbot/bell_on.png` | The lit collar bell, drawn over the frame while Catbot is fed |
+| `assets/catbot/frames.json` | Frame lists, frame rates, the feet anchor, and where the screen and bell sit in each frame |
+| `assets/textures/food.png`, `heart.png`, `zzz.png` | The commit cube (and its crumbs), hearts and Zs |
+| `assets/icon.png`, `build/icon.png` | Tray and installer icons |
 
-To regenerate the originals (this **overwrites** your edits):
+Edit any PNG in Aseprite, Piskel or another pixel editor and restart the app (or rebuild the installer). If you move the face-screen or bell in a frame, update its `screen` / `bell` position in `frames.json`. To regenerate everything from code (this **overwrites** your edits):
 
 ```bash
 npm run textures
 ```
 
-Tweak the palette at the top of the script to recolour Catbot. The shapes and proportions of the parts are in [`src/renderer/pet/model.ts`](src/renderer/pet/model.ts). [`docs/catbot-reference.webp`](docs/catbot-reference.webp) is the design reference the model was drawn from.
+Tweak the palette, the part shapes in `drawHead` / `drawBody` / `drawLeg` / `drawTail`, or the poses in `ANIMS` at the top of the script. [`docs/catbot-reference.webp`](docs/catbot-reference.webp) is the design reference Catbot was drawn from.
 
 ## Build the installer
 
@@ -151,8 +157,8 @@ Your options:
 
 - **One overlay window per monitor**, covering the full display: transparent, frameless, non-focusable, `skipTaskbar` and a tool window (not in Alt+Tab).
 - **Layering:** in desktop mode the overlays are kept directly above the desktop window (`SetWindowPos(HWND_BOTTOM)`; Windows keeps the desktop itself pinned at the very bottom), re-checked every 0.6 s and following the desktop up when you use Show desktop (Win+D). In on-top mode they use `setAlwaysOnTop(true, 'screen-saver')` plus a `SetWindowPos(HWND_TOPMOST)` re-assert every 1.5 s, because Windows lets the taskbar jump back on top when you click it.
-- **Click-through and hover:** `setIgnoreMouseEvents(true, { forward: true })` is switched off only while the cursor is over Catbot. The cursor position is polled ~10×/s (not only on mouse moves), so hovering and clicking work even when Catbot walks under a still cursor. In desktop mode `WindowFromPoint` checks that no app window covers Catbot at the cursor.
-- **Rendering:** a small pet-sized WebGL canvas moves around the overlay (not a full-screen canvas). It renders at about 30 fps, skips frames when nothing changed, drops to 10 fps when idle and stops completely when hidden. The other monitors' overlays sleep until Catbot walks over.
+- **Cursor, hover and click-through:** `setIgnoreMouseEvents(true, { forward: true })` is switched off only while the cursor is over Catbot. The cursor position is also polled ~10×/s, so hover and following work even when Catbot walks under a still cursor. In desktop mode `WindowFromPoint` checks that no app window covers the spot, so Catbot only follows or reacts to a cursor that's actually over the desktop.
+- **Rendering:** a small pet-sized 2D canvas moves around the overlay (not a full-screen canvas). Frames are scaled by a whole number of device pixels, so they stay crisp at any Windows scaling. It renders at about 30 fps, skips frames when nothing changed, drops to 10 fps when idle and stops completely when hidden. The other monitors' overlays sleep until Catbot walks over.
 - **Movement:** Catbot's position is a point on the "floor" (anywhere in the work area, the taskbar's top edge in bottom-only mode, or the top edge of the window it's standing on) plus a height for jumps, falls and tosses, with gravity, bounce and friction.
 - **Windows:** a small [koffi](https://koffi.dev/) FFI helper (prebuilt, no compiler) handles z-order, the focused window's bounds, whether the window Catbot stands on moved, and the taskbar auto-hide state.
 - **Git:** [simple-git](https://github.com/steveukx/git-js) runs `git log --all --no-merges --shortstat` every 60 s. No network access at runtime.
@@ -160,16 +166,16 @@ Your options:
 ```
 src/main/       overlay windows, z-order, tray, git watcher, hunger, state, settings, Win32 helper
 src/preload/    the IPC bridge exposed to renderers
-src/renderer/   three.js scene, Catbot model/brain/animations, particles, speech bubbles, settings page, dev preview
+src/renderer/   2D sprite view, Catbot brain (movement/behaviour), particles, speech bubbles, settings page, dev pages
 src/shared/     config types and constants
-assets/         generated textures (PNG) and tray icon
-scripts/        texture generator
+assets/         generated Catbot frames, particles and tray icon
+scripts/        Catbot/texture generator
 docs/           design reference
 ```
 
 ## Known limitations
 
-- **In desktop mode, app windows hide Catbot** (that's the point). It's still out there wandering. Minimise your windows or use Show desktop (Win+D) to see it, or turn on **Show on top of apps**.
+- **In desktop mode, app windows hide Catbot** (that's the point), and it only follows the cursor while the cursor is over the visible desktop. Minimise your windows or use Show desktop (Win+D) to play, or turn on **Show on top of apps**.
 - **Full-screen games and exclusive-fullscreen apps cover it even in on-top mode.** So do the Start menu, notification centre, Alt+Tab and Task View: Windows draws them in z-bands above every app's "always on top" windows.
 - In on-top mode, after you click the taskbar it can cover Catbot for up to ~1.5 s, until the next re-assert.
 - In desktop mode the taskbar covers the bottom of the screen, so Catbot stays inside the work area.
@@ -183,4 +189,4 @@ docs/           design reference
 
 ## License
 
-MIT, see [LICENSE](LICENSE). Catbot's model and textures are original to this project.
+MIT, see [LICENSE](LICENSE). Catbot's art is original to this project, drawn in code.
