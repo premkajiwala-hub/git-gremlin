@@ -1,7 +1,7 @@
 import type { DisplayInfo, FeedEvent, PetSnapshot, PetStatus, Settings, WindowLedge } from '../../shared/types'
 import type { World } from '../world'
 import type { ParticleKind } from './particles'
-import { animLength, frameAt, type AnimName, type SpriteSet } from './sprites'
+import { expression, neutralPose, type Pose } from './pose'
 
 export type Activity =
   | 'idle'
@@ -9,6 +9,7 @@ export type Activity =
   | 'run'
   | 'crawl'
   | 'hop'
+  | 'prejump'
   | 'sit'
   | 'curious'
   | 'sleep'
@@ -16,40 +17,21 @@ export type Activity =
   | 'happy'
   | 'hurt'
   | 'starving'
+  | 'tap'
   | 'dragged'
   | 'air'
 
-/** Everything the view needs to draw one frame. */
-export interface RenderState {
-  anim: AnimName
-  frame: number
-  /** Mirror horizontally (the sheet's poses face right). */
-  flip: boolean
-  /** Height above the floor point, in DIP (jumps and throws). */
-  z: number
-  squashX: number
-  squashY: number
-  /** Rotation in radians around the feet. */
-  rot: number
-  /** 0..1 red flash. */
-  tint: number
-  /** 0..1 hunger dimming. */
-  dim: number
-  /** 0 = no food on screen, else the commit cube's remaining size (0..1). */
-  food: number
-  /** Being carried: the shadow shrinks. */
-  lifted: boolean
-}
-
 export interface BrainHooks {
   say(text: string, ms?: number): void
-  /** Spawn a particle relative to the pet's feet (DIP). */
+  /** Spawn a particle at (x, y) in model units relative to the pet's feet. */
   spawn(kind: ParticleKind, x: number, y: number): void
+  /** Catbot started (hwnd) or stopped (0) standing on a window's top edge. */
+  standing(hwnd: number): void
   handoff(target: DisplayInfo, snap: PetSnapshot): void
 }
 
-const GRAVITY = 2200 // DIP / s^2, for hops and throws
-const FRICTION = 1900 // DIP / s^2, sliding along the floor
+const GRAVITY = 2400 // DIP / s^2
+const FRICTION = 1900 // DIP / s^2 when sliding along the floor
 const MAX_THROW = 2600
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a)
@@ -62,7 +44,6 @@ export const RANDOM_LINES = [
   'SMALL COMMITS = HAPPY CIRCUITS.',
   'HAVE YOU TRIED GIT ADD -P?',
   'MERGE CONFLICTS MAKE MY FANS SPIN.',
-  'RUNNING TESTS... JUST KIDDING. YOU DO IT.',
   'MEOW.EXE HAS STARTED.',
   'MY TAIL IS 40% CABLE.',
   'I DREAM IN GREEN SQUARES.',
@@ -73,24 +54,27 @@ export const RANDOM_LINES = [
 const HUNGRY_LINES = [
   'LOW BATTERY... FEED ME COMMITS',
   '*WHIRRR* SO HUNGRY...',
-  'ENTERING POWER SAVING MODE...',
+  '*SIGH*',
   'EVEN A TYPO FIX WOULD DO.',
   'GIT COMMIT -M "FOOD"?',
   'ERROR 404: SNACK NOT FOUND'
 ]
 const PECKISH_LINES = ['SNACK TIME SOON?', 'ENERGY DIPPING. A COMMIT WOULD BE NICE.', '*TUMMY BEEP*']
 const STARVING_LINES = ['...', 'B-BATTERY CRITICAL...', 'C-COMMIT... PLEASE...']
-const EAT_LINES = ['NOM.EXE COMPLETE!', 'CHARGING...', 'BYTES DIGESTED!', 'MMM, FRESH CODE.']
+const EAT_LINES = ['NOM.EXE COMPLETE!', 'CRUNCHY COMMIT!', 'BYTES DIGESTED!', 'MMM, FRESH CODE.']
 
 type Gait = 'walk' | 'run' | 'crawl'
 const GAIT_SPEED: Record<Gait, number> = { walk: 1, run: 2.4, crawl: 0.45 }
-const GAIT_ANIM_RATE: Record<Gait, number> = { walk: 1, run: 2, crawl: 0.6 }
+/** Activities that pause while the cursor hovers over Catbot. */
+const PAUSABLE: Activity[] = ['idle', 'walk', 'run', 'crawl', 'sit', 'curious']
 
 /**
- * The catbot's body and mind: free movement across the screen (or along the
- * bottom edge), simple physics for hops and throws, the behaviour state
- * machine, and what to draw each frame. (x, y) is the point on the "floor"
- * under its feet, in global DIP; z is its height above that point.
+ * Catbot's body and mind: free movement across the screen (or along the
+ * bottom edge), hops onto the focused window's top edge, physics for jumps and
+ * throws, the behaviour state machine, and the target pose for the model.
+ *
+ * (x, y) is the point on the "floor" under its feet, in global DIP; z is its
+ * height above that point. On a window's top edge, y is that edge.
  */
 export class PetBrain {
   x = 0
@@ -103,33 +87,46 @@ export class PetBrain {
   activity: Activity = 'idle'
   t = 0
   dur = 2
-  /** Where the current walk/run/crawl is heading. */
   tx = 0
   ty = 0
-  /** The focused app window; a starving catbot crawls over and taps it. */
+  /** The focused app window, which Catbot may hop onto. */
   ledge: WindowLedge | null = null
+  readonly target: Pose = neutralPose()
 
-  private anim: AnimName = 'idle'
-  private animT = 0
-  private animRate = 1
+  /** The window top edge Catbot is standing on, if any. */
+  private stand: WindowLedge | null = null
   private following = false
   private crossing = false
-  private hopsLeft = 0
-  private hopV = { x: 0, y: 0 }
+  private thenHop = false
+  private walkingOff = false
   private afterTap = false
+  private hopsLeft = 0
+  private jump: { vx: number; vy: number; vz: number } | null = null
   private pendingFeed: FeedEvent | null = null
   private afterLand: 'hurt' | null = null
   private bounce = 0.35
+  private hovered = false
+  private pausedForHover = false
   private handedOff = false
   private clock = 0
-  private flashT = 0
+  private walkPhase = 0
+  private fxClock = 0
+  private blinkT = 3
+  private blinking = 0
+  private lookT = 0
+  private lookYaw = 0
+  private earTwitch = 0
+  private earTwitchT = 4
+  private lookAtCamera = 0
   private squashT = 0
+  private flashT = 0
+  private sighT = 0
+  private noLandT = 0
   private twitchT = 4
   private twitching = 0
   private nagT = rand(25, 50)
   private followCooldown = 0
   private curiousCooldown = 0
-  private fxClock = 0
   private dragOffset = { x: 0, y: 0 }
   private cursor = { x: 0, y: 0 }
 
@@ -137,20 +134,15 @@ export class PetBrain {
     public world: World,
     public settings: Settings,
     public status: PetStatus,
-    private sprites: SpriteSet,
     private hooks: BrainHooks
   ) {}
 
   // --- sizes -------------------------------------------------------------------
-  /** Sprite pixels -> DIP. */
-  get scale(): number {
-    return this.settings.petSize / this.sprites.standHeight
-  }
-  get h(): number {
+  get size(): number {
     return this.settings.petSize
   }
-  get w(): number {
-    return this.sprites.standWidth * this.scale
+  get hw(): number {
+    return this.size * 0.5
   }
   private get stage() {
     return this.status.stage
@@ -158,24 +150,35 @@ export class PetBrain {
   private get roam(): boolean {
     return this.settings.movement === 'roam'
   }
-
-  /** Hit box around the pet in DIP. */
-  hitBox(): { left: number; right: number; top: number; bottom: number } {
-    const lying = this.activity === 'sleep' || this.activity === 'starving'
-    const w = this.w * (lying ? 1.05 : 0.85)
-    const h = this.h * (lying ? 0.62 : 0.95)
-    const feet = this.y - this.z
-    return { left: this.x - w / 2, right: this.x + w / 2, top: feet - h, bottom: feet + 4 }
+  get onWindow(): boolean {
+    return this.stand !== null
   }
 
-  /** The area the floor point may move in on this monitor. */
+  /** Hit box around Catbot in DIP. */
+  hitBox(): { left: number; right: number; top: number; bottom: number } {
+    const lying = this.activity === 'sleep' || this.activity === 'starving'
+    const hw = this.size * (lying ? 0.62 : 0.55)
+    const h = this.size * (lying ? 0.6 : 1.0)
+    const feet = this.y - this.z
+    return { left: this.x - hw, right: this.x + hw, top: feet - h, bottom: feet + 4 }
+  }
+
+  /** Where the feet may go right now: a window's top edge, or the floor of this monitor. */
   private area(): { x0: number; x1: number; y0: number; y1: number } {
     const wa = this.world.workArea
-    const hw = this.w * 0.5
-    const x0 = wa.x + hw
-    const x1 = wa.x + wa.width - hw
+    if (this.stand) {
+      const l = this.stand
+      return {
+        x0: Math.max(l.x, wa.x) + this.hw * 0.5,
+        x1: Math.min(l.x + l.width, wa.x + wa.width) - this.hw * 0.5,
+        y0: l.y,
+        y1: l.y
+      }
+    }
+    const x0 = wa.x + this.hw
+    const x1 = wa.x + wa.width - this.hw
     if (!this.roam) return { x0, x1, y0: this.world.groundY, y1: this.world.groundY }
-    return { x0, x1, y0: wa.y + this.h + 4, y1: wa.y + wa.height - 3 }
+    return { x0, x1, y0: wa.y + this.size + 4, y1: wa.y + wa.height - 3 }
   }
 
   // --- snapshots -------------------------------------------------------------------
@@ -188,16 +191,13 @@ export class PetBrain {
       facing: this.facing,
       grounded: this.z <= 0,
       brain: {
-        activity: this.activity === 'dragged' ? 'air' : this.activity,
+        activity: this.activity === 'dragged' || this.activity === 'prejump' ? 'idle' : this.activity,
         t: this.t,
         dur: this.dur,
         tx: this.tx,
         ty: this.ty,
         z: this.z,
         vz: this.vz,
-        following: this.following,
-        hopsLeft: this.hopsLeft,
-        hopV: this.hopV,
         pendingFeed: this.pendingFeed
       }
     }
@@ -212,9 +212,6 @@ export class PetBrain {
       ty: number
       z: number
       vz: number
-      following: boolean
-      hopsLeft: number
-      hopV: { x: number; y: number }
       pendingFeed: FeedEvent | null
     }>
     this.x = s.x
@@ -228,29 +225,31 @@ export class PetBrain {
     this.dur = b.dur ?? 2
     this.tx = b.tx ?? s.x
     this.ty = b.ty ?? s.y
-    this.following = b.following ?? false
-    this.hopsLeft = b.hopsLeft ?? 0
-    this.hopV = b.hopV ?? { x: 0, y: 0 }
     this.pendingFeed = b.pendingFeed ?? null
-    this.crossing = false
+    this.stand = null
+    this.following = this.crossing = this.thenHop = this.walkingOff = this.afterTap = false
     this.handedOff = false
-    const known: Activity[] = ['idle', 'walk', 'run', 'crawl', 'hop', 'sit', 'curious', 'sleep', 'eat', 'happy', 'hurt', 'starving', 'air']
+    const known: Activity[] = ['idle', 'walk', 'run', 'crawl', 'sit', 'curious', 'sleep', 'happy', 'hurt', 'starving', 'air']
     this.activity = b.activity && known.includes(b.activity) ? b.activity : 'idle'
-    if (this.activity === 'eat') this.activity = 'happy'
-    this.playFor(this.activity, false)
+    if (this.z > 0) this.activity = 'air'
+    if (!this.roam) this.y = this.world.groundY
     this.clampToArea()
   }
 
   // --- events from the outside world ---------------------------------------------------
   feed(ev: FeedEvent): void {
-    if (this.activity === 'dragged' || this.activity === 'air') this.pendingFeed = ev
+    if (this.activity === 'dragged' || this.activity === 'air' || this.activity === 'prejump') this.pendingFeed = ev
     else this.startEat(ev)
   }
 
   clicked(): void {
-    if (this.activity === 'dragged' || this.activity === 'air' || this.activity === 'eat') return
-    if (this.activity === 'starving' || this.activity === 'sleep') return
-    this.set('curious', 1.6)
+    this.lookAtCamera = 2
+    this.blinking = 0
+  }
+
+  /** The cursor is over Catbot: it stops what it's doing and looks at you. */
+  setHovered(h: boolean): void {
+    this.hovered = h
   }
 
   /** The cursor came close after being away. */
@@ -262,15 +261,15 @@ export class PetBrain {
     this.set('curious', 1.6)
   }
 
-  /** The cursor was wiggled near the pet: sometimes chase it for a few seconds. */
+  /** The cursor was wiggled near Catbot: sometimes chase it for a few seconds. */
   wiggled(gx: number, gy: number): void {
-    const busy: Activity[] = ['dragged', 'air', 'hop', 'eat', 'sleep', 'starving', 'happy', 'hurt']
-    if (this.followCooldown > 0 || busy.includes(this.activity) || this.stage === 'starving') return
+    const busy: Activity[] = ['dragged', 'air', 'hop', 'prejump', 'eat', 'sleep', 'starving', 'tap', 'happy', 'hurt']
+    if (this.followCooldown > 0 || busy.includes(this.activity) || this.stage === 'starving' || this.stand) return
     this.followCooldown = 12
     if (!chance(0.6)) return
     this.cursor = { x: gx, y: gy }
     this.following = true
-    this.startMove('run', rand(3, 6))
+    this.set('run', rand(3, 6))
   }
 
   setCursor(gx: number, gy: number): void {
@@ -279,12 +278,12 @@ export class PetBrain {
   }
 
   startDrag(grabX: number, grabY: number): void {
-    this.dragOffset = { x: grabX - this.x, y: grabY - (this.y - this.z) }
-    this.cursor = { x: grabX, y: grabY }
+    this.leaveWindow()
     this.y -= this.z
     this.z = 0
+    this.dragOffset = { x: grabX - this.x, y: grabY - this.y }
+    this.cursor = { x: grabX, y: grabY }
     this.vx = this.vy = this.vz = 0
-    this.following = false
     this.set('dragged', 0)
   }
 
@@ -294,18 +293,19 @@ export class PetBrain {
     const vy = clamp(this.vy, -MAX_THROW, MAX_THROW)
     const hard = Math.hypot(vx, vy) > 1400
     this.afterLand = hard ? 'hurt' : null
-    this.bounce = hard ? 0.5 : 0.3
+    this.bounce = hard ? 0.55 : 0.35
     if (hard) {
+      // Flicked hard: cosmetic red flash and a bouncier landing.
       this.flashT = 0.35
       if (chance(0.6)) this.hooks.say(pickOne(['WHEEE!', 'SYSTEM SHAKEN!', 'HEY!']), 1500)
     }
     if (this.roam) {
-      // Tossed across the "floor": a little hop plus a slide.
+      // Tossed across the "floor": a hop plus a slide.
       this.vx = vx * 0.6
       this.vy = vy * 0.6
       this.vz = 260 + Math.min(500, Math.hypot(vx, vy) * 0.15)
     } else {
-      // Bottom-edge mode: it falls back down to the taskbar.
+      // Bottom-edge mode: it falls back down to the taskbar (or onto a window).
       this.z = Math.max(0, this.world.groundY - this.y)
       this.y = this.world.groundY
       this.vx = vx * 0.7
@@ -315,22 +315,25 @@ export class PetBrain {
     this.set('air', 0)
   }
 
+  /** The window Catbot is standing on moved, closed or was minimised. */
+  standingLost(hwnd: number): void {
+    if (this.stand?.hwnd === hwnd) this.fallFromWindow()
+  }
+
   // --- main update -------------------------------------------------------------------
   update(dt: number): void {
     if (this.handedOff) return
     this.clock += dt
     this.t += dt
-    this.animT += dt * this.animRate
     this.tickTimers(dt)
+    this.handleHover()
 
     switch (this.activity) {
       case 'idle':
       case 'sit':
       case 'curious':
-      case 'happy':
       case 'hurt':
         this.slide(dt)
-        if (this.activity === 'happy') this.everyFx(0.35, () => this.hooks.spawn('heart', this.facing * this.w * 0.15 + rand(-6, 6), -this.h * 0.95))
         if (this.t > this.dur) {
           if (this.afterTap) {
             this.afterTap = false
@@ -338,43 +341,58 @@ export class PetBrain {
           } else this.next()
         }
         break
+      case 'happy':
+        this.slide(dt)
+        if (this.t > this.dur) this.next()
+        break
       case 'walk':
       case 'run':
       case 'crawl': {
         if (this.following) {
           this.tx = this.cursor.x
-          this.ty = this.roam ? this.cursor.y + this.h * 0.5 : this.world.groundY
+          this.ty = this.roam && !this.stand ? this.cursor.y + this.size * 0.5 : this.y
         }
-        const gait = this.activity
-        const arrived = this.moveToward(this.tx, this.ty, this.speed(gait), dt)
-        if (this.handedOff) return
+        const arrived = this.moveToward(this.tx, this.ty, this.speed(this.activity), dt)
+        // Walking off a window's edge switches to falling.
+        if (this.handedOff || (this.activity as Activity) === 'air') return this.animate(dt)
         if (this.following) {
           if (this.t > this.dur) this.next()
         } else if (arrived) {
-          if (this.afterTap) this.set('curious', 2.4)
-          else this.next()
+          if (this.afterTap) this.set('tap', 3)
+          else if (this.thenHop) {
+            this.thenHop = false
+            if (!this.launchToWindow()) this.next()
+          } else this.next()
         } else if (this.t > 25) this.next()
         break
       }
       case 'hop':
-        this.hop(dt)
+        this.physics(dt)
+        break
+      case 'prejump':
+        if (this.t > 0.28 && this.jump) {
+          this.leaveWindow()
+          this.vx = this.jump.vx
+          this.vy = this.jump.vy
+          this.vz = this.jump.vz
+          this.jump = null
+          this.set('air', 0)
+        }
         break
       case 'sleep':
         this.slide(dt)
         if (!this.status.quiet && this.t > this.dur) this.next()
         break
       case 'eat':
-        this.everyFx(0.24, () => {
-          for (let i = 0; i < 2; i++) this.hooks.spawn('crumb', this.facing * this.w * 0.55, -2)
-        })
-        if (this.t > this.dur) {
-          this.set('happy', 1.8)
-        }
+        if (this.t > this.dur) this.set('happy', 1.8)
         break
       case 'starving':
         this.slide(dt)
         if (this.stage !== 'starving') this.next()
         else if (this.t > this.dur) this.tryTapWindow()
+        break
+      case 'tap':
+        if (this.t > this.dur) this.set('starving', rand(25, 60))
         break
       case 'dragged':
         this.drag(dt)
@@ -384,7 +402,20 @@ export class PetBrain {
         break
     }
 
-    if (this.activity !== 'dragged') this.checkHandoff()
+    if (this.activity !== 'dragged' && !this.stand) this.checkHandoff()
+    this.animate(dt)
+  }
+
+  private handleHover(): void {
+    if (this.hovered && PAUSABLE.includes(this.activity) && !this.pausedForHover) {
+      this.pausedForHover = true
+      this.following = false
+      this.thenHop = false
+      this.set('idle', Infinity)
+    } else if (!this.hovered && this.pausedForHover) {
+      this.pausedForHover = false
+      if (this.activity === 'idle') this.dur = this.t + 0.8
+    }
   }
 
   // --- behaviour selection -------------------------------------------------------------
@@ -393,43 +424,27 @@ export class PetBrain {
     this.t = 0
     this.dur = dur
     if (a !== 'walk' && a !== 'run' && a !== 'crawl') this.following = false
-    this.playFor(a, true)
-  }
-
-  /** Pick the animation that goes with an activity. */
-  private playFor(a: Activity, restart: boolean): void {
-    const anim: Record<Activity, AnimName> = {
-      idle: 'idle',
-      walk: 'walk-right',
-      run: 'walk-right',
-      crawl: 'walk-right',
-      hop: 'jump',
-      sit: 'sit',
-      curious: 'curious',
-      sleep: 'sleep',
-      eat: 'sit',
-      happy: 'happy',
-      hurt: 'hurt',
-      starving: 'sleep',
-      dragged: 'jump',
-      air: 'jump'
-    }
-    let name = anim[a]
-    if (name === 'walk-right' && this.facing < 0) name = 'walk-left'
-    if (restart || name !== this.anim) this.animT = 0
-    this.anim = name
-    this.animRate = a === 'run' || a === 'crawl' ? GAIT_ANIM_RATE[a] : 1
+    this.fxClock = 0
   }
 
   private next(): void {
     this.afterTap = false
+    this.walkingOff = false
     if (this.pendingFeed) {
       const ev = this.pendingFeed
       this.pendingFeed = null
       return this.startEat(ev)
     }
-    if (this.status.quiet) return this.set('sleep', 30)
-    if (this.stage === 'starving') return this.set('starving', rand(20, 50))
+    if (this.status.quiet) return this.stand ? this.walkOffWindow() : this.set('sleep', 30)
+    if (this.stage === 'starving') return this.stand ? this.walkOffWindow() : this.set('starving', rand(20, 50))
+
+    if (this.stand) {
+      const r = Math.random()
+      if (r < 0.35) return this.set('idle', rand(2, 6))
+      if (r < 0.55) return this.set('sit', rand(4, 9))
+      if (r < 0.85) return this.startMove('walk')
+      return this.walkOffWindow()
+    }
 
     const weights: [string, number][] =
       this.stage === 'hungry'
@@ -441,23 +456,25 @@ export class PetBrain {
           ]
         : this.stage === 'peckish'
           ? [
-              ['idle', 24],
-              ['walk', 34],
+              ['idle', 22],
+              ['walk', 32],
               ['run', 6],
               ['crawl', 10],
-              ['hop', 5],
-              ['sit', 15],
+              ['hop', 4],
+              ['window', 8],
+              ['sit', 12],
               ['curious', 6]
             ]
           : [
-              ['idle', 20],
-              ['walk', 30],
+              ['idle', 18],
+              ['walk', 28],
               ['run', 12],
-              ['crawl', 8],
-              ['hop', 9],
-              ['sit', 10],
-              ['curious', 5],
-              ['nap', 6]
+              ['crawl', 7],
+              ['hop', 7],
+              ['window', 12],
+              ['sit', 8],
+              ['curious', 4],
+              ['nap', 4]
             ]
     let r = Math.random() * weights.reduce((s, [, w]) => s + w, 0)
     let choice = weights[0][0]
@@ -474,7 +491,10 @@ export class PetBrain {
       case 'crawl':
         return this.startMove(choice as Gait)
       case 'hop':
-        return this.startHop()
+        return this.startHops()
+      case 'window':
+        if (this.goToWindow()) return
+        return this.startMove('walk')
       case 'sit':
         return this.set('sit', rand(4, 10))
       case 'curious':
@@ -486,56 +506,143 @@ export class PetBrain {
     }
   }
 
-  private startMove(gait: Gait, dur = 0): void {
-    if (!this.following) this.pickTarget()
-    this.set(gait, dur)
+  private startMove(gait: Gait): void {
+    this.pickTarget()
+    this.set(gait, 0)
   }
 
   /** A random spot to wander to: nearby, anywhere on this monitor, or on the next one. */
   private pickTarget(): void {
     const a = this.area()
     this.crossing = false
+    if (this.stand) {
+      this.tx = rand(a.x0, a.x1)
+      this.ty = a.y0
+      return
+    }
     const dir: 1 | -1 = chance(0.5) ? 1 : -1
     const neighbor = this.world.neighbor(dir)
     if (neighbor && chance(0.12)) {
       const wa = neighbor.workArea
       this.crossing = true
       this.tx = dir > 0 ? wa.x + rand(0.1, 0.5) * wa.width : wa.x + rand(0.5, 0.9) * wa.width
-      this.ty = this.roam ? clamp(this.y, Math.max(a.y0, wa.y + this.h + 4), Math.min(a.y1, wa.y + wa.height - 3)) : neighbor.groundY
+      this.ty = this.roam ? clamp(this.y, Math.max(a.y0, wa.y + this.size + 4), Math.min(a.y1, wa.y + wa.height - 3)) : neighbor.groundY
       return
     }
     if (!this.roam || chance(0.65)) {
-      // Somewhere nearby.
       const ang = Math.random() * Math.PI * 2
       const dist = rand(80, 420)
       this.tx = clamp(this.x + Math.cos(ang) * dist, a.x0, a.x1)
       this.ty = clamp(this.y + Math.sin(ang) * dist * 0.7, a.y0, a.y1)
-      if (Math.hypot(this.tx - this.x, this.ty - this.y) < 40) {
-        this.tx = clamp(this.x - Math.cos(ang) * dist, a.x0, a.x1)
-      }
+      if (Math.hypot(this.tx - this.x, this.ty - this.y) < 40) this.tx = clamp(this.x - Math.cos(ang) * dist, a.x0, a.x1)
     } else {
-      // Anywhere on this monitor.
       this.tx = rand(a.x0, a.x1)
       this.ty = rand(a.y0, a.y1)
     }
   }
 
-  private startHop(): void {
-    const a = this.area()
+  /** A few playful hops along the floor. */
+  private startHops(): void {
     this.hopsLeft = 1 + Math.floor(Math.random() * 3)
-    let dir: 1 | -1 = chance(0.5) ? 1 : -1
-    const reach = this.h * 1.1
-    if (this.x + dir * reach * this.hopsLeft > a.x1 || this.x + dir * reach * this.hopsLeft < a.x0) dir = (-dir) as 1 | -1
-    this.facing = dir
-    const len = animLength(this.sprites.anims.jump)
-    this.hopV = { x: (dir * reach) / len, y: this.roam ? (rand(-0.35, 0.35) * reach) / len : 0 }
+    this.facing = chance(0.5) ? 1 : -1
+    this.hopOnce()
+  }
+
+  private hopOnce(): void {
+    const a = this.area()
+    const reach = this.size * 1.1
+    if (this.x + this.facing * reach > a.x1 || this.x + this.facing * reach < a.x0) this.facing = (-this.facing) as 1 | -1
+    const vz = 520
+    const flight = (2 * vz) / GRAVITY
+    this.vx = (this.facing * reach) / flight
+    this.vy = this.roam ? (rand(-0.35, 0.35) * reach) / flight : 0
+    this.vz = vz
     this.set('hop', 0)
+  }
+
+  /** The focused window's top edge on this monitor, if Catbot can stand on it. */
+  private usableLedge(): WindowLedge | null {
+    const l = this.ledge
+    if (!l) return null
+    const wa = this.world.workArea
+    const x0 = Math.max(l.x, wa.x)
+    const x1 = Math.min(l.x + l.width, wa.x + wa.width)
+    if (x1 - x0 < this.size * 2) return null
+    if (l.y < wa.y + this.size * 1.3 || l.y > wa.y + wa.height - this.size * 0.9) return null
+    return { ...l, x: x0, width: x1 - x0 }
+  }
+
+  /** Head for a spot under the focused window's top edge, then jump up onto it. */
+  private goToWindow(): boolean {
+    const l = this.usableLedge()
+    if (!l || this.stage === 'hungry') return false
+    const a = this.area()
+    const inside = this.x > l.x + this.hw && this.x < l.x + l.width - this.hw
+    const below = this.y > l.y + 40
+    if (inside && below && this.y - l.y < 700) return this.launchToWindow()
+    this.tx = clamp(rand(l.x + this.hw, l.x + l.width - this.hw), a.x0, a.x1)
+    this.ty = this.roam ? clamp(l.y + rand(120, 320), a.y0, a.y1) : this.world.groundY
+    if (this.ty <= l.y + 40) return false
+    this.crossing = false
+    this.thenHop = true
+    this.set('walk', 0)
+    return true
+  }
+
+  private launchToWindow(): boolean {
+    const l = this.usableLedge()
+    if (!l || this.stand) return false
+    const tx = clamp(this.x + this.facing * rand(30, 140), l.x + this.hw, l.x + l.width - this.hw)
+    const up = this.y - l.y + 40
+    if (up < 70 || up > 1000) return false
+    const vz = Math.sqrt(2 * GRAVITY * up)
+    const flight = vz / GRAVITY + Math.sqrt((2 * 40) / GRAVITY)
+    const vx = (tx - this.x) / flight
+    if (Math.abs(vx) > 1400) return false
+    this.facing = vx >= 0 ? 1 : -1
+    this.jump = { vx, vy: 0, vz }
+    this.set('prejump', 0.28)
+    return true
+  }
+
+  private walkOffWindow(): void {
+    if (!this.stand) return this.startMove('walk')
+    const l = this.stand
+    const left = this.x - l.x < l.x + l.width - this.x
+    this.tx = left ? l.x - this.hw : l.x + l.width + this.hw
+    this.ty = l.y
+    this.walkingOff = true
+    this.set('walk', 0)
+  }
+
+  private leaveWindow(): void {
+    if (this.stand) {
+      this.stand = null
+      this.hooks.standing(0)
+    }
+  }
+
+  /** Drop from the window's top edge down to the floor below it. */
+  private fallFromWindow(): void {
+    const l = this.stand
+    this.leaveWindow()
+    if (!l) return
+    const a = this.area()
+    const landY = this.roam ? clamp(l.y + rand(90, 260), a.y0, a.y1) : this.world.groundY
+    // Don't land straight back on the (possibly stale) window edge.
+    this.noLandT = 0.8
+    this.z = Math.max(0, landY - l.y)
+    this.y = landY
+    this.vz = 0
+    this.vy = 0
+    this.set('air', 0)
   }
 
   private startEat(ev: FeedEvent): void {
     this.z = 0
     this.vx = this.vy = this.vz = 0
-    this.set('eat', 2.6)
+    this.jump = null
+    this.set('eat', 2.8)
     const what = ev.debug ? 'NOM.EXE (DEBUG SNACK)' : `${pickOne(EAT_LINES)} +${ev.commits} COMMIT${ev.commits === 1 ? '' : 'S'}`
     this.hooks.say(what, 2600)
   }
@@ -545,10 +652,13 @@ export class PetBrain {
     const l = this.ledge
     const a = this.area()
     if (!l) return this.set('starving', rand(25, 60))
-    const edges = [l.x - this.w * 0.4, l.x + l.width + this.w * 0.4].filter((x) => x > a.x0 && x < a.x1)
+    const edges = [
+      { x: l.x - this.hw * 0.9, f: 1 as const },
+      { x: l.x + l.width + this.hw * 0.9, f: -1 as const }
+    ].filter((e) => e.x > a.x0 && e.x < a.x1)
     if (!edges.length) return this.set('starving', rand(25, 60))
-    edges.sort((p, q) => Math.abs(p - this.x) - Math.abs(q - this.x))
-    this.tx = edges[0]
+    edges.sort((p, q) => Math.abs(p.x - this.x) - Math.abs(q.x - this.x))
+    this.tx = edges[0].x
     this.ty = this.roam ? clamp(l.y + l.height * 0.6, a.y0, a.y1) : this.world.groundY
     this.crossing = false
     this.afterTap = true
@@ -559,51 +669,33 @@ export class PetBrain {
   // --- movement & physics ------------------------------------------------------------------
   private speed(gait: Gait): number {
     const stageMul = this.stage === 'hungry' ? 0.5 : this.stage === 'starving' ? 0.3 : 1
-    const followMul = this.following ? 0.85 : 1
-    return this.settings.petSpeed * stageMul * GAIT_SPEED[gait] * followMul
+    return this.settings.petSpeed * stageMul * GAIT_SPEED[gait] * (this.following ? 0.85 : 1)
   }
 
   /** Walk in a straight line toward (tx, ty). Returns true on arrival. */
   private moveToward(tx: number, ty: number, speed: number, dt: number): boolean {
     const dx = tx - this.x
-    const dy = ty - this.y
+    const dy = this.stand ? 0 : ty - this.y
     const d = Math.hypot(dx, dy)
-    if (d < 3) {
-      if (this.anim.startsWith('walk')) this.playFor('idle', false)
-      return true
-    }
-    if (Math.abs(dx) > 4) {
-      const f: 1 | -1 = dx > 0 ? 1 : -1
-      if (f !== this.facing) {
-        this.facing = f
-        this.playFor(this.activity, false)
-      }
-    }
-    if (!this.anim.startsWith('walk')) this.playFor(this.activity, false)
+    if (d < 3) return true
+    if (Math.abs(dx) > 4) this.facing = dx > 0 ? 1 : -1
     const step = Math.min(d, speed * dt)
     this.x += (dx / d) * step
     this.y += (dy / d) * step
+
+    if (this.stand) {
+      const l = this.stand
+      if (this.x < Math.max(l.x, this.world.left) || this.x > Math.min(l.x + l.width, this.world.right)) {
+        // Walked off the edge of the window.
+        this.fallFromWindow()
+        this.vx = this.facing * speed
+        return false
+      }
+      if (!this.walkingOff) this.clampToArea()
+      return false
+    }
     if (!this.crossing) this.clampToArea()
     return false
-  }
-
-  private hop(dt: number): void {
-    const jump = this.sprites.anims.jump
-    const frame = frameAt(jump, this.animT)
-    // Only travel while airborne (frames 1-3 of the 5-frame jump).
-    if (frame >= 1 && frame <= 3) {
-      this.x += this.hopV.x * dt * (5 / 3)
-      this.y += this.hopV.y * dt * (5 / 3)
-      this.clampToArea()
-    }
-    if (this.animT >= animLength(jump)) {
-      this.hopsLeft--
-      if (this.hopsLeft > 0) this.animT = 0
-      else {
-        this.squashT = 0.18
-        this.next()
-      }
-    }
   }
 
   /** Residual sliding after a throw, with friction. */
@@ -617,55 +709,74 @@ export class PetBrain {
     this.vx *= nv / v
     this.vy *= nv / v
     this.x += this.vx * dt
-    this.y += this.vy * dt
+    if (!this.stand) this.y += this.vy * dt
+    if (this.stand && (this.x < this.stand.x || this.x > this.stand.x + this.stand.width)) return this.fallFromWindow()
     this.bounceOffEdges(0.4)
   }
 
   private physics(dt: number): void {
+    const prevFeet = this.y - this.z
     this.x += this.vx * dt
     if (this.roam) this.y += this.vy * dt
     this.vz -= GRAVITY * dt
     this.z += this.vz * dt
     this.bounceOffEdges(0.6)
-    // Don't fly off the top of the screen.
-    const ceiling = this.world.top + this.h
+    const ceiling = this.world.top + this.size
     if (this.y - this.z < ceiling) {
       this.z = this.y - ceiling
       this.vz = -Math.abs(this.vz) * 0.4
     }
 
+    // Land on the focused window's top edge when coming down through it.
+    const feet = this.y - this.z
+    const l = this.noLandT > 0 ? null : this.usableLedge()
+    if (l && this.vz < 0 && prevFeet <= l.y + 1 && feet >= l.y && l.y < this.y && this.x >= l.x && this.x <= l.x + l.width) {
+      this.y = l.y
+      this.z = 0
+      this.stand = { ...this.ledge! }
+      this.hooks.standing(this.stand.hwnd)
+      return this.land(true)
+    }
+
     if (this.z <= 0) {
       this.z = 0
-      if (this.vz < -420) {
+      if (this.vz < -450) {
         this.vz = -this.vz * this.bounce
         this.vx *= 0.8
         this.vy *= 0.8
-        this.squashT = 0.2
+        this.squashT = 0.22
         return
       }
       this.vz = 0
+      if (this.activity === 'hop') {
+        this.vx = this.vy = 0
+        this.squashT = 0.18
+        this.hopsLeft--
+        if (this.hopsLeft > 0) this.hopOnce()
+        else this.next()
+        return
+      }
       const v = Math.hypot(this.vx, this.vy)
       const nv = Math.max(0, v - FRICTION * dt)
       if (v > 0) {
         this.vx *= nv / v
         this.vy *= nv / v
       }
-      if (nv < 20) this.land()
+      if (nv < 20) this.land(false)
     }
   }
 
-  private land(): void {
+  private land(onWindow: boolean): void {
     this.vx = this.vy = this.vz = 0
-    this.z = 0
     this.squashT = 0.25
-    this.bounce = 0.3
+    this.bounce = 0.35
     if (this.afterLand === 'hurt') {
       this.afterLand = null
       this.flashT = Math.max(this.flashT, 0.3)
       return this.set('hurt', 1.1)
     }
     if (this.pendingFeed) return this.next()
-    if (this.stage === 'starving') return this.set('starving', rand(20, 50))
+    if (this.stage === 'starving' && !onWindow) return this.set('starving', rand(20, 50))
     this.set('idle', rand(0.6, 1.6))
   }
 
@@ -680,6 +791,7 @@ export class PetBrain {
       this.x = a.x1
       this.vx = -Math.abs(this.vx) * k
     }
+    if (this.stand || !this.roam) return
     if (this.y < a.y0) {
       this.y = a.y0
       this.vy = Math.abs(this.vy) * k
@@ -693,13 +805,13 @@ export class PetBrain {
   private clampToArea(): void {
     const a = this.area()
     this.x = clamp(this.x, a.x0, a.x1)
-    this.y = clamp(this.y, a.y0, a.y1)
+    if (this.z <= 0) this.y = clamp(this.y, a.y0, a.y1)
   }
 
   private drag(dt: number): void {
     const w = this.world
-    const nx = clamp(this.cursor.x - this.dragOffset.x, w.left + this.w * 0.4, w.right - this.w * 0.4)
-    const ny = clamp(this.cursor.y - this.dragOffset.y, w.top + this.h, this.roam ? w.workArea.y + w.workArea.height : w.groundY)
+    const nx = clamp(this.cursor.x - this.dragOffset.x, w.left + this.hw * 0.6, w.right - this.hw * 0.6)
+    const ny = clamp(this.cursor.y - this.dragOffset.y, w.top + this.size, this.roam ? w.workArea.y + w.workArea.height : w.groundY)
     if (dt > 0) {
       this.vx = this.vx * 0.5 + ((nx - this.x) / dt) * 0.5
       this.vy = this.vy * 0.5 + ((ny - this.y) / dt) * 0.5
@@ -719,27 +831,40 @@ export class PetBrain {
     this.handedOff = true
     const snap = this.snapshot()
     const wa = target.workArea
-    snap.y = this.roam ? clamp(snap.y, wa.y + this.h + 4, wa.y + wa.height - 3) : target.groundY
+    snap.y = this.roam ? clamp(snap.y, wa.y + this.size + 4, wa.y + wa.height - 3) : target.groundY
     this.hooks.handoff(target, snap)
   }
 
-  // --- timers & chatter --------------------------------------------------------------------
-  private everyFx(interval: number, fn: () => void): void {
-    if (this.fxClock >= interval) {
-      this.fxClock = 0
-      fn()
-    }
-  }
-
+  // --- timers & chatter ---------------------------------------------------------------------
   private tickTimers(dt: number): void {
     this.fxClock += dt
-    this.flashT = Math.max(0, this.flashT - dt)
+    this.blinkT -= dt
+    if (this.blinkT <= 0) {
+      this.blinking = 0.14
+      this.blinkT = rand(2, 6)
+    }
+    this.blinking = Math.max(0, this.blinking - dt)
+    this.lookT -= dt
+    if (this.lookT <= 0) {
+      this.lookYaw = chance(0.4) ? 0 : rand(-0.6, 0.5)
+      this.lookT = rand(1, 3.5)
+    }
+    this.earTwitchT -= dt
+    if (this.earTwitchT <= 0) {
+      this.earTwitch = 0.25
+      this.earTwitchT = rand(3, 8)
+    }
+    this.earTwitch = Math.max(0, this.earTwitch - dt)
+    this.lookAtCamera = Math.max(0, this.lookAtCamera - dt)
     this.squashT = Math.max(0, this.squashT - dt)
+    this.flashT = Math.max(0, this.flashT - dt)
+    this.sighT = Math.max(0, this.sighT - dt)
+    this.noLandT = Math.max(0, this.noLandT - dt)
     this.followCooldown = Math.max(0, this.followCooldown - dt)
     this.curiousCooldown = Math.max(0, this.curiousCooldown - dt)
     this.twitchT -= dt
     if (this.twitchT <= 0) {
-      this.twitching = 0.4
+      this.twitching = 0.35
       this.twitchT = rand(3, 9)
     }
     this.twitching = Math.max(0, this.twitching - dt)
@@ -748,7 +873,9 @@ export class PetBrain {
     this.nagT -= dt
     if (this.nagT > 0) return
     if (this.stage === 'hungry') {
-      this.hooks.say(pickOne(HUNGRY_LINES), 3000)
+      const line = pickOne(HUNGRY_LINES)
+      this.hooks.say(line, 3000)
+      if (line === '*SIGH*' || chance(0.4)) this.sighT = 1.4
       this.nagT = rand(45, 90)
     } else if (this.stage === 'starving') {
       this.hooks.say(pickOne(STARVING_LINES), 2500)
@@ -761,64 +888,188 @@ export class PetBrain {
     }
   }
 
-  // --- what to draw --------------------------------------------------------------------------
-  render(): RenderState {
-    const anims = this.sprites.anims
-    let anim = this.anim
-    let frame = frameAt(anims[anim], this.animT)
-    let rot = 0
-    let squashX = 1
-    let squashY = 1
-    let food = 0
+  // --- animation ------------------------------------------------------------------------------
+  private animate(dt: number): void {
+    const p = this.target
+    const f = this.facing
+    const hungry = this.stage === 'hungry' || this.stage === 'starving'
+    const clock = this.clock
+
+    p.yaw = f > 0 ? -0.75 : Math.PI + 0.75
+    p.bodyY = 0
+    p.bodyPitch = 0
+    p.roll = 0
+    p.squash = 1
+    p.neckPitch = hungry ? -0.3 : 0
+    p.neckYaw = 0
+    p.neckRoll = 0
+    p.legs = [0, 0, 0, 0]
+    const twitch = this.earTwitch > 0 ? Math.sin(clock * 40) * 0.3 : 0
+    p.earNear = hungry ? 0.55 : twitch
+    p.earFar = hungry ? 0.55 : 0
+    p.tailLift = hungry ? 1.55 : 0.85 + Math.sin(clock * 1.6) * 0.08
+    p.tailCurl = hungry ? 0.1 : 0.3
+    p.tailSway = Math.sin(clock * 1.3) * (hungry ? 0.08 : 0.25)
+    p.eyes = expression(this.blinking > 0 ? 'blink' : hungry ? 'sad' : 'idle')
+    p.glow = { full: 1, peckish: 0.7, hungry: 0.35, starving: 0 }[this.stage]
+    p.tint = this.flashT > 0 && Math.floor(this.flashT * 20) % 2 === 0 ? 1 : 0
+    p.food = 0
 
     switch (this.activity) {
-      case 'crawl':
-        // Sneaking: low and stretched.
-        squashY = 0.8
-        squashX = 1.12
+      case 'idle':
+        p.neckYaw = this.lookYaw
         break
-      case 'eat': {
-        const chomp = Math.abs(Math.sin(this.t * 13))
-        squashY = 1 - 0.05 * chomp
-        food = Math.max(0.1, 1 - this.t / this.dur)
+      case 'walk':
+      case 'run':
+      case 'crawl': {
+        const gait = this.activity
+        this.walkPhase += dt * (this.speed(gait) / this.size) * (gait === 'run' ? 6 : 9)
+        const amp = gait === 'run' ? 0.9 : gait === 'crawl' ? 0.35 : hungry ? 0.4 : 0.6
+        const s = Math.sin(this.walkPhase) * amp
+        p.legs = [s, -s, -s, s]
+        p.bodyY = Math.abs(Math.sin(this.walkPhase)) * (gait === 'run' ? 1.6 : 0.8)
+        p.neckPitch += Math.sin(this.walkPhase * 2) * 0.07
+        p.tailSway = Math.sin(this.walkPhase) * 0.3
+        if (gait === 'run') {
+          p.tailLift = 1.25
+          p.earNear = p.earFar = 0.35
+          p.bodyPitch = -0.06
+        }
+        if (gait === 'crawl') {
+          p.bodyY = -3
+          p.squash = 0.86
+          p.neckPitch -= 0.1
+          p.earNear = p.earFar = 0.45
+          p.tailLift = 1.5
+        }
         break
       }
-      case 'starving':
-        // Lying flat with its screen dimmed; the odd twitch.
-        anim = 'sleep'
-        frame = 1
-        if (this.twitching > 0) rot = Math.sin(this.clock * 45) * 0.06
+      case 'prejump':
+        p.squash = 0.78
+        p.bodyY = -1
+        p.legs = [-0.3, -0.3, 0.3, 0.3]
+        p.neckPitch = 0.15
+        p.eyes = expression('alert')
         break
-      case 'dragged':
-        anim = 'jump'
-        frame = 2
-        rot = clamp(-this.vx * 0.0005, -0.5, 0.5) + Math.sin(this.clock * 6) * 0.05
+      case 'hop':
+      case 'air': {
+        const up = this.vz > 0
+        p.legs = up ? [-0.5, -0.5, 0.5, 0.5] : [0.6, 0.6, -0.6, -0.6]
+        p.bodyPitch = clamp(this.vz * 0.00015, -0.25, 0.25)
+        p.neckPitch = up ? 0.2 : -0.1
+        p.tailLift = 1.3
+        p.eyes = expression(this.activity === 'hop' ? 'happy' : 'alert')
         break
-      case 'air':
-        anim = 'jump'
-        frame = this.vz > 0 ? 2 : 3
+      }
+      case 'sit':
+        p.bodyPitch = 0.38
+        p.bodyY = -1.5
+        p.legs = [-0.38, -0.38, 1.2, 1.2]
+        p.neckPitch -= 0.3
+        p.neckYaw = this.lookYaw
+        p.tailLift = 1.75
+        p.tailCurl = 0.5
         break
-    }
-    if (this.squashT > 0) {
-      const k = Math.sin((Math.PI * this.squashT) / 0.25) * 0.22
-      squashY *= 1 - k
-      squashX *= 1 + k * 0.7
+      case 'curious':
+        p.neckRoll = 0.35 * Math.sin(Math.min(1, this.t * 3) * Math.PI * 0.5)
+        p.neckYaw = f > 0 ? -0.5 : 0.5
+        p.earNear = p.earFar = -0.15
+        p.eyes = expression('alert')
+        break
+      case 'dragged': {
+        const trail = clamp(this.vx * f * 0.0007, -1.1, 1.1)
+        for (let i = 0; i < 4; i++) p.legs[i] = -trail + Math.sin(clock * 7 + i * 1.3) * 0.18
+        p.bodyPitch = clamp(-this.vx * f * 0.0003, -0.45, 0.45) + Math.sin(clock * 3) * 0.05
+        p.neckPitch = -0.15
+        p.eyes = expression('alert')
+        p.earNear = p.earFar = 0.5
+        p.tailLift = 1.9 + clamp(this.vx * f * 0.0008, -0.6, 0.6)
+        p.tailSway = Math.sin(clock * 5) * 0.4
+        break
+      }
+      case 'eat': {
+        const dip = Math.max(0, Math.sin(this.t * 12))
+        p.neckPitch = -0.35 - 0.45 * dip
+        p.food = Math.max(0.08, 1 - this.t / this.dur)
+        p.glow = 0.6 + 0.4 * dip
+        p.eyes = expression('happy')
+        p.tailSway = Math.sin(clock * 8) * 0.35
+        if (this.fxClock > 0.26) {
+          this.fxClock = 0
+          for (let i = 0; i < 2; i++) this.hooks.spawn('crumb', f * 22, 7)
+        }
+        break
+      }
+      case 'happy': {
+        const k = (this.t % 0.6) / 0.6
+        const hop = 4 * k * (1 - k)
+        p.bodyY = hop * 10
+        const tuck = hop * 0.6
+        p.legs = [tuck, tuck, -tuck, -tuck]
+        p.eyes = expression('happy')
+        p.glow = 1
+        p.earNear = p.earFar = -0.15
+        p.tailLift = 0.7
+        p.tailSway = Math.sin(clock * 14) * 0.45
+        if (this.fxClock > 0.35) {
+          this.fxClock = 0
+          this.hooks.spawn('heart', f * 6 + rand(-6, 6), 40)
+        }
+        break
+      }
+      case 'hurt':
+        p.eyes = expression('hurt')
+        p.earNear = p.earFar = 0.8
+        p.squash = 1 - Math.abs(Math.sin(this.t * 18)) * 0.05
+        p.tailLift = 1.7
+        break
+      case 'sleep':
+        p.legs = [1.45, 1.45, -1.45, -1.45]
+        p.bodyY = -5
+        p.neckPitch = -0.25
+        p.eyes = expression('blink')
+        p.earNear = p.earFar = 0.4
+        p.tailLift = 1.95
+        p.tailCurl = 0.9
+        p.tailSway = 0
+        p.squash = 1 + Math.sin(clock * 2) * 0.025
+        if (this.fxClock > 1.6) {
+          this.fxClock = 0
+          this.hooks.spawn('zzz', f * 12, 30)
+        }
+        break
+      case 'starving': {
+        p.roll = 1
+        const tw = this.twitching > 0 ? Math.sin(clock * 40) * 0.35 : 0
+        p.legs = [0.25 + tw, 0.25 - tw, -0.25 + tw, -0.25]
+        p.eyes = expression(Math.sin(clock * 0.6) > 0.7 ? 'sad' : 'blink')
+        p.neckPitch = -0.2
+        p.glow = 0
+        p.tailLift = 1.6
+        p.tailCurl = 0
+        p.tailSway = tw * 0.3
+        break
+      }
+      case 'tap':
+        p.legs = [1.1 + Math.sin(this.t * 14) * 0.35, 0, 0, 0]
+        p.neckPitch = -0.1 + Math.sin(this.t * 14) * 0.05
+        p.eyes = expression('sad')
+        p.glow = 0
+        break
     }
 
-    const flip = anim === 'walk-right' || anim === 'walk-left' ? false : this.facing < 0
-    const dim = this.stage === 'starving' ? 0.45 : this.stage === 'hungry' ? 0.22 : 0
-    return {
-      anim,
-      frame,
-      flip,
-      z: this.z,
-      squashX,
-      squashY,
-      rot,
-      tint: this.flashT > 0 && Math.floor(this.flashT * 20) % 2 === 0 ? 1 : 0,
-      dim,
-      food,
-      lifted: this.activity === 'dragged'
+    if (this.sighT > 0) {
+      const k = Math.sin((Math.PI * this.sighT) / 1.4)
+      p.squash *= 1 - 0.06 * k
+      p.neckPitch -= 0.25 * k
+    }
+    if (this.squashT > 0) p.squash *= 1 - 0.28 * Math.sin((Math.PI * this.squashT) / 0.25)
+    if ((this.pausedForHover || this.lookAtCamera > 0) && this.activity !== 'starving' && this.activity !== 'sleep') {
+      // Looking up at you.
+      p.neckYaw = f > 0 ? -0.6 : 0.6
+      p.neckPitch = Math.max(p.neckPitch, 0.1)
+      p.earNear = p.earFar = -0.15
+      p.eyes = expression(this.blinking > 0 ? 'blink' : hungry ? 'sad' : this.lookAtCamera > 0 ? 'alert' : 'idle')
     }
   }
 }

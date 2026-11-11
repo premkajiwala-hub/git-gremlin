@@ -25,6 +25,7 @@ interface Win32 {
   FindWindowExW: Fn
   GetWindow: Fn
   GetWindowLongPtrW: Fn
+  WindowFromPoint: Fn
 }
 
 let api: Win32 | null = null
@@ -54,7 +55,10 @@ try {
       'intptr_t __stdcall FindWindowExW(intptr_t hWndParent, intptr_t hWndChildAfter, str16 lpszClass, str16 lpszWindow)'
     ),
     GetWindow: user32.func('intptr_t __stdcall GetWindow(intptr_t hWnd, uint32_t uCmd)'),
-    GetWindowLongPtrW: user32.func('intptr_t __stdcall GetWindowLongPtrW(intptr_t hWnd, int nIndex)')
+    GetWindowLongPtrW: user32.func('intptr_t __stdcall GetWindowLongPtrW(intptr_t hWnd, int nIndex)'),
+    WindowFromPoint: user32.func(
+      `intptr_t __stdcall WindowFromPoint(${koffi.struct('POINT', { x: 'long', y: 'long' }).name} pt)`
+    )
   }
 } catch (err) {
   console.warn('[native] koffi unavailable, using fallbacks:', err)
@@ -141,6 +145,22 @@ export function keepAboveDesktop(hwnd: number): boolean {
   const above = Number(api.GetWindow(host, GW_HWNDPREV))
   const insertAfter = !above || isTopmost(above) ? HWND_TOP : above
   return api.SetWindowPos(hwnd, insertAfter, 0, 0, 0, 0, flags)
+}
+
+/**
+ * Whether the desktop (or one of our own overlays) is what's visible at a
+ * physical screen point, i.e. no app window covers it.
+ */
+export function desktopVisibleAt(px: number, py: number, ours: Set<number>): boolean {
+  if (!api) return true
+  const h = Number(api.WindowFromPoint({ x: Math.round(px), y: Math.round(py) }))
+  if (!h) return true
+  const root = Number(api.GetAncestor(h, GA_ROOT)) || h
+  if (ours.has(root)) return true
+  const buf = Buffer.alloc(512)
+  const n = api.GetClassNameW(root, buf, 256)
+  const cls = buf.toString('utf16le', 0, Math.max(0, n) * 2)
+  return cls === 'Progman' || cls === 'WorkerW'
 }
 
 /** Whether the (primary) taskbar is set to auto-hide. */

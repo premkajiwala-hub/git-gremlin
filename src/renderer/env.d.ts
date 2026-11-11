@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import type { GremlinApi } from '../preload/index'
 
 declare global {

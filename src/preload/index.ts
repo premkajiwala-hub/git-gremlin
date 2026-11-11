@@ -28,6 +28,8 @@ const api = {
   handoff: (targetDisplayId: number, snap: PetSnapshot): void => ipcRenderer.send(IPC.handoff, targetDisplayId, snap),
   sendPose: (pose: PetPose | null): void => ipcRenderer.send(IPC.pose, pose),
   sendSnapshot: (snap: PetSnapshot): void => ipcRenderer.send(IPC.snapshot, snap),
+  setStanding: (hwnd: number): void => ipcRenderer.send(IPC.standing, hwnd),
+  getCursor: (): Promise<{ x: number; y: number; visible: boolean }> => ipcRenderer.invoke(IPC.cursor),
 
   onAdopt: (cb: (snap: PetSnapshot | null) => void): Unsub => on(IPC.adopt, cb),
   onRelease: (cb: () => void): Unsub => on(IPC.release, cb),
@@ -37,6 +39,7 @@ const api = {
   onStatus: (cb: (status: PetStatus) => void): Unsub => on(IPC.status, cb),
   onFeed: (cb: (ev: FeedEvent) => void): Unsub => on(IPC.feed, cb),
   onLedge: (cb: (ledge: WindowLedge | null) => void): Unsub => on(IPC.ledge, cb),
+  onStandingLost: (cb: (hwnd: number) => void): Unsub => on(IPC.standingLost, cb),
   onSay: (cb: (text: string) => void): Unsub => on(IPC.say, cb),
   onSettings: (cb: (settings: Settings) => void): Unsub => on(IPC.settingsChanged, cb),
 

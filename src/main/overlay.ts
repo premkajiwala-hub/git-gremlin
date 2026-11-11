@@ -3,7 +3,7 @@ import { BrowserWindow, ipcMain, screen, type IpcMainEvent } from 'electron'
 import { DESKTOP_REASSERT_MS, IPC, TOPMOST_REASSERT_MS } from '../shared/constants'
 import type { DisplayInfo, OverlayInit, PetPose, PetSnapshot, PetStatus, Settings, WindowLedge } from '../shared/types'
 import { getDisplayInfos } from './displays'
-import { forceTopmost, hwndOf, keepAboveDesktop, nativeAvailable } from './native'
+import { desktopVisibleAt, forceTopmost, hwndOf, keepAboveDesktop, nativeAvailable } from './native'
 
 export interface OverlayOptions {
   getSettings: () => Settings
@@ -12,6 +12,8 @@ export interface OverlayOptions {
   /** Last known pet state (restored from disk on startup). */
   initialSnapshot: PetSnapshot | null
   onSnapshot?: (snap: PetSnapshot) => void
+  /** Catbot started (hwnd) or stopped (0) standing on a window. */
+  onStanding?: (hwnd: number) => void
 }
 
 interface Overlay {
@@ -234,6 +236,25 @@ export class OverlayManager {
         status: this.opts.getStatus(),
         ledge: this.opts.getLedge()
       }
+    })
+
+    ipcMain.on(IPC.standing, (e: IpcMainEvent, hwnd: number) => {
+      const o = this.overlayFor(e.sender.id)
+      if (!o || o.display.id !== this.ownerId) return
+      this.opts.onStanding?.(hwnd)
+    })
+
+    // Where the cursor is, and whether the desktop is what's visible under it
+    // (in desktop mode an app window may be covering Catbot).
+    ipcMain.handle(IPC.cursor, () => {
+      const p = screen.getCursorScreenPoint()
+      let visible = true
+      if (!this.onTop && nativeAvailable) {
+        const phys = screen.dipToScreenPoint(p)
+        const ours = new Set([...this.overlays.values()].map((o) => o.hwnd))
+        visible = desktopVisibleAt(phys.x, phys.y, ours)
+      }
+      return { x: p.x, y: p.y, visible }
     })
 
     ipcMain.on(IPC.setInteractive, (e: IpcMainEvent, interactive: boolean) => {

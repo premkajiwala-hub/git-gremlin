@@ -1,0 +1,32 @@
+Visible region of each PNG (see scripts/generate-textures.ts):
+
+head_front.png        16x16
+head_side.png         16x16
+head_top.png          16x16
+head_back.png         16x16
+head_bottom.png       16x16
+eyes_idle.png         16x16 overlay (transparent except the eyes)
+eyes_blink.png        16x16 overlay (transparent except the eyes)
+eyes_happy.png        16x16 overlay (transparent except the eyes)
+eyes_hurt.png         16x16 overlay (transparent except the eyes)
+eyes_alert.png        16x16 overlay (transparent except the eyes)
+eyes_sad.png          16x16 overlay (transparent except the eyes)
+ear_front.png         5x4 (top-left)
+ear_side.png          3x4 (top-left)
+ear_tip.png           3x3 (top-left)
+body_side.png         16x10 (top 10 rows), repeats along the length
+body_top.png          16x14 (top 14 rows), repeats along the length
+body_end.png          14x10 (top-left)
+body_bottom.png       16x14, repeats along the length
+leg_side.png          5x7 (top-left)
+leg_top.png           5x5 (top-left)
+leg_bottom.png        5x5 (top-left)
+tail_light.png        3x4 (top-left)
+tail_dark.png         3x4 (top-left)
+tail_tip.png          3x4 (top-left)
+collar.png            15x3 (top-left)
+bell_on.png           3x3 (top-left)
+bell_off.png          3x3 (top-left)
+food.png              16x16
+heart.png             8x8 sprite
+zzz.png               8x8 sprite

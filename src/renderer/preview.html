@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Catbot preview</title>
+    <link rel="stylesheet" href="./overlay.css" />
+    <style>
+      html,
+      body {
+        background: linear-gradient(160deg, #3b5a78, #22303f);
+      }
+      #panel {
+        position: fixed;
+        left: 8px;
+        top: 8px;
+        z-index: 10;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        max-width: 760px;
+        font: 13px 'Segoe UI', sans-serif;
+      }
+      #panel button {
+        background: #19212a;
+        color: #e6eaef;
+        border: 1px solid #ff9a2e;
+        border-radius: 4px;
+        padding: 4px 10px;
+        cursor: pointer;
+      }
+      #fakewin {
+        position: fixed;
+        left: 420px;
+        top: 230px;
+        width: 360px;
+        height: 200px;
+        background: #e8ebef;
+        border-radius: 6px;
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="fakewin"></div>
+    <div id="stage"></div>
+    <div id="panel"></div>
+    <!-- Dev-only: open http://localhost:5173/preview.html while `npm start` runs. -->
+    <script type="module" src="./preview.ts"></script>
+  </body>
+</html>

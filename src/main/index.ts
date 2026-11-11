@@ -48,7 +48,10 @@ function start(): void {
   store.load()
   hunger = new Hunger(store)
 
-  tracker = new WindowTracker((ledge) => overlays.broadcast(IPC.ledge, ledge))
+  tracker = new WindowTracker(
+    (ledge) => overlays.broadcast(IPC.ledge, ledge),
+    (hwnd) => overlays.sendToPet(IPC.standingLost, hwnd)
+  )
   overlays = new OverlayManager({
     getSettings: () => store.state.settings,
     getStatus: status,
@@ -57,7 +60,8 @@ function start(): void {
     onSnapshot: (snap) => {
       store.state.pet = snap
       store.saveSoon()
-    }
+    },
+    onStanding: (hwnd) => tracker.setStanding(hwnd)
   })
   git = new GitWatcher(store, onCommits)
   tray = new AppTray({

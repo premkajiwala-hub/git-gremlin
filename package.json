@@ -13,7 +13,6 @@
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "textures": "node scripts/generate-textures.ts",
-    "sprites": "node scripts/slice-catbot.ts",
     "compile": "electron-vite build",
     "build": "npm run typecheck && electron-vite build && electron-builder --win nsis --x64 --publish never"
   },
@@ -23,10 +22,11 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
+    "@types/three": "^0.187.0",
     "electron": "^45.2.3",
     "electron-builder": "^26.18.0",
     "electron-vite": "^6.0.0",
-    "sharp": "^0.35.5",
+    "three": "^0.187.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.7"
   },
