@@ -21,6 +21,10 @@ interface Win32 {
   GetAncestor: Fn
   DwmGetWindowAttribute: Fn
   SHAppBarMessage: Fn
+  FindWindowW: Fn
+  FindWindowExW: Fn
+  GetWindow: Fn
+  GetWindowLongPtrW: Fn
 }
 
 let api: Win32 | null = null
@@ -44,7 +48,13 @@ try {
     DwmGetWindowAttribute: dwmapi.func(
       'long __stdcall DwmGetWindowAttribute(intptr_t hwnd, uint32_t dwAttribute, void *pvAttribute, uint32_t cbAttribute)'
     ),
-    SHAppBarMessage: shell32.func('uintptr_t __stdcall SHAppBarMessage(uint32_t dwMessage, void *pData)')
+    SHAppBarMessage: shell32.func('uintptr_t __stdcall SHAppBarMessage(uint32_t dwMessage, void *pData)'),
+    FindWindowW: user32.func('intptr_t __stdcall FindWindowW(str16 lpClassName, str16 lpWindowName)'),
+    FindWindowExW: user32.func(
+      'intptr_t __stdcall FindWindowExW(intptr_t hWndParent, intptr_t hWndChildAfter, str16 lpszClass, str16 lpszWindow)'
+    ),
+    GetWindow: user32.func('intptr_t __stdcall GetWindow(intptr_t hWnd, uint32_t uCmd)'),
+    GetWindowLongPtrW: user32.func('intptr_t __stdcall GetWindowLongPtrW(intptr_t hWnd, int nIndex)')
   }
 } catch (err) {
   console.warn('[native] koffi unavailable, using fallbacks:', err)
@@ -86,6 +96,51 @@ export function forceTopmost(hwnd: number): boolean {
     0,
     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOSENDCHANGING
   )
+}
+
+const HWND_TOP = 0
+const HWND_BOTTOM = 1
+const GW_HWNDPREV = 3
+const GWL_EXSTYLE = -20
+const WS_EX_TOPMOST = 0x8
+
+/** The window that hosts the desktop icons (Progman, or a WorkerW on some setups). */
+function desktopHost(): number {
+  if (!api) return 0
+  const progman = Number(api.FindWindowW('Progman', null))
+  if (progman && Number(api.FindWindowExW(progman, 0, 'SHELLDLL_DefView', null))) return progman
+  let worker = 0
+  for (let i = 0; i < 64; i++) {
+    worker = Number(api.FindWindowExW(0, worker, 'WorkerW', null))
+    if (!worker) break
+    if (Number(api.FindWindowExW(worker, 0, 'SHELLDLL_DefView', null))) return worker
+  }
+  return progman
+}
+
+function isTopmost(hwnd: number): boolean {
+  return (Number(api!.GetWindowLongPtrW(hwnd, GWL_EXSTYLE)) & WS_EX_TOPMOST) !== 0
+}
+
+/**
+ * Keep a (non-topmost) window directly above the desktop: app windows cover
+ * it, but it's visible wherever the wallpaper shows. Also follows the desktop
+ * when "Show desktop" (Win+D) raises it above everything.
+ */
+export function keepAboveDesktop(hwnd: number): boolean {
+  if (!api) return false
+  const host = desktopHost()
+  if (!host) return false
+  if (Number(api.GetWindow(host, GW_HWNDPREV)) === hwnd) return true
+  const flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOSENDCHANGING
+  // Usual case: Windows keeps the desktop pinned at the very bottom, so
+  // "bottom" lands us directly above it.
+  api.SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, flags)
+  if (Number(api.GetWindow(host, GW_HWNDPREV)) === hwnd) return true
+  // The desktop has been raised (Show desktop / Win+D): follow it up.
+  const above = Number(api.GetWindow(host, GW_HWNDPREV))
+  const insertAfter = !above || isTopmost(above) ? HWND_TOP : above
+  return api.SetWindowPos(hwnd, insertAfter, 0, 0, 0, 0, flags)
 }
 
 /** Whether the (primary) taskbar is set to auto-hide. */

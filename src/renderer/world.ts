@@ -1,4 +1,4 @@
-import type { DisplayInfo } from '../shared/types'
+import type { DisplayInfo, Rect } from '../shared/types'
 
 /** Geometry helpers for the monitor this overlay covers, in global DIP coordinates. */
 export class World {
@@ -22,6 +22,10 @@ export class World {
   get groundY(): number {
     return this.display.groundY
   }
+  /** The part of the monitor not covered by the taskbar. */
+  get workArea(): Rect {
+    return this.display.workArea
+  }
 
   toLocal(gx: number, gy: number): { x: number; y: number } {
     return { x: gx - this.left, y: gy - this.top }
@@ -41,8 +45,7 @@ export class World {
       if (d.id === this.display.id) continue
       const otherEdge = dir > 0 ? d.bounds.x : d.bounds.x + d.bounds.width
       if (Math.abs(otherEdge - edge) > 4) continue
-      const overlap =
-        Math.min(b.y + b.height, d.bounds.y + d.bounds.height) - Math.max(b.y, d.bounds.y)
+      const overlap = Math.min(b.y + b.height, d.bounds.y + d.bounds.height) - Math.max(b.y, d.bounds.y)
       if (overlap > bestOverlap) {
         best = d
         bestOverlap = overlap
@@ -51,7 +54,16 @@ export class World {
     return best
   }
 
-  /** Whether a horizontal span [x0, x1] at height y overlaps this monitor. */
+  /** The monitor containing a global point, if any. */
+  displayAt(x: number, y: number): DisplayInfo | null {
+    return (
+      this.displays.find(
+        (d) => x >= d.bounds.x && x < d.bounds.x + d.bounds.width && y >= d.bounds.y && y <= d.bounds.y + d.bounds.height
+      ) ?? null
+    )
+  }
+
+  /** Whether a rectangle overlaps this monitor. */
   overlaps(x0: number, x1: number, y0: number, y1: number): boolean {
     return x1 > this.left && x0 < this.right && y1 > this.top && y0 < this.bottom
   }

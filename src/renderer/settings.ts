@@ -13,6 +13,8 @@ function render(view: SettingsView): void {
   field('petName').value = s.petName
   field('petSize').value = String(s.petSize)
   field('petSpeed').value = String(s.petSpeed)
+  ;(form.elements.namedItem('movement') as RadioNodeList).value = s.movement
+  field('onTopOfApps').checked = s.onTopOfApps
   field('peckishAfterHours').value = String(s.peckishAfterHours)
   field('hungryAfterHours').value = String(s.hungryAfterHours)
   field('starvingAfterHours').value = String(s.starvingAfterHours)
@@ -34,7 +36,7 @@ function renderRepos(repos: string[]): void {
   if (!repos.length) {
     const li = document.createElement('li')
     li.className = 'empty'
-    li.textContent = 'No repos yet. Add one so your pet can eat.'
+    li.textContent = 'No repos yet. Add one so your catbot can eat.'
     reposEl.append(li)
     return
   }
@@ -64,6 +66,8 @@ function collect(): Settings {
     petName: field('petName').value,
     petSize: Number(field('petSize').value),
     petSpeed: Number(field('petSpeed').value),
+    movement: (form.elements.namedItem('movement') as RadioNodeList).value === 'ground' ? 'ground' : 'roam',
+    onTopOfApps: field('onTopOfApps').checked,
     peckishAfterHours: Number(field('peckishAfterHours').value),
     hungryAfterHours: Number(field('hungryAfterHours').value),
     starvingAfterHours: Number(field('starvingAfterHours').value),

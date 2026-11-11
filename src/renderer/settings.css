@@ -1,12 +1,15 @@
+/* Catbot palette: dark face-screen, light-gray shell, orange accents, cyan glow. */
 :root {
-  --bg: #1b1f1a;
-  --panel: #242a22;
-  --line: #36402f;
-  --text: #e7eadf;
-  --muted: #9aa58f;
-  --moss: #6cab48;
-  --moss-dark: #3d6b2b;
-  --amber: #ffb21e;
+  --bg: #11161c;
+  --panel: #19212a;
+  --line: #2b3742;
+  --field: #0c1419;
+  --text: #e6eaef;
+  --muted: #93a1ae;
+  --cyan: #5ef2ff;
+  --cyan-dim: #1d6f78;
+  --orange: #ff9a2e;
+  --orange-dark: #c96f12;
   color-scheme: dark;
 }
 
@@ -30,10 +33,11 @@ header {
 }
 
 .logo {
-  width: 48px;
-  height: 48px;
-  image-rendering: pixelated;
-  border-radius: 4px;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  background: #dfe3e8;
+  border: 2px solid var(--orange);
 }
 
 h1 {
@@ -49,6 +53,7 @@ h1 {
 section {
   background: var(--panel);
   border: 1px solid var(--line);
+  border-left: 3px solid var(--orange);
   border-radius: 6px;
   padding: 12px 14px;
   margin-bottom: 12px;
@@ -56,15 +61,27 @@ section {
 
 h2 {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--moss);
+  letter-spacing: 0.1em;
+  color: var(--cyan);
 }
 
 h3 {
   margin: 0;
   font-size: 13px;
+}
+
+fieldset {
+  border: 0;
+  margin: 0 0 4px;
+  padding: 0;
+}
+
+legend {
+  color: var(--muted);
+  padding: 0;
+  margin-bottom: 2px;
 }
 
 label {
@@ -73,7 +90,7 @@ label {
   color: var(--muted);
 }
 
-label input:not([type='checkbox']) {
+label input:not([type='checkbox']):not([type='radio']) {
   display: block;
   width: 100%;
   margin-top: 4px;
@@ -81,14 +98,15 @@ label input:not([type='checkbox']) {
 
 label.check {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   color: var(--text);
 }
 
 .val {
   float: right;
-  color: var(--text);
+  color: var(--cyan);
+  font-variant-numeric: tabular-nums;
 }
 
 .row {
@@ -97,12 +115,11 @@ label.check {
   gap: 10px;
 }
 
-input[type='text'],
 input:not([type]),
 input[type='email'],
 input[type='number'],
 input[type='time'] {
-  background: #151914;
+  background: var(--field);
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -112,18 +129,22 @@ input[type='time'] {
 
 input:focus-visible,
 button:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--cyan);
   outline-offset: 1px;
 }
 
-input[type='range'] {
-  accent-color: var(--moss);
+input[type='range'],
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--orange);
 }
 
-input[type='checkbox'] {
-  accent-color: var(--moss);
+input[type='checkbox'],
+input[type='radio'] {
   width: 16px;
   height: 16px;
+  margin: 2px 0 0;
+  flex-shrink: 0;
 }
 
 .hint {
@@ -154,17 +175,21 @@ input[type='checkbox'] {
   border: 1px solid var(--line);
   border-radius: 4px;
   margin-bottom: 6px;
-  background: #151914;
+  background: var(--field);
   word-break: break-all;
+  font-family: Consolas, 'Cascadia Mono', monospace;
+  font-size: 12px;
+  color: var(--cyan);
 }
 
 #repos li.empty {
   color: var(--muted);
   justify-content: center;
+  font-family: inherit;
 }
 
 button {
-  background: #2f382b;
+  background: #243039;
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -174,22 +199,26 @@ button {
 }
 
 button:hover {
-  background: #3a4535;
+  background: #2e3c47;
 }
 
 button.primary {
-  background: var(--moss-dark);
-  border-color: var(--moss);
+  background: var(--orange);
+  border-color: var(--orange);
+  color: #1f1206;
+  font-weight: 600;
 }
 
 button.primary:hover {
-  background: #4b8034;
+  background: #ffad55;
 }
 
 button.small {
   padding: 2px 8px;
   font-size: 12px;
   flex-shrink: 0;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: var(--text);
 }
 
 footer {
@@ -204,5 +233,5 @@ footer {
 }
 
 .saved {
-  color: var(--moss);
+  color: var(--cyan);
 }

@@ -74,12 +74,18 @@ export interface FeedEvent {
   debug?: boolean
 }
 
+/** Where the pet may wander: anywhere on screen, or only along the bottom edge. */
+export type Movement = 'roam' | 'ground'
+
 export interface Settings {
   petName: string
   /** On-screen height in DIP. */
   petSize: number
   /** Walking speed in DIP per second. */
   petSpeed: number
+  movement: Movement
+  /** true = drawn on top of every app; false = only on the desktop, behind app windows. */
+  onTopOfApps: boolean
   peckishAfterHours: number
   hungryAfterHours: number
   starvingAfterHours: number

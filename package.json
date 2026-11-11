@@ -2,7 +2,7 @@
   "name": "git-gremlin",
   "productName": "GitGremlin",
   "version": "0.1.0",
-  "description": "A blocky Windows desktop pet that lives on your taskbar and gets hungry when you don't commit code.",
+  "description": "A robot-cat Windows desktop pet that roams your desktop and gets hungry when you don't commit code.",
   "author": "premkajiwala-hub",
   "license": "MIT",
   "private": true,
@@ -13,6 +13,7 @@
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "textures": "node scripts/generate-textures.ts",
+    "sprites": "node scripts/slice-catbot.ts",
     "compile": "electron-vite build",
     "build": "npm run typecheck && electron-vite build && electron-builder --win nsis --x64 --publish never"
   },
@@ -22,11 +23,10 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
-    "@types/three": "^0.187.0",
     "electron": "^45.2.3",
     "electron-builder": "^26.18.0",
     "electron-vite": "^6.0.0",
-    "three": "^0.187.0",
+    "sharp": "^0.35.5",
     "typescript": "^7.0.2",
     "vite": "^8.3.7"
   },

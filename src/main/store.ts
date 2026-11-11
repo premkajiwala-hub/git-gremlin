@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { app } from 'electron'
-import { DEFAULT_SETTINGS } from '../shared/constants'
+import { DEFAULT_SETTINGS, PET_SIZE_MAX, PET_SIZE_MIN } from '../shared/constants'
 import type { PetSnapshot, Settings } from '../shared/types'
 
 export interface RepoState {
@@ -52,9 +52,20 @@ export class Store {
         pet: raw.pet ?? null
       }
       this.state.settings.repos = [...new Set(this.state.settings.repos ?? [])]
+      this.migrate()
     } catch {
       this.state = defaults()
     }
+  }
+
+  /** Mossy -> Catbot: carry over the old defaults to the new ones, keep anything customised. */
+  private migrate(): void {
+    const s = this.state.settings
+    if (s.petName === 'Mossy') s.petName = DEFAULT_SETTINGS.petName
+    if (s.petSize === 80) s.petSize = DEFAULT_SETTINGS.petSize
+    s.petSize = Math.min(PET_SIZE_MAX, Math.max(PET_SIZE_MIN, s.petSize))
+    if (s.movement !== 'ground') s.movement = 'roam'
+    s.onTopOfApps = Boolean(s.onTopOfApps)
   }
 
   saveSoon(): void {

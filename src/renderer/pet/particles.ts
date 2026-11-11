@@ -1,104 +1,86 @@
-import * as THREE from 'three'
-import type { TextureSet } from './textures'
-
-export type ParticleKind = 'heart' | 'zzz' | 'crumb'
+export type ParticleKind = 'heart' | 'crumb'
 
 interface Particle {
-  obj: THREE.Object3D
   kind: ParticleKind
+  /** Position relative to the pet's feet, in CSS px (y up is negative). */
+  x: number
+  y: number
   vx: number
   vy: number
-  vz: number
   age: number
   life: number
-  spin: number
+  size: number
 }
 
-const GRAVITY = 260 // model units / s^2
+const GRAVITY = 520
 
-/**
- * Pixel hearts, sleepy Zs and tiny cube crumbs. Positions are in the pet's
- * scene space (origin = between its feet, units = model texels).
- */
+/** Pixel hearts and tiny commit-cube crumbs, drawn on the pet's canvas. */
 export class Particles {
   private live: Particle[] = []
-  private crumbGeo = new THREE.BoxGeometry(2, 2, 2)
-  private crumbMat: THREE.MeshBasicMaterial
-  private heartMat: THREE.SpriteMaterial
-  private zMat: THREE.SpriteMaterial
-
-  constructor(
-    private scene: THREE.Scene,
-    tex: TextureSet
-  ) {
-    this.crumbMat = new THREE.MeshBasicMaterial({ map: tex.food })
-    this.heartMat = new THREE.SpriteMaterial({ map: tex.heart, transparent: true, alphaTest: 0.5 })
-    this.zMat = new THREE.SpriteMaterial({ map: tex.zzz, transparent: true, alphaTest: 0.5 })
-  }
 
   get active(): boolean {
     return this.live.length > 0
   }
 
-  spawn(kind: ParticleKind, x: number, y: number, z = 6): void {
-    if (this.live.length > 60) return
-    let obj: THREE.Object3D
-    const p: Particle = { obj: null!, kind, vx: 0, vy: 0, vz: 0, age: 0, life: 1, spin: 0 }
+  /** `x`, `y` relative to the pet's feet; `scale` is the pet's size / 72. */
+  spawn(kind: ParticleKind, x: number, y: number, scale: number): void {
+    if (this.live.length > 40) return
     if (kind === 'crumb') {
-      obj = new THREE.Mesh(this.crumbGeo, this.crumbMat)
-      p.vx = (Math.random() - 0.5) * 70
-      p.vy = 50 + Math.random() * 60
-      p.vz = (Math.random() - 0.2) * 40
-      p.life = 1.4
-      p.spin = (Math.random() - 0.5) * 12
+      this.live.push({
+        kind,
+        x,
+        y,
+        vx: (Math.random() - 0.5) * 90 * scale,
+        vy: -(60 + Math.random() * 90) * scale,
+        age: 0,
+        life: 1.2,
+        size: Math.max(3, Math.round(4 * scale))
+      })
     } else {
-      obj = new THREE.Sprite(kind === 'heart' ? this.heartMat.clone() : this.zMat.clone())
-      obj.scale.setScalar(kind === 'heart' ? 8 : 7)
-      p.vx = kind === 'zzz' ? 6 + Math.random() * 4 : (Math.random() - 0.5) * 10
-      p.vy = kind === 'zzz' ? 9 : 18 + Math.random() * 8
-      p.life = kind === 'zzz' ? 2.6 : 1.6
+      this.live.push({
+        kind,
+        x,
+        y,
+        vx: (Math.random() - 0.5) * 14 * scale,
+        vy: -(34 + Math.random() * 14) * scale,
+        age: 0,
+        life: 1.5,
+        size: Math.round(16 * scale)
+      })
     }
-    obj.position.set(x, y, z)
-    p.obj = obj
-    this.scene.add(obj)
-    this.live.push(p)
   }
 
   update(dt: number): void {
     for (let i = this.live.length - 1; i >= 0; i--) {
       const p = this.live[i]
       p.age += dt
-      const o = p.obj
       if (p.kind === 'crumb') {
-        p.vy -= GRAVITY * dt
-        o.position.x += p.vx * dt
-        o.position.y += p.vy * dt
-        o.position.z += p.vz * dt
-        o.rotation.x += p.spin * dt
-        o.rotation.y += p.spin * dt
-        if (o.position.y < 1) {
-          o.position.y = 1
-          p.vy = Math.abs(p.vy) * 0.3
+        p.vy += GRAVITY * dt
+        p.x += p.vx * dt
+        p.y += p.vy * dt
+        if (p.y > 0) {
+          p.y = 0
+          p.vy = -Math.abs(p.vy) * 0.3
           p.vx *= 0.6
-          p.vz *= 0.6
         }
       } else {
-        o.position.x += (p.vx + Math.sin(p.age * 5) * 6) * dt
-        o.position.y += p.vy * dt
-        if (p.kind === 'zzz') o.scale.setScalar(5 + p.age * 2)
-        const mat = (o as THREE.Sprite).material
-        mat.opacity = Math.min(1, (p.life - p.age) * 2)
+        p.x += (p.vx + Math.sin(p.age * 5) * 8) * dt
+        p.y += p.vy * dt
       }
-      if (p.age >= p.life) {
-        this.scene.remove(o)
-        if (o instanceof THREE.Sprite) o.material.dispose()
-        this.live.splice(i, 1)
-      }
+      if (p.age >= p.life) this.live.splice(i, 1)
     }
   }
 
+  draw(ctx: CanvasRenderingContext2D, ax: number, ay: number, heart: HTMLImageElement, food: HTMLImageElement): void {
+    for (const p of this.live) {
+      ctx.globalAlpha = Math.min(1, (p.life - p.age) * 2.5)
+      const img = p.kind === 'heart' ? heart : food
+      ctx.drawImage(img, Math.round(ax + p.x - p.size / 2), Math.round(ay + p.y - p.size), p.size, p.size)
+    }
+    ctx.globalAlpha = 1
+  }
+
   clear(): void {
-    for (const p of this.live) this.scene.remove(p.obj)
     this.live = []
   }
 }

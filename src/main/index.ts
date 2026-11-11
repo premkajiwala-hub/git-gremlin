@@ -1,6 +1,6 @@
 import { basename } from 'node:path'
 import { app, BrowserWindow, dialog, ipcMain, powerMonitor } from 'electron'
-import { APP_ID, DEFAULT_SETTINGS, IPC } from '../shared/constants'
+import { APP_ID, DEFAULT_SETTINGS, IPC, PET_SIZE_MAX, PET_SIZE_MIN } from '../shared/constants'
 import type { FeedEvent, PetStatus, RepoResult, Settings, SettingsView } from '../shared/types'
 import { GitWatcher, type NewCommit } from './git'
 import { Hunger } from './hunger'
@@ -19,10 +19,12 @@ if (!app.requestSingleInstanceLock()) {
   // snack), `--say "text"` (speech bubble), `--settings`; otherwise show the pet.
   app.on('second-instance', (_e, argv) => {
     if (!store) return
+    // Chromium inserts its own --switches into argv, so take the first non-switch after --say.
     const sayAt = argv.indexOf('--say')
+    const sayText = sayAt >= 0 ? argv.slice(sayAt + 1).find((a) => !a.startsWith('--')) : undefined
     if (argv.includes('--feed')) feedNow()
     else if (argv.includes('--settings')) openSettingsWindow()
-    else if (sayAt >= 0 && argv[sayAt + 1]) overlays.sendToPet(IPC.say, argv[sayAt + 1].toUpperCase())
+    else if (sayText) overlays.sendToPet(IPC.say, sayText.toUpperCase())
     else setHidden(false)
   })
 }
@@ -46,10 +48,7 @@ function start(): void {
   store.load()
   hunger = new Hunger(store)
 
-  tracker = new WindowTracker(
-    (ledge) => overlays.broadcast(IPC.ledge, ledge),
-    (hwnd) => overlays.sendToPet(IPC.standingLost, hwnd)
-  )
+  tracker = new WindowTracker((ledge) => overlays.broadcast(IPC.ledge, ledge))
   overlays = new OverlayManager({
     getSettings: () => store.state.settings,
     getStatus: status,
@@ -58,8 +57,7 @@ function start(): void {
     onSnapshot: (snap) => {
       store.state.pet = snap
       store.saveSoon()
-    },
-    onStanding: (hwnd) => tracker.setStanding(hwnd)
+    }
   })
   git = new GitWatcher(store, onCommits)
   tray = new AppTray({
@@ -224,8 +222,10 @@ function sanitize(input: Settings): Settings {
   ].sort((a, b) => a - b)
   return {
     petName: String(input.petName ?? '').trim().slice(0, 24) || cur.petName,
-    petSize: Math.round(num(input.petSize, DEFAULT_SETTINGS.petSize, 40, 200)),
+    petSize: Math.round(num(input.petSize, DEFAULT_SETTINGS.petSize, PET_SIZE_MIN, PET_SIZE_MAX)),
     petSpeed: Math.round(num(input.petSpeed, DEFAULT_SETTINGS.petSpeed, 10, 150)),
+    movement: input.movement === 'ground' ? 'ground' : 'roam',
+    onTopOfApps: Boolean(input.onTopOfApps),
     peckishAfterHours: hours[0],
     hungryAfterHours: hours[1],
     starvingAfterHours: hours[2],
@@ -242,6 +242,7 @@ function registerSettingsIpc(): void {
   ipcMain.handle(IPC.settingsSave, async (_e, s: Settings, sww: boolean) => {
     hunger.tick()
     store.state.settings = sanitize(s)
+    overlays.setOnTop(store.state.settings.onTopOfApps)
     if (sww !== startWithWindows()) setStartWithWindows(Boolean(sww))
     changed()
     return settingsView()

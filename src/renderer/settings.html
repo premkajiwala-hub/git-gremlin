@@ -14,22 +14,40 @@
       <img src="./icon.png" alt="" class="logo" />
       <div>
         <h1>GitGremlin</h1>
-        <p class="sub">Feed your pet by committing code.</p>
+        <p class="sub">Your catbot runs on commits.</p>
       </div>
     </header>
 
     <form id="form">
       <section>
-        <h2>Pet</h2>
+        <h2>Catbot</h2>
         <label>Name <input name="petName" maxlength="24" required /></label>
         <label
           >Size <span class="val" data-for="petSize"></span>
-          <input name="petSize" type="range" min="40" max="200" step="4"
+          <input name="petSize" type="range" min="48" max="112" step="4"
         /></label>
         <label
           >Walking speed <span class="val" data-for="petSpeed"></span>
           <input name="petSpeed" type="range" min="10" max="150" step="5"
         /></label>
+      </section>
+
+      <section>
+        <h2>Behaviour</h2>
+        <fieldset>
+          <legend>Where it wanders</legend>
+          <label class="check"
+            ><input type="radio" name="movement" value="roam" /> Anywhere on the screen (walks, runs, crawls and hops
+            around)</label
+          >
+          <label class="check"
+            ><input type="radio" name="movement" value="ground" /> Only along the bottom of the screen</label
+          >
+        </fieldset>
+        <label class="check"
+          ><input name="onTopOfApps" type="checkbox" /> Show on top of apps</label
+        >
+        <p class="hint">Off: the catbot lives on the desktop and hides behind your app windows. On: it stays on top of everything.</p>
       </section>
 
       <section>
@@ -40,7 +58,7 @@
           <label>Hungry <input name="hungryAfterHours" type="number" min="0.1" max="72" step="0.25" /></label>
           <label>Starving <input name="starvingAfterHours" type="number" min="0.1" max="72" step="0.25" /></label>
         </div>
-        <label class="check"><input name="quietHoursEnabled" type="checkbox" /> Quiet hours (hunger pauses, pet sleeps)</label>
+        <label class="check"><input name="quietHoursEnabled" type="checkbox" /> Quiet hours (hunger pauses, catbot sleeps)</label>
         <div class="row">
           <label>From <input name="quietStart" type="time" /></label>
           <label>To <input name="quietEnd" type="time" /></label>
@@ -67,7 +85,7 @@
       </section>
 
       <footer>
-        <span id="saved" class="saved"></span>
+        <span id="saved" class="saved" role="status"></span>
         <button type="submit" class="primary">Save</button>
       </footer>
     </form>

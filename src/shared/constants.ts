@@ -11,6 +11,8 @@ export const IDLE_FRAME_MS = 100
 
 /** How often the overlays are pushed back to the top of the topmost z-band. */
 export const TOPMOST_REASSERT_MS = 1500
+/** How often desktop-mode overlays are tucked back just above the desktop. */
+export const DESKTOP_REASSERT_MS = 600
 /** How often watched repos are checked for new commits. */
 export const GIT_POLL_MS = 60_000
 
@@ -20,10 +22,16 @@ export const FOOD_BASE_HOURS = 3
 export const FOOD_BONUS_PER_DECADE = 1
 export const FOOD_BONUS_CAP_HOURS = 3
 
+/** Allowed pet heights: big enough to see, small enough not to get in the way. */
+export const PET_SIZE_MIN = 48
+export const PET_SIZE_MAX = 112
+
 export const DEFAULT_SETTINGS: Settings = {
-  petName: 'Mossy',
-  petSize: 80,
+  petName: 'Catbot',
+  petSize: 72,
   petSpeed: 45,
+  movement: 'roam',
+  onTopOfApps: false,
   peckishAfterHours: 2,
   hungryAfterHours: 4,
   starvingAfterHours: 8,
@@ -48,8 +56,6 @@ export const IPC = {
   status: 'pet:status',
   feed: 'pet:feed',
   ledge: 'pet:ledge',
-  standing: 'pet:standing',
-  standingLost: 'pet:standing-lost',
   say: 'pet:say',
   settingsChanged: 'settings:changed',
   settingsGet: 'settings:get',
