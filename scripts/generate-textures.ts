@@ -10,6 +10,7 @@
  *   assets/pets/<pet>/frames.json      animations, frame rates, anchor, overlay positions
  *   assets/textures/heart.png, zzz.png shared particles
  *   assets/icon.png, build/icon.png    GitGremlin app (tray / installer) icon
+ *   assets/icon.ico                    the same, for the Start menu shortcut
  *
  * Run with:  npm run textures   (overwrites repainted files)
  * Each pet's drawing lives in scripts/art/<pet>.ts.
@@ -95,5 +96,27 @@ icon.over(paw)
 writeFileSync(join(ROOT, 'assets', 'icon.png'), png(scale(icon, 2)))
 mkdirSync(join(ROOT, 'build'), { recursive: true })
 writeFileSync(join(ROOT, 'build', 'icon.png'), png(scale(icon, 13)))
+writeFileSync(join(ROOT, 'assets', 'icon.ico'), ico([1, 2, 3, 5, 12].map((k) => png(scale(icon, k)))))
+
+/** A Windows .ico holding PNG images (supported since Vista), for the Start menu shortcut. */
+function ico(images: Buffer[]): Buffer {
+  const head = Buffer.alloc(6 + 16 * images.length)
+  head.writeUInt16LE(0, 0)
+  head.writeUInt16LE(1, 2) // type: icon
+  head.writeUInt16LE(images.length, 4)
+  let offset = head.length
+  images.forEach((img, i) => {
+    const size = img.readUInt32BE(16) // PNG IHDR width (square)
+    const e = 6 + 16 * i
+    head.writeUInt8(size >= 256 ? 0 : size, e)
+    head.writeUInt8(size >= 256 ? 0 : size, e + 1)
+    head.writeUInt16LE(1, e + 4) // planes
+    head.writeUInt16LE(32, e + 6) // bits per pixel
+    head.writeUInt32LE(img.length, e + 8)
+    head.writeUInt32LE(offset, e + 12)
+    offset += img.length
+  })
+  return Buffer.concat([head, ...images])
+}
 
 console.log(`Wrote ${pets.length} pets to ${PETS}, particles and icons`)

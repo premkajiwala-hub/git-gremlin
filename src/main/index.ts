@@ -4,6 +4,7 @@ import type { FeedEvent, HubView, PetId, PetStatus, Settings, SignInCode, SignIn
 import { clientId, DeviceFlow } from './github-auth'
 import { GitHubWatcher, moodFrom, type GitHubData } from './github'
 import { hubWindow, openHub } from './hub-window'
+import { installStartMenuShortcut, rebuildIfStale } from './launcher'
 import { OverlayManager } from './overlay'
 import { catbotFeedText, catbotStatus, newContributions } from './pets/catbot'
 import { DustyService } from './pets/dusty'
@@ -11,8 +12,23 @@ import { normalizeSettings, Store } from './store'
 import { AppTray } from './tray'
 import { WindowTracker } from './windows'
 
-if (!app.requestSingleInstanceLock()) {
-  app.quit()
+if (process.argv.includes('--install-shortcut')) {
+  // `npm run install-app`: add GitGremlin to the Start menu, then exit.
+  app.whenReady().then(() => {
+    try {
+      console.log(`[GitGremlin] Start menu shortcut: ${installStartMenuShortcut()}`)
+      app.exit(0)
+    } catch (err) {
+      console.error(`[GitGremlin] ${(err as Error).message}`)
+      app.exit(1)
+    }
+  })
+} else if (!app.requestSingleInstanceLock()) {
+  // Already running: the running copy got our arguments. Exit at once, before
+  // Chromium starts up and fights the running copy over its cache folders.
+  app.exit(0)
+} else if (rebuildIfStale()) {
+  // Relaunching with the fresh build.
 } else {
   app.setAppUserModelId(APP_ID)
   app.whenReady().then(start)

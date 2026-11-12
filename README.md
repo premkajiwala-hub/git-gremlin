@@ -28,6 +28,22 @@ A Windows 11 home for **desktop pets with a purpose**. Each pet is 2D pixel art,
 - [Node.js](https://nodejs.org/) 24 (23.6+ works; `npm run textures` needs Node's built-in TypeScript type stripping)
 - A GitHub account (for Catbot)
 
+## Install it as an app on this PC
+
+From the project folder, once:
+
+```bash
+npm install
+npm run install-app
+```
+
+This builds GitGremlin and adds **GitGremlin** to the Start menu, so you can open it from Windows search like any app (and pin it to Start or the taskbar). The shortcut runs the signed Electron runtime from `node_modules` with this folder, so it works on PCs where Smart App Control blocks unsigned installers.
+
+- Opening GitGremlin while it's already running opens the panel.
+- If the source changed since the last build (after a `git pull`, say), GitGremlin rebuilds itself when it starts (this takes a few seconds), then launches.
+- Turn on **Start GitGremlin with Windows** in the panel (General) to have the pets appear at sign-in.
+- Keep the project folder where it is: the shortcut points at it. If you move it, run `npm run install-app` again.
+
 ## Run it in dev mode
 
 ```bash
@@ -166,7 +182,7 @@ On PCs with Windows 11 **Smart App Control** turned on, the local build fails at
 
 Your options:
 
-- **Run it from source**: `npm start`. Dev mode runs the signed Electron binary, and **Start with Windows** works there too.
+- **Install it from source**: `npm run install-app` (see [Install it as an app on this PC](#install-it-as-an-app-on-this-pc)). It runs the signed Electron binary, and **Start with Windows** works there too.
 - **Build in CI**: use the GitHub Actions artifact on a PC without Smart App Control.
 - **Code-sign the build** with a trusted certificate (see electron-builder's `win.signtoolOptions`).
 
@@ -200,7 +216,6 @@ State (settings, pet positions, last chart data, Dusty's last scan and clean, en
 - Dragging is limited to the monitor the pet is on. Toss it, or let it walk, to change monitors.
 - GitHub can take a few minutes to show a pushed commit on your chart, and only contributions GitHub counts appear there. Offline, Catbot keeps the last known mood.
 - Dusty only knows the locations listed above. Caches of other tools are left alone, and files locked by running programs are skipped.
-- "Start with Windows" in dev mode starts the built app from this folder, so run `npm run compile` once after pulling changes.
 - Unsigned builds are blocked on PCs with Smart App Control (see [Smart App Control](#smart-app-control)).
 
 ## License

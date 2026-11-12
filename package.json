@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "textures": "node scripts/generate-textures.ts",
     "compile": "electron-vite build",
-    "build": "npm run typecheck && electron-vite build && electron-builder --win nsis --x64 --publish never"
+    "build": "npm run typecheck && electron-vite build && electron-builder --win nsis --x64 --publish never",
+    "install-app": "electron-vite build && electron . --install-shortcut"
   },
   "dependencies": {
     "koffi": "^3.3.7"
