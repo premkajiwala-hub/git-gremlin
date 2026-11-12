@@ -15,7 +15,8 @@
     "textures": "node scripts/generate-textures.ts",
     "compile": "electron-vite build",
     "build": "npm run typecheck && electron-vite build && electron-builder --win nsis --x64 --publish never",
-    "install-app": "electron-vite build && electron . --install-shortcut"
+    "install-app": "electron-vite build && electron . --install-shortcut",
+    "docs-images": "node scripts/render-docs.ts"
   },
   "dependencies": {
     "koffi": "^3.3.7"

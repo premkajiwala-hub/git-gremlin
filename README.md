@@ -1,15 +1,21 @@
-# GitGremlin
+<p align="center">
+  <img src="build/icon.png" alt="GitGremlin logo: a 2x2 grid of green contribution squares with an orange paw print" width="112" />
+</p>
 
-A Windows 11 home for **desktop pets with a purpose**. Each pet is 2D pixel art, drawn in code, roaming your desktop, and each one does a job for you. You manage all of them from one panel, the **GitGremlin** app in your tray.
+<h1 align="center">GitGremlin</h1>
 
-| Pet | What it is | Its job |
-|---|---|---|
-| **Catbot** | A little robot cat with a white shell, orange stripes, a cable tail and a glowing face-screen | Gets hungry on days you haven't contributed on GitHub, and livelier the greener today's square is |
-| **Dusty** | A grey raccoon (a "trash panda") with a ringed tail and a teal bandana | Sniffs out cache, temp and Recycle Bin junk and eats it, but only what is safe and only how you allow |
+<p align="center"><b>Desktop pets with a purpose, for Windows 10 and 11.</b></p>
 
-<!-- Screenshot / GIF placeholder: record the pets on your desktop and save it as docs/screenshot.gif, then replace this comment with:
-![GitGremlin pets on the desktop](docs/screenshot.gif) -->
-> 📸 _Screenshot coming soon. Drop a GIF at `docs/screenshot.gif` and link it here._
+<p align="center">
+  <img src="docs/pets-hero.png" alt="Catbot, a white robot cat, and Dusty, a grey raccoon with a teal bandana, facing each other with a heart between them" width="600" />
+</p>
+
+GitGremlin is a Windows home for **desktop pets with a purpose**. Each pet is 2D pixel art, drawn in code, roaming your desktop, and each one does a job for you. You manage all of them from one panel, the **GitGremlin** app in your tray.
+
+| | Pet | What it is | Its job |
+|---|---|---|---|
+| <img src="assets/pets/catbot/portrait.png" alt="Catbot" width="60" /> | **Catbot** | A little robot cat with a white shell, orange stripes, a cable tail and a glowing face-screen | Gets hungry on days you haven't contributed on GitHub, and livelier the greener today's square is |
+| <img src="assets/pets/dusty/portrait.png" alt="Dusty" width="66" /> | **Dusty** | A grey raccoon (a "trash panda") with a ringed tail and a teal bandana | Sniffs out cache, temp and Recycle Bin junk and eats it, but only what is safe and only how you allow |
 
 ## Features
 
@@ -206,6 +212,10 @@ While `npm start` runs, two dev pages are available in a browser:
 
 ## The GitGremlin panel
 
+<p align="center">
+  <img src="docs/panel.png" alt="The GitGremlin panel showing Dusty's page: a sidebar with Catbot and Dusty, the junk found with Scan now and Clean buttons, and Dusty's cleaning mode options" width="720" />
+</p>
+
 | Page | What's there |
 |---|---|
 | **Catbot** | On/off switch · GitHub sign-in, today's contributions, streak and last 7 days · Look and movement |
@@ -219,6 +229,11 @@ Tray menu: Open GitGremlin · one submenu per pet (status, Show on desktop, its 
 A second launch passes flags to the running app: `--settings` (open the panel), `--feed [catbot|dusty]` (debug snack), `--scan` (Dusty scans now), `--say "text"` (Catbot speaks).
 
 ## Catbot: fed by your GitHub contributions
+
+<p align="center">
+  <img src="docs/catbot-poses.png" alt="Catbot's poses: idle, walking, running, eating a commit cube, happy with hearts, sitting, hungry and asleep" width="100%" />
+  <br /><sub>Idle · walk · run · eating a commit cube · happy · sit · hungry · asleep</sub>
+</p>
 
 Catbot reads your **GitHub contribution chart**, the green squares on your profile, and today's square sets its mood. It isn't tied to any one repo: every commit, PR, issue and review that counts on your profile counts for Catbot.
 
@@ -247,6 +262,11 @@ The chart is re-read every 3 minutes, when your PC wakes or unlocks, and from **
 The levels are GitHub's own, so Catbot matches the colour you see on your profile. "Today" is your PC's local date. A new day starts hungry until you contribute again.
 
 ## Dusty: eats junk files, safely
+
+<p align="center">
+  <img src="docs/dusty-poses.png" alt="Dusty's poses: idle, walking, running, rummaging, eating a junk file, happy with hearts, washing its paws and asleep" width="100%" />
+  <br /><sub>Idle · walk · run · rummaging for junk · eating a junk file · happy · washing its paws · asleep</sub>
+</p>
 
 Dusty scans a short list of **known junk locations** every hour (you can change this), shortly after start-up, and whenever you click **Scan now**. While scanning it trots around rummaging; while cleaning it munches; afterwards it says how much it ate and washes its paws.
 
@@ -308,6 +328,12 @@ Edit any PNG in a pixel editor and restart the app, or regenerate everything fro
 
 ```bash
 npm run textures
+```
+
+The README images in `docs/` (`pets-hero.png`, `catbot-poses.png`, `dusty-poses.png`) are rendered from these PNGs, so they always match what the app draws. Re-render them after changing the art:
+
+```bash
+npm run docs-images
 ```
 
 ## Build the installer
