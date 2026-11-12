@@ -22,32 +22,176 @@ A Windows 11 home for **desktop pets with a purpose**. Each pet is 2D pixel art,
 - **Click-through.** The overlay ignores the mouse everywhere except over a pet.
 - **Robot speech bubbles,** in each pet's colours, that type themselves out.
 
-## Requirements
+## Installation
 
-- Windows 10 or 11 (x64)
-- [Node.js](https://nodejs.org/) 24 (23.6+ works; `npm run textures` needs Node's built-in TypeScript type stripping)
-- A GitHub account (for Catbot)
+GitGremlin runs on **Windows 10 or 11 (x64)**. These steps install it as a normal Windows app: you open it from the Start menu or the taskbar search box, can pin it, and can start it with Windows. You only use the terminal once, to set it up.
 
-## Install it as an app on this PC
+You need:
 
-From the project folder, once:
+| Tool | Why | Version |
+|---|---|---|
+| [Node.js](https://nodejs.org/) (includes npm) | Installs GitGremlin's packages and builds the app | 22.12 or newer (the current LTS is recommended) |
+| [Git](https://git-scm.com/) | Downloads the project (optional: you can download a ZIP instead) | any recent version |
+| winget (App Installer) | Installs the two tools above with one command each | comes with Windows 10 (1809+) and 11 |
+| A GitHub account | For Catbot, which reads your contribution chart | – |
 
-```bash
+You don't install **Electron** yourself. It's one of the project's packages, so step 4 installs it into the project folder.
+
+All commands below are for **Windows PowerShell**. Open it from the Start menu (search "PowerShell").
+
+### 1. Check what's already installed
+
+Paste this into PowerShell. It lists each tool and its version, or says it's missing:
+
+```powershell
+foreach ($t in 'winget', 'node', 'npm', 'git') {
+  if (Get-Command $t -ErrorAction SilentlyContinue) {
+    $v = (& $t --version 2>$null) | Select-Object -First 1
+    Write-Host ("{0,-7} installed   {1}" -f $t, $v) -ForegroundColor Green
+  } else {
+    Write-Host ("{0,-7} NOT INSTALLED" -f $t) -ForegroundColor Red
+  }
+}
+if (Get-Command node -ErrorAction SilentlyContinue) {
+  node -e "const [a,b]=process.versions.node.split('.').map(Number); console.log(a>22||(a===22&&b>=12) ? 'Node.js version OK' : 'Node.js is too old: update it in step 2')"
+}
+```
+
+If everything shows as installed and the Node.js version is OK, skip to step 3.
+
+### 2. Install what's missing
+
+These commands only install a tool if it isn't there yet:
+
+```powershell
+# Node.js LTS (includes npm)
+if (Get-Command node -ErrorAction SilentlyContinue) { "Node.js is already installed: $(node --version)" } else { winget install --id OpenJS.NodeJS.LTS -e --source winget }
+
+# Git
+if (Get-Command git -ErrorAction SilentlyContinue) { "Git is already installed: $(git --version)" } else { winget install --id Git.Git -e --source winget }
+```
+
+Node.js installed but too old? Update it:
+
+```powershell
+winget upgrade --id OpenJS.NodeJS.LTS -e --source winget
+```
+
+**Close PowerShell and open a new window** after installing, so it picks up the new `node`, `npm` and `git` commands. Then run the check from step 1 again.
+
+<details>
+<summary>No winget? Install them by hand</summary>
+
+- **winget** itself: install or update **App Installer** from the Microsoft Store.
+- **Node.js:** download the LTS installer (`.msi`) from <https://nodejs.org/> and keep the default options.
+- **Git:** download the installer from <https://git-scm.com/download/win> and keep the default options.
+
+</details>
+
+### 3. Download GitGremlin
+
+Pick a folder for it. This example uses `D:\git-gremlin`; any folder works, but **keep it there afterwards**, because the Start menu shortcut points to it.
+
+```powershell
+cd D:\
+git clone https://github.com/premkajiwala-hub/git-gremlin.git
+cd git-gremlin
+```
+
+Without Git: on the GitHub page click **Code → Download ZIP**, extract it (for example to `D:\git-gremlin`), then run `cd D:\git-gremlin` in PowerShell.
+
+### 4. Install GitGremlin's packages (including Electron)
+
+From the `git-gremlin` folder:
+
+```powershell
 npm install
+```
+
+This installs everything the project needs into `node_modules`: Electron, electron-vite (the build tool), TypeScript and koffi (the small Windows helper). It takes a minute or two.
+
+Check that Electron works. The first run downloads the Electron runtime (about 100 MB), then prints its version:
+
+```powershell
+npx electron --version
+```
+
+> **If npm says install scripts were blocked** (npm 11+ asks before running packages' install scripts): run `npm install-scripts approve koffi electron-winstaller`, then `npm rebuild`.
+
+### 5. Install GitGremlin as a Windows app
+
+```powershell
 npm run install-app
 ```
 
-This builds GitGremlin and adds **GitGremlin** to the Start menu, so you can open it from Windows search like any app (and pin it to Start or the taskbar). The shortcut runs the signed Electron runtime from `node_modules` with this folder, so it works on PCs where Smart App Control blocks unsigned installers.
+This builds GitGremlin and adds **GitGremlin** to your Start menu, with its icon. When it's done it prints where the shortcut was saved. To double-check:
 
-- Opening GitGremlin while it's already running opens the panel.
-- If the source changed since the last build (after a `git pull`, say), GitGremlin rebuilds itself when it starts (this takes a few seconds), then launches.
-- Turn on **Start GitGremlin with Windows** in the panel (General) to have the pets appear at sign-in.
-- Keep the project folder where it is: the shortcut points at it. If you move it, run `npm run install-app` again.
+```powershell
+Test-Path "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\GitGremlin.lnk"
+```
+
+`True` means it's installed. Optional: also put a shortcut on your desktop:
+
+```powershell
+Copy-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\GitGremlin.lnk" ([Environment]::GetFolderPath('Desktop'))
+```
+
+### 6. Open GitGremlin
+
+1. Press the **Windows key** (or click the taskbar search box), type **GitGremlin**, and press **Enter**.
+2. The pets appear on your desktop and the GitGremlin icon appears in the system tray, bottom right. If you can't see it, it may be under the **^** arrow.
+3. Click the tray icon to open the **GitGremlin panel**:
+   - **Catbot → Sign in with GitHub** links your contribution chart.
+   - **Dusty** shows the junk it finds. Nothing is deleted until you confirm.
+   - **General → Start GitGremlin with Windows** brings the pets back every time you sign in.
+
+To keep it handy, right-click **GitGremlin** in the Start menu and choose **Pin to Start** or **Pin to taskbar**. Opening GitGremlin while it's already running just opens the panel. To stop it, right-click the tray icon and choose **Quit**.
+
+> **Why not a normal installer?** Windows 11's **Smart App Control** blocks unsigned installers, and GitGremlin isn't code-signed. The Start menu shortcut instead runs the signed Electron runtime from `node_modules` with your GitGremlin folder, which Smart App Control allows. On PCs without Smart App Control you can also use the installer from GitHub Actions (see [Build the installer](#build-the-installer)).
+
+### Updating
+
+```powershell
+cd D:\git-gremlin
+git pull
+npm install
+```
+
+Then open GitGremlin as usual. If the code changed, it rebuilds itself on start (this takes a few seconds the first time) and then launches. If GitGremlin was running during the update, quit it from the tray first.
+
+### Uninstalling
+
+1. In the panel, turn off **Start GitGremlin with Windows**, then **Quit** from the tray icon.
+2. Remove the shortcut, your GitGremlin data (settings, pet positions, the encrypted GitHub token) and the project folder:
+
+```powershell
+Remove-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\GitGremlin.lnk"
+Remove-Item -Recurse -Force "$env:APPDATA\GitGremlin"
+Remove-Item -Recurse -Force D:\git-gremlin
+```
+
+3. Optional: remove GitGremlin's access to your GitHub account under GitHub → Settings → Applications → *Authorized OAuth Apps*.
+
+Node.js and Git stay installed. Remove them with `winget uninstall --id OpenJS.NodeJS.LTS -e` and `winget uninstall --id Git.Git -e` if you don't need them.
+
+### Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `'node'`, `'npm'` or `'git'` is not recognized | Close PowerShell and open a new window after installing, so it picks up the new commands. If that doesn't help, sign out of Windows and back in. |
+| `npm.ps1 cannot be loaded because running scripts is disabled on this system` | Allow your own scripts for your user account: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, or use `npm.cmd` instead of `npm` (for example `npm.cmd install`). |
+| `winget` is not recognized | Install or update **App Installer** from the Microsoft Store, or install Node.js and Git by hand (step 2). |
+| `Failed to load URL: ... hub.html ... ERR_FILE_NOT_FOUND` | The built copy is out of date. Quit GitGremlin from the tray and run `npm run install-app` again. |
+| Nothing happens when you open GitGremlin | It's probably already running: look for its tray icon (it opens the panel when you open GitGremlin again). If it's stuck, end **Electron** in Task Manager and open GitGremlin again. |
+| `Unable to move the cache: Access is denied` in the terminal | Two copies were running at once. Quit GitGremlin from the tray (and end any leftover **Electron** processes), then open it again. |
+| The pets don't show | In desktop mode, app windows hide them: press **Win+D** to show the desktop, or turn on **Show pets on top of apps** (General). Also check each pet's **On desktop** switch. |
+| `npm install` fails with network errors | Check your internet connection or proxy, then run `npm install` again. |
 
 ## Run it in dev mode
 
+For working on GitGremlin itself (needs steps 1–4 of [Installation](#installation)). Quit the installed app first: only one copy runs at a time.
+
 ```bash
-npm install
 npm start
 ```
 
@@ -158,9 +302,9 @@ Every pet is drawn in code: [`scripts/art/catbot.ts`](scripts/art/catbot.ts) and
 | `assets/pets/<pet>/portrait.png` | The panel's picture |
 | `assets/pets/<pet>/frames.json` | Frame lists, frame rates, the feet anchor, and where the eyes and accent sit in each frame |
 | `assets/textures/heart.png`, `zzz.png` | Shared particles |
-| `assets/icon.png`, `build/icon.png` | GitGremlin's tray and installer icons |
+| `assets/icon.png`, `build/icon.png`, `assets/icon.ico` | GitGremlin's tray, installer and Start menu icons |
 
-Edit any PNG in a pixel editor and restart the app, or regenerate everything from code (this **overwrites** your edits):
+Edit any PNG in a pixel editor and restart the app, or regenerate everything from code (this **overwrites** your edits; it needs Node.js 23.6 or newer, which runs the TypeScript script directly):
 
 ```bash
 npm run textures
@@ -182,7 +326,7 @@ On PCs with Windows 11 **Smart App Control** turned on, the local build fails at
 
 Your options:
 
-- **Install it from source**: `npm run install-app` (see [Install it as an app on this PC](#install-it-as-an-app-on-this-pc)). It runs the signed Electron binary, and **Start with Windows** works there too.
+- **Install it from source**: `npm run install-app` (see [Install GitGremlin as a Windows app](#5-install-gitgremlin-as-a-windows-app)). It runs the signed Electron binary, and **Start with Windows** works there too.
 - **Build in CI**: use the GitHub Actions artifact on a PC without Smart App Control.
 - **Code-sign the build** with a trusted certificate (see electron-builder's `win.signtoolOptions`).
 
