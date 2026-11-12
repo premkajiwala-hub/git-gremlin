@@ -2,9 +2,9 @@
  * Renders the README images from the pets' actual asset PNGs (so they show
  * exactly what the app draws, including repainted frames):
  *
- *   docs/pets-hero.png      Catbot and Dusty together
- *   docs/catbot-poses.png   a strip of Catbot's animations
- *   docs/dusty-poses.png    a strip of Dusty's animations
+ *   docs/images/pets-hero.png      Catbot and Dusty together
+ *   docs/images/catbot-poses.png   a strip of Catbot's animations
+ *   docs/images/dusty-poses.png    a strip of Dusty's animations
  *
  * Run with:  npm run docs-images
  */
@@ -15,7 +15,7 @@ import { inflateSync } from 'node:zlib'
 import { Img, png, scale } from './art/pixel.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const DOCS = join(ROOT, 'docs')
+const DOCS = join(ROOT, 'docs', 'images')
 const BG = '#1f2a35'
 const FLOOR = '#2a3846'
 const SHADOW = '#17202a'

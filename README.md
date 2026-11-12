@@ -4,35 +4,68 @@
 
 <h1 align="center">GitGremlin</h1>
 
-<p align="center"><b>Desktop pets with a purpose, for Windows 10 and 11.</b></p>
+<p align="center"><b>Desktop pets with a purpose, for Windows.</b></p>
 
 <p align="center">
-  <img src="docs/pets-hero.png" alt="Catbot, a white robot cat, and Dusty, a grey raccoon with a teal bandana, facing each other with a heart between them" width="600" />
+  <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white" alt="Windows 10 | 11" />
+  <img src="https://img.shields.io/badge/Electron-45-47848F?logo=electron&logoColor=white" alt="Electron 45" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license" />
 </p>
 
-GitGremlin is a Windows home for **desktop pets with a purpose**. Each pet is 2D pixel art, drawn in code, roaming your desktop, and each one does a job for you. You manage all of them from one panel, the **GitGremlin** app in your tray.
+<p align="center">
+  <img src="docs/images/pets-hero.png" alt="Catbot, a white robot cat, and Dusty, a grey raccoon with a teal bandana, facing each other with a heart between them" width="600" />
+</p>
 
-| | Pet | What it is | Its job |
-|---|---|---|---|
-| <img src="assets/pets/catbot/portrait.png" alt="Catbot" width="60" /> | **Catbot** | A little robot cat with a white shell, orange stripes, a cable tail and a glowing face-screen | Gets hungry on days you haven't contributed on GitHub, and livelier the greener today's square is |
-| <img src="assets/pets/dusty/portrait.png" alt="Dusty" width="66" /> | **Dusty** | A grey raccoon (a "trash panda") with a ringed tail and a teal bandana | Sniffs out cache, temp and Recycle Bin junk and eats it, but only what is safe and only how you allow |
+GitGremlin puts little pixel-art pets on your Windows desktop, and each one does a job for you. Catbot keeps an eye on your GitHub contributions. Dusty cleans junk files off your PC. They roam, play and talk to you, and you manage them all from one app.
+
+## Contents
+
+- [About](#about)
+- [Meet the pets](#meet-the-pets)
+- [Features](#features)
+- [Installation](#installation)
+- [Using GitGremlin](#using-gitgremlin)
+- [Privacy and safety](#privacy-and-safety)
+- [Troubleshooting](#troubleshooting)
+- [Known limitations](#known-limitations)
+- [Documentation](#documentation)
+- [License](#license)
+
+## About
+
+GitGremlin is a home for **pets with a purpose**:
+
+- **Every pet has a job.** It watches something for you, and its mood and behaviour show you how things stand at a glance.
+- **Every pet is 2D pixel art drawn in code.** No image files from elsewhere; each pet has its own look and animations.
+- **One app manages them all.** The **GitGremlin panel** in your tray turns pets on and off, and holds every pet's settings.
+- **It stays out of your way.** By default pets live on your desktop, behind your app windows, and clicks pass through everywhere except on a pet.
+
+## Meet the pets
+
+| | Pet | What it does | Guide |
+|:---:|---|---|---|
+| <img src="assets/pets/catbot/portrait.png" alt="Catbot" width="60" /> | **Catbot**<br /><sub>robot cat</sub> | Mirrors today's square on your **GitHub contribution chart**: hungry on days you haven't contributed, happier and livelier the greener the square. New contributions feed it. | [Catbot's guide →](docs/pets/catbot.md) |
+| <img src="assets/pets/dusty/portrait.png" alt="Dusty" width="66" /> | **Dusty**<br /><sub>raccoon</sub> | Sniffs out **junk files**: developer caches, the Recycle Bin, and optionally temp files and browser caches. Cleans them only the way you allow: ask first, automatically, or report only. | [Dusty's guide →](docs/pets/dusty.md) |
+
+More pets are on the way.
 
 ## Features
 
-- **One panel for every pet.** Click the GitGremlin tray icon to open it. The sidebar lists your pets with what each is up to; each pet has a page for its job and its look and movement. Changes save as you make them.
-- **Lives on your desktop.** By default the pets sit just above the wallpaper: your app windows cover them and they show wherever the desktop shows. Turn on **Show pets on top of apps** (General) to keep them above everything.
-- **Hover to read their minds.** Hover over a pet and its speech bubble shows its status report for as long as you hover. Click a pet that wants something (sign in, review junk) and its page opens in the panel.
-- **Roam freely.** They walk, run, sneak (crawl) and hop anywhere on the screen, sit, get curious, walk between monitors, and jump onto the top edge of the window you're working in. Or keep a pet *Only along the bottom of the screen*.
-- **Follow the cursor** (per pet, on for Catbot by default).
-- **Pixel-art animations:** idle, walk, run, crawl, sit, jump, eat, happy hops with hearts, droop, flop, dangle while dragged, squash on landing and a red flash when flicked hard. Dusty also rummages through junk and washes its paws after a meal. Always drawn in whole device pixels, so they stay crisp.
-- **Click-through.** The overlay ignores the mouse everywhere except over a pet.
-- **Robot speech bubbles,** in each pet's colours, that type themselves out.
+- **One panel for every pet.** Click the tray icon to open the GitGremlin panel. It lists your pets with what each is up to, and gives each pet a page for its job and its look. Changes save as you make them.
+- **Lives on your desktop.** Pets sit just above the wallpaper, so your app windows cover them. Or turn on **Show pets on top of apps** to keep them above everything.
+- **Hover to read their minds.** Hover over a pet to see its status report in a speech bubble. Click a pet that wants something (sign in, review junk) and its page opens in the panel.
+- **Roams freely.** Pets walk, run, crawl and hop anywhere on the screen. They sit, get curious, walk between monitors and jump onto the window you're working in. Or keep a pet along the bottom of the screen.
+- **Plays with you.** Pets can follow your cursor, and you can pick them up, drag them and toss them.
+- **Crisp pixel art.** Everything is drawn in whole device pixels, so it stays sharp at any Windows scaling.
+- **A real Windows app.** Open it from the Start menu or search, pin it, and start it with Windows.
+- **Light on your PC.** Rendering slows down when nothing on screen changes, and the only network access is Catbot's read-only GitHub check.
 
 ## Installation
 
-GitGremlin runs on **Windows 10 or 11 (x64)**. These steps install it as a normal Windows app: you open it from the Start menu or the taskbar search box, can pin it, and can start it with Windows. You only use the terminal once, to set it up.
+GitGremlin runs on **Windows 10 or 11 (x64)**. These steps install it as a normal Windows app: you open it from the Start menu or the taskbar search box, can pin it, and can start it with Windows. You use the terminal only once, to set it up.
 
-You need:
+**You need:**
 
 | Tool | Why | Version |
 |---|---|---|
@@ -41,9 +74,7 @@ You need:
 | winget (App Installer) | Installs the two tools above with one command each | comes with Windows 10 (1809+) and 11 |
 | A GitHub account | For Catbot, which reads your contribution chart | – |
 
-You don't install **Electron** yourself. It's one of the project's packages, so step 4 installs it into the project folder.
-
-All commands below are for **Windows PowerShell**. Open it from the Start menu (search "PowerShell").
+You don't install **Electron** yourself: it's one of the project's packages, and step 4 installs it. All commands below are for **Windows PowerShell** (search "PowerShell" in the Start menu).
 
 ### 1. Check what's already installed
 
@@ -63,11 +94,11 @@ if (Get-Command node -ErrorAction SilentlyContinue) {
 }
 ```
 
-If everything shows as installed and the Node.js version is OK, skip to step 3.
+If everything is installed and the Node.js version is OK, skip to step 3.
 
 ### 2. Install what's missing
 
-These commands only install a tool if it isn't there yet:
+Each command installs a tool only if it isn't there yet:
 
 ```powershell
 # Node.js LTS (includes npm)
@@ -83,7 +114,7 @@ Node.js installed but too old? Update it:
 winget upgrade --id OpenJS.NodeJS.LTS -e --source winget
 ```
 
-**Close PowerShell and open a new window** after installing, so it picks up the new `node`, `npm` and `git` commands. Then run the check from step 1 again.
+Then **close PowerShell and open a new window**, so it picks up the new commands, and run the check from step 1 again.
 
 <details>
 <summary>No winget? Install them by hand</summary>
@@ -96,7 +127,7 @@ winget upgrade --id OpenJS.NodeJS.LTS -e --source winget
 
 ### 3. Download GitGremlin
 
-Pick a folder for it. This example uses `D:\git-gremlin`; any folder works, but **keep it there afterwards**, because the Start menu shortcut points to it.
+Pick a folder for it. This example uses `D:\git-gremlin`. Any folder works, but **keep it there afterwards**, because the Start menu shortcut points to it.
 
 ```powershell
 cd D:\
@@ -104,17 +135,15 @@ git clone https://github.com/premkajiwala-hub/git-gremlin.git
 cd git-gremlin
 ```
 
-Without Git: on the GitHub page click **Code → Download ZIP**, extract it (for example to `D:\git-gremlin`), then run `cd D:\git-gremlin` in PowerShell.
+Without Git: on the GitHub page, click **Code → Download ZIP** and extract it (for example to `D:\git-gremlin`). Then run `cd D:\git-gremlin` in PowerShell.
 
 ### 4. Install GitGremlin's packages (including Electron)
-
-From the `git-gremlin` folder:
 
 ```powershell
 npm install
 ```
 
-This installs everything the project needs into `node_modules`: Electron, electron-vite (the build tool), TypeScript and koffi (the small Windows helper). It takes a minute or two.
+This installs everything the project needs into `node_modules`: Electron, electron-vite (the build tool), TypeScript and koffi (a small Windows helper). It takes a minute or two.
 
 Check that Electron works. The first run downloads the Electron runtime (about 100 MB), then prints its version:
 
@@ -122,7 +151,7 @@ Check that Electron works. The first run downloads the Electron runtime (about 1
 npx electron --version
 ```
 
-> **If npm says install scripts were blocked** (npm 11+ asks before running packages' install scripts): run `npm install-scripts approve koffi electron-winstaller`, then `npm rebuild`.
+> **If npm says install scripts were blocked** (npm 11+ asks first): run `npm install-scripts approve koffi electron-winstaller`, then `npm rebuild`.
 
 ### 5. Install GitGremlin as a Windows app
 
@@ -130,13 +159,13 @@ npx electron --version
 npm run install-app
 ```
 
-This builds GitGremlin and adds **GitGremlin** to your Start menu, with its icon. When it's done it prints where the shortcut was saved. To double-check:
+This builds GitGremlin and adds **GitGremlin**, with its icon, to your Start menu. To double-check:
 
 ```powershell
 Test-Path "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\GitGremlin.lnk"
 ```
 
-`True` means it's installed. Optional: also put a shortcut on your desktop:
+`True` means it's installed. Optionally, put a shortcut on your desktop too:
 
 ```powershell
 Copy-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\GitGremlin.lnk" ([Environment]::GetFolderPath('Desktop'))
@@ -145,15 +174,15 @@ Copy-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\GitGremlin.lnk" ([
 ### 6. Open GitGremlin
 
 1. Press the **Windows key** (or click the taskbar search box), type **GitGremlin**, and press **Enter**.
-2. The pets appear on your desktop and the GitGremlin icon appears in the system tray, bottom right. If you can't see it, it may be under the **^** arrow.
+2. The pets appear on your desktop, and the GitGremlin icon appears in the system tray, bottom right. It may be hidden under the **^** arrow.
 3. Click the tray icon to open the **GitGremlin panel**:
    - **Catbot → Sign in with GitHub** links your contribution chart.
    - **Dusty** shows the junk it finds. Nothing is deleted until you confirm.
    - **General → Start GitGremlin with Windows** brings the pets back every time you sign in.
 
-To keep it handy, right-click **GitGremlin** in the Start menu and choose **Pin to Start** or **Pin to taskbar**. Opening GitGremlin while it's already running just opens the panel. To stop it, right-click the tray icon and choose **Quit**.
+To keep it handy, right-click **GitGremlin** in the Start menu and choose **Pin to Start** or **Pin to taskbar**. Opening GitGremlin while it's already running opens the panel. To stop it, right-click the tray icon and choose **Quit**.
 
-> **Why not a normal installer?** Windows 11's **Smart App Control** blocks unsigned installers, and GitGremlin isn't code-signed. The Start menu shortcut instead runs the signed Electron runtime from `node_modules` with your GitGremlin folder, which Smart App Control allows. On PCs without Smart App Control you can also use the installer from GitHub Actions (see [Build the installer](#build-the-installer)).
+> **Why not a normal installer?** Windows 11's **Smart App Control** blocks unsigned installers, and GitGremlin isn't code-signed. Instead, the Start menu shortcut runs the signed Electron runtime with your GitGremlin folder, which Smart App Control allows. On PCs without Smart App Control you can also use the [installer from GitHub Actions](docs/development.md#building-the-installer).
 
 ### Updating
 
@@ -163,231 +192,108 @@ git pull
 npm install
 ```
 
-Then open GitGremlin as usual. If the code changed, it rebuilds itself on start (this takes a few seconds the first time) and then launches. If GitGremlin was running during the update, quit it from the tray first.
+Then open GitGremlin as usual. If the code changed, it rebuilds itself on start, which takes a few seconds, and then launches. If GitGremlin was running during the update, quit it from the tray first.
 
 ### Uninstalling
 
-1. In the panel, turn off **Start GitGremlin with Windows**, then **Quit** from the tray icon.
+1. In the panel, turn off **Start GitGremlin with Windows**, then choose **Quit** from the tray icon.
 2. Remove the shortcut, your GitGremlin data (settings, pet positions, the encrypted GitHub token) and the project folder:
 
-```powershell
-Remove-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\GitGremlin.lnk"
-Remove-Item -Recurse -Force "$env:APPDATA\GitGremlin"
-Remove-Item -Recurse -Force D:\git-gremlin
-```
+   ```powershell
+   Remove-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\GitGremlin.lnk"
+   Remove-Item -Recurse -Force "$env:APPDATA\GitGremlin"
+   Remove-Item -Recurse -Force D:\git-gremlin
+   ```
 
-3. Optional: remove GitGremlin's access to your GitHub account under GitHub → Settings → Applications → *Authorized OAuth Apps*.
+3. Optionally, remove GitGremlin's access to your GitHub account under GitHub → Settings → Applications → *Authorized OAuth Apps*.
 
-Node.js and Git stay installed. Remove them with `winget uninstall --id OpenJS.NodeJS.LTS -e` and `winget uninstall --id Git.Git -e` if you don't need them.
+Node.js and Git stay installed. If you don't need them, remove them with `winget uninstall --id OpenJS.NodeJS.LTS -e` and `winget uninstall --id Git.Git -e`.
 
-### Troubleshooting
+## Using GitGremlin
 
-| Problem | Fix |
-|---|---|
-| `'node'`, `'npm'` or `'git'` is not recognized | Close PowerShell and open a new window after installing, so it picks up the new commands. If that doesn't help, sign out of Windows and back in. |
-| `npm.ps1 cannot be loaded because running scripts is disabled on this system` | Allow your own scripts for your user account: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, or use `npm.cmd` instead of `npm` (for example `npm.cmd install`). |
-| `winget` is not recognized | Install or update **App Installer** from the Microsoft Store, or install Node.js and Git by hand (step 2). |
-| `Failed to load URL: ... hub.html ... ERR_FILE_NOT_FOUND` | The built copy is out of date. Quit GitGremlin from the tray and run `npm run install-app` again. |
-| Nothing happens when you open GitGremlin | It's probably already running: look for its tray icon (it opens the panel when you open GitGremlin again). If it's stuck, end **Electron** in Task Manager and open GitGremlin again. |
-| `Unable to move the cache: Access is denied` in the terminal | Two copies were running at once. Quit GitGremlin from the tray (and end any leftover **Electron** processes), then open it again. |
-| The pets don't show | In desktop mode, app windows hide them: press **Win+D** to show the desktop, or turn on **Show pets on top of apps** (General). Also check each pet's **On desktop** switch. |
-| `npm install` fails with network errors | Check your internet connection or proxy, then run `npm install` again. |
-
-## Run it in dev mode
-
-For working on GitGremlin itself (needs steps 1–4 of [Installation](#installation)). Quit the installed app first: only one copy runs at a time.
-
-```bash
-npm start
-```
-
-The pets appear on your desktop and the GitGremlin icon appears in the system tray. Click it to open the panel; right-click it for quick actions.
-
-> npm 11+ may block install scripts. If `npm install` says `koffi` or `electron-winstaller` scripts were blocked, run `npm install-scripts approve koffi electron-winstaller` and `npm rebuild`. (They're already listed in `allowScripts` in `package.json`.)
-
-While `npm start` runs, two dev pages are available in a browser:
-
-- <http://localhost:5173/preview.html>: a fake desktop with both pets and buttons to feed Catbot, set its contribution level, make Dusty scan and clean, and move the "window" they stand on.
-- <http://localhost:5173/sheet.html?pet=dusty&k=6>: every animation frame of a pet (`catbot` or `dusty`), enlarged (`k` = zoom).
-
-## The GitGremlin panel
+### The GitGremlin panel
 
 <p align="center">
-  <img src="docs/panel.png" alt="The GitGremlin panel showing Dusty's page: a sidebar with Catbot and Dusty, the junk found with Scan now and Clean buttons, and Dusty's cleaning mode options" width="720" />
+  <img src="docs/images/panel.png" alt="The GitGremlin panel showing Dusty's page: a sidebar with Catbot and Dusty, the junk found with Scan now and Clean buttons, and Dusty's cleaning mode options" width="720" />
 </p>
+
+Click the tray icon to open it. The sidebar lists every pet with a status dot:
+- 🟢 on the desktop;
+- 🟠 wants your attention;
+- ⚪ off.
 
 | Page | What's there |
 |---|---|
-| **Catbot** | On/off switch · GitHub sign-in, today's contributions, streak and last 7 days · Look and movement |
-| **Dusty** | On/off switch · Junk found (with **Scan now** and **Clean**) · What Dusty does with junk · Where Dusty looks · Look and movement |
-| **General** | Show pets on top of apps · Start GitGremlin with Windows |
+| **A pet's page** | An **On desktop** switch, the pet's own job settings (see its guide), and **Look and movement** |
+| **General** | **Show pets on top of apps** and **Start GitGremlin with Windows** |
 
-**Look and movement** (each pet): Name · Size (48–112 px, snapped to a crisp whole-pixel scale) · Walking speed (running is ~2.4×, crawling ~0.45×) · Where it wanders (anywhere, or only along the bottom) · Follow my cursor.
+**Look and movement** is the same for every pet:
 
-Tray menu: Open GitGremlin · one submenu per pet (status, Show on desktop, its quick actions, Settings...) · Hide all pets for 1 hour · Show pets · Start with Windows · Quit.
-
-A second launch passes flags to the running app: `--settings` (open the panel), `--feed [catbot|dusty]` (debug snack), `--scan` (Dusty scans now), `--say "text"` (Catbot speaks).
-
-## Catbot: fed by your GitHub contributions
-
-<p align="center">
-  <img src="docs/catbot-poses.png" alt="Catbot's poses: idle, walking, running, eating a commit cube, happy with hearts, sitting, hungry and asleep" width="100%" />
-  <br /><sub>Idle · walk · run · eating a commit cube · happy · sit · hungry · asleep</sub>
-</p>
-
-Catbot reads your **GitHub contribution chart**, the green squares on your profile, and today's square sets its mood. It isn't tied to any one repo: every commit, PR, issue and review that counts on your profile counts for Catbot.
-
-Linking always goes through GitHub's own sign-in:
-
-1. Panel → **Catbot** → **Sign in with GitHub**.
-2. GitGremlin shows a one-time code (already copied to your clipboard) and opens <https://github.com/login/device>.
-3. Paste the code on GitHub and approve **GitGremlin**. It asks only for `read:user`: read-only access to your profile.
-4. The panel switches to your avatar, name and @username, and Catbot says hello.
-
-This is GitHub's OAuth **device flow**, the same one the GitHub CLI and VS Code use. Your password never touches the app, and the token is stored encrypted on your PC (Windows DPAPI via Electron `safeStorage`). **Sign out** forgets it. To revoke access completely, remove GitGremlin under GitHub → Settings → Applications → *Authorized OAuth Apps*. Already signed in with the [GitHub CLI](https://cli.github.com/)? The panel also offers **Use my GitHub CLI login instead**, used only when you choose it.
-
-> **For forks / your own builds:** sign-in uses GitGremlin's GitHub OAuth App (Client ID in `src/shared/constants.ts`, a public identifier, not a secret). To use your own, register an OAuth App at GitHub → Settings → Developer settings → OAuth Apps with **Enable Device Flow** ticked and token expiry off, then set `GITHUB_CLIENT_ID` (or the `GITGREMLIN_GITHUB_CLIENT_ID` environment variable).
-
-The chart is re-read every 3 minutes, when your PC wakes or unlocks, and from **Refresh GitHub now** in the tray. When today's count goes up, Catbot eats a golden commit cube, says "+N CONTRIBUTIONS", then does a happy hop with hearts.
-
-| Today on your chart | Mood | What Catbot does |
-|---|---|---|
-| ⬛ 0 contributions | **Hungry** | Dimmed, sad eyes, ears and tail droop, half speed, sits a lot |
-| ⬛ 0 today **and** yesterday | **Starving** | Flops over, twitches, bell dark; now and then crawls to the focused window and taps on it |
-| 🟩 level 1 ("Less") | Fed, calm | ^ ^ eyes, bell lit, unhurried walk |
-| 🟩 level 2 | Fed, content | Normal speed; wanders, runs now and then, hops onto windows |
-| 🟩 level 3 | Happy | Faster, springy walk, more running and hopping, little happy dances |
-| 🟩 level 4 ("More") | Ecstatic | Fastest, zoomies, beaming > < all the time |
-
-The levels are GitHub's own, so Catbot matches the colour you see on your profile. "Today" is your PC's local date. A new day starts hungry until you contribute again.
-
-## Dusty: eats junk files, safely
-
-<p align="center">
-  <img src="docs/dusty-poses.png" alt="Dusty's poses: idle, walking, running, rummaging, eating a junk file, happy with hearts, washing its paws and asleep" width="100%" />
-  <br /><sub>Idle · walk · run · rummaging for junk · eating a junk file · happy · washing its paws · asleep</sub>
-</p>
-
-Dusty scans a short list of **known junk locations** every hour (you can change this), shortly after start-up, and whenever you click **Scan now**. While scanning it trots around rummaging; while cleaning it munches; afterwards it says how much it ate and washes its paws.
-
-**What Dusty does with junk** (you choose):
-
-| Mode | What happens |
+| Setting | What it does |
 |---|---|
-| **Ask me first** (default) | Dusty tells you what it found ("I SNIFFED OUT 1.2 GB OF JUNK! CLICK ME TO REVIEW."). Nothing is deleted until you tick what to clean and confirm. |
-| **Clean automatically** | After each scan Dusty cleans the caches and temp files by itself. It still asks before emptying the Recycle Bin. |
-| **Only report** | Dusty shows what it found and never deletes anything. |
+| **Name** | Shown in its speech bubble and the tray |
+| **Size** | 48–112 px tall, snapped to crisp whole pixels |
+| **Walking speed** | Running is about 2.4× and crawling 0.45× this |
+| **Where it wanders** | Anywhere on the screen, or only along the bottom |
+| **Follow my cursor** | Walks after the cursor while you move it over the desktop |
 
-**Where Dusty looks** (you choose):
+### The tray icon
 
-| Target | Default | What's in it |
-|---|---|---|
-| Developer caches | On | npm (`npm-cache\_cacache`), Yarn, pnpm metadata, pip, NuGet HTTP/plugins caches, Electron and electron-builder download caches |
-| Recycle Bin | On | Emptied through Windows itself. Permanent, so it's always confirmed |
-| Temp files | Off | Everything currently in your `%TEMP%` folder. Files that programs are using right now are skipped |
-| Browser caches | Off | Chrome, Edge, Brave (`Cache`, `Code Cache`, `GPUCache` per profile) and Firefox (`cache2`). Never history, passwords or cookies. Skipped while that browser is running |
+- **Click** to open the panel.
+- **Right-click** for quick actions:
+  - one submenu per pet, with its status, **Show on desktop** and its own actions;
+  - **Hide all pets for 1 hour** / **Show pets**;
+  - **Start with Windows**;
+  - **Quit**.
 
-**Safety rules** (in [`src/main/junk.ts`](src/main/junk.ts)):
-
-- Only the locations above are ever touched, and only their *contents*: the folders themselves stay.
-- Every path must resolve inside `%LOCALAPPDATA%`, `%APPDATA%` or `%TEMP%`, or it's refused.
-- Links and junctions are never followed (deleting one removes the link, not what it points to).
-- Files in use are skipped one by one and counted; the rest of their folder is still cleaned.
-- Only categories from the latest scan can be cleaned, and the panel's Clean button always shows a confirmation listing exactly what goes.
-
-Dusty's mood follows how tidy things are: content when there's little junk, happiest right after a clean, a bit restless when junk piles up.
-
-## Playing with the pets
+### Playing with the pets
 
 | Do this | The pet does this |
 |---|---|
-| Move the cursor over the desktop | Follows it (if Follow my cursor is on) and stops once it reaches the cursor |
+| Move the cursor over the desktop | Follows it (if **Follow my cursor** is on) and stops when it reaches it |
 | Hover over it | Stops, faces you and shows its status report until you move away |
-| Click it | Looks up and shows the report again; if it wants something, its page opens in the panel |
-| Drag it | Legs dangle |
-| Toss it | Hops, slides and bounces off the screen edges; may land on a window. Flick it hard for a red flash |
+| Click it | Looks up and shows its report; if it wants something, its page opens in the panel |
+| Drag it | Dangles from your cursor |
+| Toss it | Flies, bounces off the screen edges and may land on a window; flick it hard for a red flash |
 
-Pets are awake the whole time the app runs: there are no sleep hours. Turn a pet off with its switch, or quit from the tray.
+Pets are awake the whole time GitGremlin runs. Turn one off with its switch, or quit from the tray.
 
-## Repainting the pets
+## Privacy and safety
 
-Every pet is drawn in code: [`scripts/art/catbot.ts`](scripts/art/catbot.ts) and [`scripts/art/dusty.ts`](scripts/art/dusty.ts), using the small pixel toolkit in [`scripts/art/pixel.ts`](scripts/art/pixel.ts). [`scripts/generate-textures.ts`](scripts/generate-textures.ts) writes, for each pet:
+- **Your GitHub account:** Catbot links through GitHub's own sign-in, with read-only access. The token is stored encrypted on your PC. [Details →](docs/pets/catbot.md#privacy-and-your-github-account)
+- **Your files:** Dusty only looks in a fixed list of junk locations inside your user folders. It never follows links, skips files in use, and by default deletes nothing until you confirm. [Safety rules →](docs/pets/dusty.md#safety-rules)
+- **Network:** the only network access is Catbot's GitHub check.
+- **Your data stays local:** settings and state are in `%APPDATA%\GitGremlin\state.json`.
 
-| File | What it is |
+## Troubleshooting
+
+| Problem | Fix |
 |---|---|
-| `assets/pets/<pet>/<animation>-<n>.png` | 50×38 side-view frames, facing right (mirrored at runtime): `idle`, `idle_sad`, `walk`, `walk_sad`, `run`, `crawl`, `sit`, `sleep`, `starving`, `jump_up`, `jump_down`, `dragged`, `eat`, `happy`, `hurt`, `tap`, `curious` (Dusty adds `wash` and `rummage`) |
-| `assets/pets/<pet>/eyes_*.png` | Expressions drawn over each frame: `idle`, `blink`, `happy`, `hurt`, `alert`, `sad` |
-| `assets/pets/<pet>/accent_on.png` | A light drawn over the frame when content (Catbot's collar bell) |
-| `assets/pets/<pet>/food.png` | What it eats (Catbot: a commit cube; Dusty: a junk file) |
-| `assets/pets/<pet>/portrait.png` | The panel's picture |
-| `assets/pets/<pet>/frames.json` | Frame lists, frame rates, the feet anchor, and where the eyes and accent sit in each frame |
-| `assets/textures/heart.png`, `zzz.png` | Shared particles |
-| `assets/icon.png`, `build/icon.png`, `assets/icon.ico` | GitGremlin's tray, installer and Start menu icons |
-
-Edit any PNG in a pixel editor and restart the app, or regenerate everything from code (this **overwrites** your edits; it needs Node.js 23.6 or newer, which runs the TypeScript script directly):
-
-```bash
-npm run textures
-```
-
-The README images in `docs/` (`pets-hero.png`, `catbot-poses.png`, `dusty-poses.png`) are rendered from these PNGs, so they always match what the app draws. Re-render them after changing the art:
-
-```bash
-npm run docs-images
-```
-
-## Build the installer
-
-```bash
-npm run build
-```
-
-This typechecks, bundles with electron-vite and runs electron-builder. The NSIS installer lands in `dist/GitGremlin-Setup-<version>.exe`.
-
-Every push to `main` also builds the installer on GitHub Actions ([`.github/workflows/build.yml`](.github/workflows/build.yml)). Download it from the run's **GitGremlin-Setup** artifact on the repo's **Actions** tab.
-
-### Smart App Control
-
-On PCs with Windows 11 **Smart App Control** turned on, the local build fails at the end with `spawn UNKNOWN`: electron-builder has to run the freshly built, unsigned installer stub, and Smart App Control blocks it. For the same reason it blocks any unsigned GitGremlin installer or `GitGremlin.exe` there.
-
-Your options:
-
-- **Install it from source**: `npm run install-app` (see [Install GitGremlin as a Windows app](#5-install-gitgremlin-as-a-windows-app)). It runs the signed Electron binary, and **Start with Windows** works there too.
-- **Build in CI**: use the GitHub Actions artifact on a PC without Smart App Control.
-- **Code-sign the build** with a trusted certificate (see electron-builder's `win.signtoolOptions`).
-
-## How it works
-
-- **One overlay window per monitor,** shared by all pets: transparent, frameless, non-focusable, not in the taskbar or Alt+Tab. Each pet is "owned" by one overlay, which runs its brain; when it walks onto another monitor, that overlay takes over.
-- **Layering:** in desktop mode the overlays are kept directly above the desktop (`SetWindowPos(HWND_BOTTOM)`), re-checked every 0.6 s. In on-top mode they use `setAlwaysOnTop(true, 'screen-saver')` plus a `HWND_TOPMOST` re-assert every 1.5 s.
-- **Cursor, hover and click-through:** `setIgnoreMouseEvents(true, { forward: true })` is switched off only while the cursor is over a pet. The cursor is also polled ~10×/s; in desktop mode `WindowFromPoint` checks that no app window covers the spot.
-- **Rendering:** each pet has its own small 2D canvas, scaled by whole device pixels. ~30 fps, skipping unchanged frames, 10 fps when idle, stopped when hidden.
-- **Purpose services** run in the main process and send each pet a status (mood, level, report lines, an optional alert, and whether it's busy): `src/main/pets/catbot.ts` (GitHub) and `src/main/pets/dusty.ts` (junk scanner).
-- **Windows:** a small [koffi](https://koffi.dev/) FFI helper handles z-order, the focused window, the Recycle Bin (`SHQueryRecycleBinW` / `SHEmptyRecycleBinW`) and the taskbar.
-- **Network:** the only network access is the GitHub GraphQL API (`viewer.contributionsCollection.contributionCalendar`) for Catbot.
-
-```
-src/main/        overlays, z-order, tray, panel window, state, Win32 helper, junk scanner
-src/main/pets/   each pet's purpose service (Catbot: GitHub, Dusty: junk)
-src/preload/     the IPC bridge exposed to renderers
-src/renderer/    multi-pet overlay host, brains, personas, sprites, speech bubbles, the GitGremlin panel, dev pages
-src/shared/      types, constants, formatting
-assets/pets/     generated frames per pet
-scripts/art/     pixel-art generators
-```
-
-State (settings, pet positions, last chart data, Dusty's last scan and clean, encrypted token) is saved to `%APPDATA%\GitGremlin\state.json`.
+| `'node'`, `'npm'` or `'git'` is not recognized | Close PowerShell and open a new window after installing. If that doesn't help, sign out of Windows and back in. |
+| `npm.ps1 cannot be loaded because running scripts is disabled` | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, or use `npm.cmd` instead of `npm` (for example `npm.cmd install`). |
+| `winget` is not recognized | Install or update **App Installer** from the Microsoft Store, or install Node.js and Git by hand (step 2). |
+| `npm install` fails with network errors | Check your internet connection or proxy, then run `npm install` again. |
+| `Failed to load URL: ... hub.html ... ERR_FILE_NOT_FOUND` | The built copy is out of date. Quit GitGremlin from the tray and run `npm run install-app` again. |
+| Nothing happens when you open GitGremlin | It's probably already running: look for its tray icon. If it's stuck, end **Electron** in Task Manager and open GitGremlin again. |
+| `Unable to move the cache: Access is denied` | Two copies were running at once. Quit GitGremlin, end any leftover **Electron** processes, and open it again. |
+| The pets don't show | App windows hide them in desktop mode: press **Win+D**, or turn on **Show pets on top of apps**. Also check each pet's **On desktop** switch. |
 
 ## Known limitations
 
-- **In desktop mode, app windows hide the pets** (that's the point), and they only follow the cursor over the visible desktop. Use Show desktop (Win+D) to play, or turn on **Show pets on top of apps**.
-- **Full-screen games and exclusive-fullscreen apps cover them even in on-top mode,** as do the Start menu, notification centre, Alt+Tab and Task View.
+- **In desktop mode, app windows hide the pets** (that's the point), and pets only follow the cursor over the visible desktop.
+- **Full-screen games and apps cover the pets, even in on-top mode.** So do the Start menu, notification centre, Alt+Tab and Task View.
 - Window hopping uses the **focused** window only, and skips maximised and full-screen windows.
-- Dragging is limited to the monitor the pet is on. Toss it, or let it walk, to change monitors.
-- GitHub can take a few minutes to show a pushed commit on your chart, and only contributions GitHub counts appear there. Offline, Catbot keeps the last known mood.
-- Dusty only knows the locations listed above. Caches of other tools are left alone, and files locked by running programs are skipped.
-- Unsigned builds are blocked on PCs with Smart App Control (see [Smart App Control](#smart-app-control)).
+- Dragging works only on the monitor the pet is on. To change monitors, toss it or let it walk.
+- Each pet has its own limits; see [Catbot's](docs/pets/catbot.md#limitations) and [Dusty's](docs/pets/dusty.md#limitations) guides.
+
+## Documentation
+
+| Guide | What's inside |
+|---|---|
+| [Catbot](docs/pets/catbot.md) | Linking GitHub, how its mood works, feeding, settings, privacy |
+| [Dusty](docs/pets/dusty.md) | Cleaning modes, where it looks, safety rules, settings |
+| [Development guide](docs/development.md) | Dev mode, project structure, how it works, pet art, adding a pet, building the installer |
 
 ## License
 
-MIT, see [LICENSE](LICENSE). All pet art is original to this project, drawn in code.
+[MIT](LICENSE). All pet art is original to this project and drawn in code.
