@@ -654,7 +654,7 @@ function isStale(r: RepoInfo): boolean {
 }
 
 const SVG_FOLDER = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>'
-const SVG_TERMINAL = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l6-5-6-5"></path><path d="M12 19h8"></path></svg>'
+const SVG_CODE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7l-5 5 5 5"></path><path d="M16 7l5 5-5 5"></path><path d="M13.5 4l-3 16"></path></svg>'
 const SVG_BRANCH = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2"></circle><circle cx="6" cy="18" r="2"></circle><circle cx="18" cy="8" r="2"></circle><path d="M6 8v8"></path><path d="M18 10c0 4-6 3-10 6"></path></svg>'
 
 function iconButton(svg: string, label: string, title: string, onClick: () => void): HTMLButtonElement {
@@ -694,10 +694,9 @@ function repoRow(r: RepoInfo): HTMLElement {
   left.append(name, path, badges)
 
   const acts = el('div', 'acts')
-  acts.append(
-    iconButton(SVG_FOLDER, 'Open', 'Open this repo in File Explorer', () => void repoAction({ kind: 'open', path: r.path })),
-    iconButton(SVG_TERMINAL, 'Terminal', 'Open a terminal in this repo', () => void repoAction({ kind: 'terminal', path: r.path }))
-  )
+  acts.append(iconButton(SVG_FOLDER, 'Open', 'Open this repo in File Explorer', () => void repoAction({ kind: 'open', path: r.path })))
+  // Open it in VS Code, to commit and push from its Source Control view.
+  if (view.syncy.vscode) acts.append(iconButton(SVG_CODE, 'VS Code', 'Open this repo in Visual Studio Code', () => void repoAction({ kind: 'vscode', path: r.path })))
   if (r.merged.length) {
     acts.append(
       iconButton(SVG_BRANCH, 'Delete merged', r.merged.join(', '), async () => {

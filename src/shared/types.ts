@@ -235,11 +235,13 @@ export interface SyncyView {
   busy: 'scanning' | 'cleaning' | null
   /** Folders Syncy searches automatically (when auto-find is on). */
   autoRoots: string[]
+  /** Visual Studio Code is installed, so repos can be opened in it. */
+  vscode: boolean
 }
 
 /** Something to do with a repo from the GitGremlin panel. */
 export type RepoAction =
-  | { kind: 'open' | 'terminal' | 'ignore' | 'unignore'; path: string }
+  | { kind: 'open' | 'vscode' | 'ignore' | 'unignore'; path: string }
   | { kind: 'deleteBranches'; path: string; branches: string[] }
 
 export interface ActionResult {

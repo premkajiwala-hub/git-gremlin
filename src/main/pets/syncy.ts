@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { ago } from '../../shared/format'
 import type { ActionResult, PetConfig, PetStatus, RepoInfo, RepoScan, SyncyView } from '../../shared/types'
+import { findVSCode } from '../editor'
 import { localDate } from '../github'
 import { autoRoots, deleteBranches, inspectRepo, scanRepos, type SearchRoot } from '../repos'
 import type { Store } from '../store'
@@ -180,7 +181,7 @@ export class SyncyService {
   }
 
   view(): SyncyView {
-    return { scan: this.scan, busy: this.busy, autoRoots: autoRoots().map((r) => r.path) }
+    return { scan: this.scan, busy: this.busy, autoRoots: autoRoots().map((r) => r.path), vscode: findVSCode() !== null }
   }
 
   status(cfg: PetConfig): PetStatus {

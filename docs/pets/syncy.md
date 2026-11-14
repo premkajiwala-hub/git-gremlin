@@ -42,7 +42,7 @@ Syncy needs no setup:
 
 1. About 20 seconds after GitGremlin starts, Syncy finds your git repos and checks each one. It checks again every 10 minutes.
 2. Open the GitGremlin panel → **Syncy** to see every repo with work that isn't on GitHub, oldest first.
-3. Each repo has quick actions: **Open folder**, **Terminal** (opens Windows Terminal or PowerShell right there), **Delete merged branches** and **Ignore**.
+3. Each repo has quick actions: **Open** (in File Explorer), **VS Code** (opens the repo in Visual Studio Code, ready to commit and push from Source Control; shown when VS Code is installed), **Delete merged** branches and **Ignore**.
 4. Push your work. On its next check Syncy notices and celebrates.
 
 Not seeing a repo? Add its folder under **Where Syncy looks**.

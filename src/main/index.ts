@@ -1,12 +1,11 @@
-import { spawn } from 'node:child_process'
-import { lstatSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { resolve } from 'node:path'
 import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeTheme, powerMonitor, shell, type MenuItemConstructorOptions } from 'electron'
 import { APP_ID, IPC, PET_IDS } from '../shared/constants'
 import { formatBytes } from '../shared/format'
 import type { ActionResult, FeedEvent, HubView, PetId, PetStatus, RepoAction, Settings, SignInCode, SignInResult } from '../shared/types'
 import { clientId, DeviceFlow } from './github-auth'
 import { GitHubWatcher, moodFrom, type GitHubData } from './github'
+import { openInVSCode } from './editor'
 import { hubWindow, openHub } from './hub-window'
 import { installStartMenuShortcut, rebuildIfStale } from './launcher'
 import { OverlayManager } from './overlay'
@@ -442,30 +441,6 @@ function knownRepo(path: unknown): string | null {
   return known.find((p) => resolve(p).toLowerCase() === key) ?? null
 }
 
-/** Is this file there? (lstat, because Windows Terminal is an app alias that existsSync can't follow.) */
-function present(path: string): boolean {
-  try {
-    lstatSync(path)
-    return true
-  } catch {
-    return false
-  }
-}
-
-/** A new PowerShell window in a folder. `start` gives it its own visible console. */
-function openPowerShell(dir: string): void {
-  spawn('cmd.exe', ['/c', 'start', '', 'powershell.exe', '-NoExit'], { cwd: dir, detached: true, stdio: 'ignore', windowsHide: true }).unref()
-}
-
-/** Open a terminal in a folder: Windows Terminal if installed, otherwise PowerShell. */
-function openTerminal(dir: string): void {
-  const wt = join(process.env.LOCALAPPDATA ?? '', 'Microsoft', 'WindowsApps', 'wt.exe')
-  if (!present(wt)) return openPowerShell(dir)
-  const child = spawn(wt, ['-d', dir], { cwd: dir, detached: true, stdio: 'ignore' })
-  child.on('error', () => openPowerShell(dir))
-  child.unref()
-}
-
 async function repoAction(action: RepoAction): Promise<ActionResult> {
   const path = knownRepo(action?.path)
   if (!path) return { ok: false, message: 'Unknown repo.' }
@@ -475,9 +450,10 @@ async function repoAction(action: RepoAction): Promise<ActionResult> {
       const err = await shell.openPath(path)
       return { ok: !err, message: err || 'Opened.' }
     }
-    case 'terminal':
-      openTerminal(path)
-      return { ok: true, message: 'Opened a terminal.' }
+    case 'vscode':
+      return openInVSCode(path)
+        ? { ok: true, message: 'Opening it in VS Code...' }
+        : { ok: false, message: "VS Code isn't installed." }
     case 'ignore': {
       if (!cfg.ignored.some((p) => resolve(p).toLowerCase() === resolve(path).toLowerCase())) cfg.ignored.push(path)
       const scan = store.state.syncy.lastScan
