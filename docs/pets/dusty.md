@@ -119,7 +119,7 @@ GitGremlin panel → **Dusty**:
 | **What Dusty does with junk** | Ask me first, Clean automatically, or Only report | Ask me first |
 | **Where Dusty looks** | Developer caches, Recycle Bin, Temp files, Browser caches | Developer caches + Recycle Bin |
 | **Scan every** | 15 minutes, 30 minutes, 1 hour, 3, 6 or 12 hours, or once a day | 1 hour |
-| **Name** | Shown in its speech bubble and the tray | Dusty |
+| **Name** | Shown in its message box and the tray | Dusty |
 | **Size** | Height on screen, 48–112 px (snapped to crisp whole pixels) | 64 px |
 | **Walking speed** | Running is about 2.4× and crawling 0.45× this | 40 px/s |
 | **Where it wanders** | Anywhere on the screen, or only along the bottom | Anywhere |

@@ -25,15 +25,158 @@ body {
   will-change: transform;
 }
 
-#stage canvas.bubble {
-  z-index: 10;
-  will-change: auto;
-}
-
 body.grab {
   cursor: grab;
 }
 
 body.grabbing {
   cursor: grabbing;
+}
+
+/* --- the pets' message box, in the GitGremlin panel's "pixel glass" style ------------------- */
+.bubble {
+  --b-bg: rgba(250, 250, 248, 0.97);
+  --b-ink: #121315;
+  --b-muted: #5a5e65;
+  --b-line: rgba(18, 19, 21, 0.12);
+  --g0: #e4e6e9;
+  --g1: #9be9a8;
+  --g2: #40c463;
+  --g3: #30a14e;
+  --g4: #216e39;
+  --accent: #f28a1e;
+  --tail: 20px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 10;
+  display: none;
+  width: max-content;
+  max-width: 236px;
+  padding: 8px 11px 9px;
+  background: var(--b-bg);
+  color: var(--b-ink);
+  border: 2px solid var(--b-ink);
+  box-shadow: 4px 4px 0 var(--b-ink);
+  font: 500 11px/1.45 'JetBrains Mono', Consolas, monospace;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bubble {
+    --b-bg: rgba(26, 27, 31, 0.97);
+    --b-ink: #f1f1ee;
+    --b-muted: #a9adb4;
+    --b-line: rgba(255, 255, 255, 0.12);
+    --g0: #1b2027;
+    --g1: #0e4429;
+    --g2: #006d32;
+    --g3: #26a641;
+    --g4: #39d353;
+  }
+}
+
+.b-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--b-line);
+  font: 700 10.5px/1 'Silkscreen', monospace;
+  letter-spacing: 0.04em;
+}
+
+.b-acc {
+  width: 7px;
+  height: 7px;
+  background: var(--accent);
+  flex: none;
+}
+
+.b-led {
+  margin-left: auto;
+  padding-left: 10px;
+  width: 6px;
+  height: 6px;
+  background: #2fb34a;
+  background-clip: content-box;
+  flex: none;
+}
+
+.bubble[data-mood='warn'] .b-led {
+  background-color: #f08a24;
+}
+
+.bubble[data-mood='bad'] .b-led {
+  background-color: #e5484d;
+}
+
+.b-line {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.b-remark {
+  color: var(--b-muted);
+}
+
+.b-remark::before {
+  content: '> ';
+  color: var(--b-ink);
+}
+
+.b-gap {
+  height: 5px;
+}
+
+.b-grid {
+  display: flex;
+  gap: 3px;
+  margin: 3px 0 2px;
+}
+
+.b-grid span {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background: var(--g0);
+  box-shadow: inset 0 0 0 1px var(--b-line);
+}
+
+.b-grid span[data-l='1'] {
+  background: var(--g1);
+}
+.b-grid span[data-l='2'] {
+  background: var(--g2);
+}
+.b-grid span[data-l='3'] {
+  background: var(--g3);
+}
+.b-grid span[data-l='4'] {
+  background: var(--g4);
+}
+
+.b-grid span.today {
+  outline: 1.5px solid var(--b-ink);
+  outline-offset: 1px;
+}
+
+/* A stepped pixel tail pointing down at the pet. */
+.b-tail {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: var(--b-ink);
+}
+
+.b-tail.t1 {
+  left: calc(var(--tail) - 3px);
+  bottom: -8px;
+}
+
+.b-tail.t2 {
+  left: calc(var(--tail) - 3px);
+  bottom: -14px;
 }

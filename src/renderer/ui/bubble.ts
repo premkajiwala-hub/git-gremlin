@@ -1,218 +1,113 @@
 import { GRID_MARK } from '../../shared/constants'
-import { ADVANCE, drawText, GLYPH_H, LINE_H, wrap } from './font'
 
-/** Default (Catbot) palette: light-gray shell, orange accents, dark face-screen, cyan text. */
-const BASE = {
-  ink: '#15191e',
-  shell: '#dfe3e8',
-  shellShade: '#a9b1bb',
-  bolt: '#7b8591',
-  header: '#ff9a2e',
-  headerShade: '#d97a17',
-  headerText: '#2a1606',
-  screen: '#0a1a20',
-  scan: '#0e232b',
-  text: '#5ef2ff',
-  cable: '#ff9a2e'
+/** A pet's colour, shown as the little square next to its name. */
+export interface BubbleTheme {
+  accent?: string
 }
 
-export type BubbleTheme = Partial<typeof BASE>
-
-const PAD = 4 // screen padding, in font pixels
-const FRAME = 2 // gray shell thickness
-const HEADER = 9 // header bar height
-const TAIL = 5
-const MAX_CHARS = 24
-const TYPE_RATE = 45 // characters per second
-
-/** GitHub's dark-theme contribution colours, level 0..4. */
-const GRID = ['#161b22', '#0e4429', '#006d32', '#26a641', '#39d353']
-const GRID_EDGE = '#2d333b'
-
 export type Mood = 'ok' | 'warn' | 'bad'
-const LED: Record<Mood, string> = { ok: '#5ef2ff', warn: '#ffb21e', bad: '#ff4d5e' }
 
-/** A little robot terminal that pops up above a pet and types its message out. */
+/**
+ * The pet's message box, in GitGremlin's "pixel glass" style: a small card
+ * with a crisp border and a hard pixel shadow, the pet's name in the pixel
+ * font and its words in monospace. It is sized to fit its text and shows all
+ * of it at once (no typing). A line equal to GRID_MARK is drawn as a row of
+ * contribution squares.
+ */
 export class SpeechBubble {
-  private canvas = document.createElement('canvas')
-  private ctx = this.canvas.getContext('2d')!
-  private lines: string[] = []
-  private title = ''
-  private mood: Mood = 'ok'
-  private total = 0
-  private shownAt = 0
+  private el = document.createElement('div')
+  private name = document.createElement('span')
+  private led = document.createElement('span')
+  private body = document.createElement('div')
   private hideAt = 0
-  private wUnits = 0
-  private hUnits = 0
-  private px = 2
-  private cssW = 0
-  private cssH = 0
+  private w = 0
+  private h = 0
   private lastKey = ''
-  private grid: number[] = []
   visible = false
 
-  private C: typeof BASE
-
   constructor(container: HTMLElement, theme: BubbleTheme = {}) {
-    this.C = { ...BASE, ...theme }
-    this.canvas.className = 'bubble'
-    this.canvas.style.display = 'none'
-    container.appendChild(this.canvas)
+    this.el.className = 'bubble'
+    if (theme.accent) this.el.style.setProperty('--accent', theme.accent)
+    const head = document.createElement('div')
+    head.className = 'b-head'
+    const acc = document.createElement('i')
+    acc.className = 'b-acc'
+    this.led.className = 'b-led'
+    head.append(acc, this.name, this.led)
+    this.body.className = 'b-body'
+    const t1 = document.createElement('span')
+    const t2 = document.createElement('span')
+    t1.className = 'b-tail t1'
+    t2.className = 'b-tail t2'
+    this.el.append(head, this.body, t1, t2)
+    container.appendChild(this.el)
   }
 
-  /**
-   * Show a message. A line consisting of just GRID_MARK is drawn as a row of
-   * contribution squares from `grid` (levels 0-4, oldest first, today last).
-   */
+  /** Show a message for `ms` (Infinity: until hidden). `grid` = contribution levels 0-4, today last. */
   show(text: string, ms: number, title: string, mood: Mood, grid: number[] = []): void {
-    this.grid = grid
-    this.lines = wrap(text, MAX_CHARS)
-    this.title = title.toUpperCase().slice(0, 18)
-    this.mood = mood
-    this.total = this.lines.reduce((n, l) => n + l.length, 0)
-    const cols = Math.max(...this.lines.map((l) => l.length), this.title.length + 4)
-    const screenW = cols * ADVANCE - 1 + PAD * 2
-    const screenH = (this.lines.length - 1) * LINE_H + GLYPH_H + PAD * 2
-    this.wUnits = screenW + (FRAME + 1) * 2
-    this.hUnits = screenH + HEADER + FRAME * 2 + 2
-    const dpr = window.devicePixelRatio
-    this.px = Math.max(1, Math.round(2 * dpr))
-    this.canvas.width = this.wUnits * this.px
-    this.canvas.height = (this.hUnits + TAIL) * this.px
-    this.cssW = this.canvas.width / dpr
-    this.cssH = this.canvas.height / dpr
-    this.canvas.style.width = `${this.cssW}px`
-    this.canvas.style.height = `${this.cssH}px`
-    this.shownAt = performance.now()
-    // Leave time to read once it has finished typing.
-    this.hideAt = this.shownAt + (this.total / TYPE_RATE) * 1000 + ms
+    this.name.textContent = title.toUpperCase()
+    this.el.dataset.mood = mood
+    const lines = text.split('\n')
+    // Drop trailing empty lines; keep one as a small gap between the report and the remark.
+    while (lines.length && !lines[lines.length - 1].trim()) lines.pop()
+    this.body.replaceChildren(
+      ...lines.map((line) => {
+        if (line === GRID_MARK) {
+          const row = document.createElement('div')
+          row.className = 'b-grid'
+          grid.forEach((level, i) => {
+            const sq = document.createElement('span')
+            sq.dataset.l = String(Math.max(0, Math.min(4, level)))
+            if (i === grid.length - 1) sq.className = 'today'
+            row.append(sq)
+          })
+          return row
+        }
+        const div = document.createElement('div')
+        div.className = line.trim() ? (line.startsWith('> ') ? 'b-line b-remark' : 'b-line') : 'b-gap'
+        div.textContent = line.startsWith('> ') ? line.slice(2) : line
+        return div
+      })
+    )
+    this.hideAt = ms === Infinity ? Infinity : performance.now() + ms
+    this.el.style.display = 'block'
+    this.w = this.el.offsetWidth
+    this.h = this.el.offsetHeight
     this.lastKey = ''
-    this.canvas.style.display = 'block'
     this.visible = true
   }
 
   hide(): void {
     this.visible = false
-    this.canvas.style.display = 'none'
+    this.el.style.display = 'none'
   }
 
-  /** Let the current bubble go away after at most `ms` (once it has finished typing). */
+  /** Let the current message go away after at most `ms`. */
   expireIn(ms: number): void {
-    if (!this.visible) return
-    const typed = this.shownAt + (this.total / TYPE_RATE) * 1000
-    this.hideAt = Math.min(this.hideAt, Math.max(typed, performance.now()) + ms)
+    if (this.visible) this.hideAt = Math.min(this.hideAt, performance.now() + ms)
   }
 
-  /** Still typing (needs redraws every frame)? */
+  /** The text appears all at once, so nothing needs redrawing every frame. */
   get busy(): boolean {
-    return this.visible && performance.now() - this.shownAt < (this.total / TYPE_RATE) * 1000 + 1600
+    return false
   }
 
-  /** Keep the bubble above the pet's head, inside the overlay. Returns false once expired. */
+  /** Keep the box above the pet's head, inside the overlay. Returns false once it has gone. */
   update(headX: number, headY: number, maxW: number, maxH: number): boolean {
     if (!this.visible) return false
-    const now = performance.now()
-    if (now > this.hideAt) {
+    if (performance.now() > this.hideAt) {
       this.hide()
       return false
     }
-    const x = Math.min(Math.max(4, headX - this.cssW / 2), maxW - this.cssW - 4)
-    const y = Math.min(Math.max(4, headY - this.cssH - 2), maxH - this.cssH - 4)
-    const unitCss = this.cssW / this.wUnits
-    const tail = Math.round(Math.min(Math.max(4, (headX - x) / unitCss), this.wUnits - 5))
-    const shown = Math.min(this.total, Math.floor(((now - this.shownAt) / 1000) * TYPE_RATE))
-    const cursorOn = Math.floor(now / 400) % 2 === 0 && this.busy
-    const key = `${tail}|${shown}|${cursorOn}`
+    const x = Math.round(Math.min(Math.max(6, headX - this.w / 2), maxW - this.w - 16))
+    const y = Math.round(Math.min(Math.max(6, headY - this.h - 18), maxH - this.h - 16))
+    const tail = Math.round(Math.min(Math.max(10, headX - x), this.w - 14))
+    const key = `${x},${y},${tail}`
     if (key !== this.lastKey) {
       this.lastKey = key
-      this.draw(tail, shown, cursorOn)
+      this.el.style.transform = `translate3d(${x}px, ${y}px, 0)`
+      this.el.style.setProperty('--tail', `${tail}px`)
     }
-    this.canvas.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`
     return true
-  }
-
-  private draw(tailCenter: number, shown: number, cursorOn: boolean): void {
-    const c = this.ctx
-    const C = this.C
-    const px = this.px
-    const w = this.wUnits
-    const h = this.hUnits
-    c.clearRect(0, 0, this.canvas.width, this.canvas.height)
-    const rect = (x: number, y: number, rw: number, rh: number, color: string) => {
-      c.fillStyle = color
-      c.fillRect(x * px, y * px, rw * px, rh * px)
-    }
-
-    // Cable from the bubble down to the catbot (drawn first, behind the shell).
-    for (let i = 0; i < TAIL; i++) {
-      const xx = tailCenter - 1
-      rect(xx - 1, h - 1 + i, 4, 1, C.ink)
-      rect(xx, h - 1 + i, 2, 1, i === TAIL - 1 ? LED[this.mood] : C.cable)
-    }
-
-    // Shell: outline with notched corners, gray body, darker lower edge.
-    rect(1, 0, w - 2, h, C.ink)
-    rect(0, 1, w, h - 2, C.ink)
-    rect(1, 1, w - 2, h - 2, C.shell)
-    rect(1, h - 2, w - 2, 1, C.shellShade)
-    // Screws in the corners.
-    for (const [bx, by] of [
-      [2, h - 3],
-      [w - 3, h - 3]
-    ])
-      rect(bx, by, 1, 1, C.bolt)
-
-    // Orange header with the pet's name and a status LED.
-    const hx = 1 + FRAME - 1
-    const hw = w - 2 * hx
-    rect(hx, 1 + FRAME - 1, hw, HEADER, C.header)
-    rect(hx, FRAME + HEADER - 1, hw, 1, C.headerShade)
-    c.fillStyle = C.headerText
-    drawText(c, [this.title], hx + 2, FRAME + 1, px)
-    const ledX = hx + hw - 5
-    rect(ledX - 1, FRAME + 2, 4, 4, C.headerText)
-    rect(ledX, FRAME + 3, 2, 2, LED[this.mood])
-
-    // Face-screen with scanlines.
-    const sx = 1 + FRAME
-    const sy = 1 + FRAME + HEADER
-    const sw = w - 2 * sx
-    const sh = h - sy - FRAME - 1
-    rect(sx - 1, sy - 1, sw + 2, sh + 2, C.ink)
-    rect(sx, sy, sw, sh, C.screen)
-    for (let yy = sy + 1; yy < sy + sh; yy += 2) rect(sx, yy, sw, 1, C.scan)
-
-    // Typed-out text and a blinking block cursor.
-    let left = shown
-    const visible = this.lines.map((l) => {
-      const part = l.slice(0, Math.max(0, left))
-      left -= l.length
-      return part
-    })
-    c.fillStyle = C.text
-    drawText(
-      c,
-      visible.map((v) => (v === GRID_MARK ? '' : v)),
-      sx + PAD,
-      sy + PAD,
-      px
-    )
-    // Contribution squares, GitHub-green, today last with a cyan underline.
-    visible.forEach((v, li) => {
-      if (v !== GRID_MARK) return
-      const y0 = sy + PAD + li * LINE_H
-      this.grid.forEach((level, i) => {
-        const x0 = sx + PAD + i * 8
-        rect(x0, y0, 7, 7, GRID_EDGE)
-        rect(x0 + 1, y0 + 1, 5, 5, GRID[Math.max(0, Math.min(4, level))])
-        if (i === this.grid.length - 1) rect(x0, y0 + 8, 7, 1, C.text)
-      })
-    })
-    if (cursorOn) {
-      let li = visible.findIndex((v, i) => v.length < this.lines[i].length)
-      if (li < 0) li = visible.length - 1
-      const cx = sx + PAD + visible[li].length * ADVANCE
-      if (cx + 5 <= sx + sw) rect(cx, sy + PAD + li * LINE_H, 5, GLYPH_H, C.text)
-    }
   }
 }

@@ -14,6 +14,7 @@
  *
  * Run with:  npm run textures              (every pet; overwrites repainted files)
  *            npm run textures -- syncy     (only the pets named)
+ *            npm run textures -- icons     (only the app logo)
  * Each pet's drawing lives in scripts/art/<pet>.ts.
  */
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
@@ -22,6 +23,7 @@ import { fileURLToPath } from 'node:url'
 import { catbot } from './art/catbot.ts'
 import { dusty } from './art/dusty.ts'
 import { syncy } from './art/syncy.ts'
+import { logo } from './art/logo.ts'
 import { Img, png, scale, stamp, type PetArt } from './art/pixel.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -72,8 +74,10 @@ function writePet(art: PetArt): number {
 
 mkdirSync(PETS, { recursive: true })
 mkdirSync(TEX, { recursive: true })
-const only = process.argv.slice(2)
-const pets = [catbot, dusty, syncy].filter((f) => !only.length || only.includes(f.name)).map((f) => f())
+const args = process.argv.slice(2)
+const only = args.filter((a) => a !== 'icons')
+const iconsOnly = args.includes('icons') && !only.length
+const pets = iconsOnly ? [] : [catbot, dusty, syncy].filter((f) => !only.length || only.includes(f.name)).map((f) => f())
 if (only.length && pets.length !== only.length) throw new Error(`Unknown pet in: ${only.join(', ')}`)
 for (const art of pets) console.log(`${art.id}: ${writePet(art)} frames`)
 
@@ -87,20 +91,12 @@ stamp(zzz, ['XXXXX', '...X.', '..X..', '.X...', 'XXXXX'], 1, 1, '#5ef2ff')
 zzz.outline('#0a2a33')
 writeFileSync(join(TEX, 'zzz.png'), png(zzz))
 
-// GitGremlin app icon: a dark tile with a 2x2 contribution grid and an orange paw print.
-const icon = new Img(20, 20)
-icon.round(0, 0, 20, 20, '#11161c')
-const greens = ['#0e4429', '#26a641', '#006d32', '#39d353']
-greens.forEach((c, i) => icon.rect(3 + (i % 2) * 7, 3 + Math.floor(i / 2) * 7, 6, 6, c))
-stamp(icon, ['.X.X.', 'X.X.X', '.....', '.XXX.', 'XXXXX', '.XXX.'], 7, 7, '#ff9a2e')
-const paw = new Img(20, 20)
-stamp(paw, ['.X.X.', 'X.X.X', '.....', '.XXX.', 'XXXXX', '.XXX.'], 7, 7, '#ff9a2e')
-paw.outline('#11161c')
-icon.over(paw)
+// GitGremlin's logo (scripts/art/logo.ts), 16x16, scaled by whole pixels.
+const icon = logo()
 writeFileSync(join(ROOT, 'assets', 'icon.png'), png(scale(icon, 2)))
 mkdirSync(join(ROOT, 'build'), { recursive: true })
-writeFileSync(join(ROOT, 'build', 'icon.png'), png(scale(icon, 13)))
-writeFileSync(join(ROOT, 'assets', 'icon.ico'), ico([1, 2, 3, 5, 12].map((k) => png(scale(icon, k)))))
+writeFileSync(join(ROOT, 'build', 'icon.png'), png(scale(icon, 16)))
+writeFileSync(join(ROOT, 'assets', 'icon.ico'), ico([1, 2, 3, 4, 16].map((k) => png(scale(icon, k)))))
 
 /** A Windows .ico holding PNG images (supported since Vista), for the Start menu shortcut. */
 function ico(images: Buffer[]): Buffer {

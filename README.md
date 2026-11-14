@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="build/icon.png" alt="GitGremlin logo: a 2x2 grid of green contribution squares with an orange paw print" width="112" />
+  <img src="build/icon.png" alt="GitGremlin logo: a white pixel gremlin with glowing green eyes and little fangs, on a dark tile above a three-commit graph in orange, teal and gold" width="112" />
 </p>
 
 <h1 align="center">GitGremlin</h1>
@@ -10,6 +10,7 @@
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white" alt="Windows 10 | 11" />
   <img src="https://img.shields.io/badge/Electron-45-47848F?logo=electron&logoColor=white" alt="Electron 45" />
   <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/version-0.2.0-121315" alt="Version 0.2.0" />
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license" />
 </p>
 
@@ -21,6 +22,7 @@ GitGremlin puts little pixel-art pets on your Windows desktop, and each one does
 
 ## Contents
 
+- [What's new in 0.2](#whats-new-in-02)
 - [About](#about)
 - [Meet the pets](#meet-the-pets)
 - [Features](#features)
@@ -31,6 +33,15 @@ GitGremlin puts little pixel-art pets on your Windows desktop, and each one does
 - [Known limitations](#known-limitations)
 - [Documentation](#documentation)
 - [License](#license)
+
+## What's new in 0.2
+
+- **A new logo:** a little pixel gremlin with glowing GitHub-green eyes, on a three-commit graph in the pets' colours.
+- **A redesigned panel, "pixel glass":** frosted-glass cards, pixel headings, and each pet drawn large in scanlines. It fills the whole window, and follows your Windows theme (or pick **Light** or **Dark** under General).
+- **A new message box on the desktop:** in the same style, sized to its words, with all the text there at once. It opens when you hover a pet and closes the moment you move away.
+- **Syncy the beaver:** guards work you haven't pushed to GitHub. [Meet Syncy →](docs/pets/syncy.md)
+- **A real Windows app:** open GitGremlin from the Start menu or search ([Installation](#installation), step 5).
+- **More in General:** **Hide all pets** for an hour, and the app version.
 
 ## About
 
@@ -53,9 +64,9 @@ More pets are on the way.
 
 ## Features
 
-- **One panel for every pet.** Click the tray icon to open the GitGremlin panel. It lists your pets with what each is up to, and gives each pet a page for its job and its look. Changes save as you make them.
+- **One panel for every pet.** Click the tray icon to open the GitGremlin panel. It lists your pets with what each is up to, and gives each pet a page for its job and its look. Changes save as you make them. Light and dark themes follow Windows.
 - **Lives on your desktop.** Pets sit just above the wallpaper, so your app windows cover them. Or turn on **Show pets on top of apps** to keep them above everything.
-- **Hover to read their minds.** Hover over a pet to see its status report in a speech bubble. Click a pet that wants something (sign in, review junk) and its page opens in the panel.
+- **Hover to read their minds.** Hover over a pet and its message box shows its status report. It closes as soon as you move away. Click a pet that wants something (sign in, review junk) and its page opens in the panel.
 - **Roams freely.** Pets walk, run, crawl and hop anywhere on the screen. They sit, get curious, walk between monitors and jump onto the window you're working in. Or keep a pet along the bottom of the screen.
 - **Plays with you.** Pets can follow your cursor, and you can pick them up, drag them and toss them.
 - **Crisp pixel art.** Everything is drawn in whole device pixels, so it stays sharp at any Windows scaling.
@@ -226,13 +237,13 @@ Click the tray icon to open it. The sidebar lists every pet with a status dot:
 | Page | What's there |
 |---|---|
 | **A pet's page** | An **On desktop** switch, the pet's own job settings (see its guide), and **Look and movement** |
-| **General** | **Show pets on top of apps** and **Start GitGremlin with Windows** |
+| **General** | **Where pets live** (on the desktop, or on top of apps), **Start GitGremlin with Windows**, **Hide all pets** for an hour, **Theme** (Auto, Light or Dark) and the app version |
 
 **Look and movement** is the same for every pet:
 
 | Setting | What it does |
 |---|---|
-| **Name** | Shown in its speech bubble and the tray |
+| **Name** | Shown in its message box and the tray |
 | **Size** | 48–112 px tall, snapped to crisp whole pixels |
 | **Walking speed** | Running is about 2.4× and crawling 0.45× this |
 | **Where it wanders** | Anywhere on the screen, or only along the bottom |
@@ -252,7 +263,7 @@ Click the tray icon to open it. The sidebar lists every pet with a status dot:
 | Do this | The pet does this |
 |---|---|
 | Move the cursor over the desktop | Follows it (if **Follow my cursor** is on) and stops when it reaches it |
-| Hover over it | Stops, faces you and shows its status report until you move away |
+| Hover over it | Stops, faces you and shows its message box; it closes the moment you move away |
 | Click it | Looks up and shows its report; if it wants something, its page opens in the panel |
 | Drag it | Dangles from your cursor |
 | Toss it | Flies, bounces off the screen edges and may land on a window; flick it hard for a red flash |

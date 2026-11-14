@@ -43,7 +43,7 @@ const CATBOT: Persona = {
   tapLines: ['FOOD...?', '*TAP TAP*', 'ANYONE CODING?'],
   extraWeights: [],
   washAfterEat: false,
-  bubble: {}
+  bubble: { accent: '#F28A1E' }
 }
 
 const DUSTY: Persona = {
@@ -63,13 +63,7 @@ const DUSTY: Persona = {
     ['rummage', 10]
   ],
   washAfterEat: true,
-  bubble: {
-    header: '#2fb5a5',
-    headerShade: '#1f8a7d',
-    headerText: '#05211d',
-    cable: '#2fb5a5',
-    text: '#9cf7d8'
-  }
+  bubble: { accent: '#1FB5A3' }
 }
 
 const SYNCY: Persona = {
@@ -90,13 +84,7 @@ const SYNCY: Persona = {
   ],
   washAfterEat: true,
   alertAnim: 'slap',
-  bubble: {
-    header: '#f2c230',
-    headerShade: '#c99a1c',
-    headerText: '#2a1a06',
-    cable: '#f2c230',
-    text: '#ffe2a8'
-  }
+  bubble: { accent: '#E2A812' }
 }
 
 export const PERSONAS: Record<PetId, Persona> = { catbot: CATBOT, dusty: DUSTY, syncy: SYNCY }

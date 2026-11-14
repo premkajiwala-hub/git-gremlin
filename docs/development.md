@@ -53,13 +53,13 @@ src/
   preload/        the IPC bridge exposed to the renderers
   renderer/       overlay (pets) and panel (hub.*) pages
     pet/            brain (movement, behaviour), personas, sprites, particles
-    ui/             pixel font, speech bubbles
+    ui/             the pets' message box
   shared/         types, constants, formatting
 assets/
   pets/<pet>/     generated frames, eyes, food, portrait, frames.json
   textures/       shared particles
 scripts/
-  art/            pixel-art toolkit and one drawing per pet
+  art/            pixel-art toolkit, one drawing per pet, and the logo
 docs/             pet guides, this guide, README images
 ```
 
@@ -160,7 +160,7 @@ For example: `npx electron . --feed dusty`.
 | `npm run install-app` | Build and add GitGremlin to the Start menu |
 | `npm run compile` | Build into `out/` |
 | `npm run typecheck` | Type-check all code |
-| `npm run textures` | Regenerate all pet art from code (`npm run textures -- syncy` for one pet) |
+| `npm run textures` | Regenerate all pet art from code (`npm run textures -- syncy` for one pet, `-- icons` for just the logo) |
 | `npm run docs-images` | Re-render the README images |
 | `npm run build` | Build the Windows installer |
 

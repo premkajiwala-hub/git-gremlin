@@ -1,7 +1,7 @@
 {
   "name": "git-gremlin",
   "productName": "GitGremlin",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A robot-cat Windows desktop pet that roams your desktop and gets hungry when you don't commit code.",
   "author": "premkajiwala-hub",
   "license": "MIT",

@@ -94,7 +94,7 @@ GitGremlin panel → **Catbot**:
 |---|---|---|
 | **On desktop** | Shows or hides Catbot | On |
 | **GitHub** | Sign in, refresh, sign out; shows today's count, streak and last 7 days | Not linked |
-| **Name** | Shown in its speech bubble and the tray | Catbot |
+| **Name** | Shown in its message box and the tray | Catbot |
 | **Size** | Height on screen, 48–112 px (snapped to crisp whole pixels) | 72 px |
 | **Walking speed** | Running is about 2.4× and crawling 0.45× this | 45 px/s |
 | **Where it wanders** | Anywhere on the screen, or only along the bottom | Anywhere |

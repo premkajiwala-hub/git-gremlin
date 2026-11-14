@@ -1,3 +1,5 @@
+import '@fontsource/jetbrains-mono/latin-500.css'
+import '@fontsource/silkscreen/latin-700.css'
 import { FRAME_MS, IDLE_FRAME_MS, PET_IDS } from '../shared/constants'
 import type { OverlayInit, PetConfig, PetId, PetPose, PetSnapshot, PetStatus } from '../shared/types'
 import { PetBrain, type RenderState } from './pet/brain'
@@ -103,6 +105,8 @@ class PetHost {
 
   say(text: string, ms = 4000): void {
     if (this.mode !== 'owner') return
+    // You're reading its report: chatter can wait.
+    if (this.hovered && this.statusBubble && this.bubble.visible) return
     this.statusBubble = false
     this.bubble.show(text, ms, this.status.name, this.mood())
   }
@@ -177,7 +181,7 @@ class PetHost {
     this.status = s
     this.brain.status = s
     // Keep an open status report up to date (e.g. Dusty finishing a scan).
-    if (this.statusBubble && this.bubble.visible && this.hovered) this.showStatus(60_000)
+    if (this.statusBubble && this.bubble.visible && this.hovered) this.showStatus(Infinity)
   }
   feed(ev: Parameters<PetBrain['feed']>[0]): void {
     this.brain.feed(ev)
@@ -231,8 +235,9 @@ class PetHost {
     if (over !== this.hovered) {
       this.hovered = over
       this.brain.setHovered(over)
-      if (over) this.showStatus(60_000)
-      else if (this.statusBubble) this.bubble.expireIn(1500)
+      // The report shows while you hover, and goes the moment the mouse leaves.
+      if (over) this.showStatus(Infinity)
+      else if (this.statusBubble) this.bubble.hide()
     }
     this.pointer.refresh()
   }
@@ -268,7 +273,7 @@ class PetHost {
       // Click: look up and give the status report. If the pet wants something
       // from you (sign in, review junk), open its page in the GitGremlin panel too.
       this.brain.clicked()
-      this.showStatus(this.hovered ? 60_000 : 6000)
+      this.showStatus(this.hovered ? Infinity : 6000)
       if (this.status.alert) api.openHub(this.id)
     }
     this.pending = null
