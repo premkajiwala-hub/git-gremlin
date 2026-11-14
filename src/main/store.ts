@@ -77,6 +77,7 @@ export function normalizeSettings(raw: Partial<Settings> | undefined): Settings 
   const dusty = r.dusty ?? d.dusty
   return {
     onTopOfApps: Boolean(r.onTopOfApps),
+    theme: r.theme === 'light' || r.theme === 'dark' ? r.theme : 'system',
     pets: {
       catbot: petConfig(r.pets?.catbot, d.pets.catbot),
       dusty: petConfig(r.pets?.dusty, d.pets.dusty),

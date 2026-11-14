@@ -39,6 +39,7 @@ export const PET_PURPOSE: Record<PetId, string> = {
 
 export const DEFAULT_SETTINGS: Settings = {
   onTopOfApps: false,
+  theme: 'system',
   pets: {
     catbot: { enabled: true, name: 'Catbot', petSize: 72, petSpeed: 45, movement: 'roam', followCursor: true },
     dusty: { enabled: true, name: 'Dusty', petSize: 64, petSpeed: 40, movement: 'roam', followCursor: false },
@@ -95,6 +96,7 @@ export const IPC = {
   syncyScan: 'hub:syncy-scan',
   syncyAction: 'hub:syncy-action',
   pickFolder: 'hub:pick-folder',
+  hidePets: 'hub:hide-pets',
   githubRefresh: 'settings:github-refresh',
   githubSignIn: 'settings:github-sign-in',
   githubCancelSignIn: 'settings:github-cancel-sign-in',

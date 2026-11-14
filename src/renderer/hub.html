@@ -4,239 +4,293 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self' ws:"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com; font-src 'self' data:; connect-src 'self' ws:"
     />
     <title>GitGremlin</title>
     <link rel="stylesheet" href="./hub.css" />
   </head>
   <body>
-    <nav id="sidebar" aria-label="Pets">
-      <div class="brand">
-        <img src="./icon.png" alt="" class="logo" />
-        <div>
-          <h1>GitGremlin</h1>
-          <p class="sub">Pets with a purpose</p>
+    <div class="app">
+      <nav class="rail" aria-label="Pets">
+        <div class="brand">
+          <div class="brand-tile"><img src="./icon.png" alt="" /></div>
+          <div>
+            <div class="brand-name">GITGREMLIN</div>
+            <div class="brand-sub">pets with a purpose</div>
+          </div>
+        </div>
+        <div class="label">Your pets</div>
+        <div id="petList" class="nav-list"></div>
+        <div class="rail-foot">
+          <button type="button" class="nav" data-page="general">
+            <span class="gear" aria-hidden="true"
+              ><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"
+                /></svg
+            ></span>
+            <span class="nav-text"><span class="nav-name">General</span><span class="nav-sub">every pet</span></span>
+          </button>
+          <div class="awake"><span class="px" id="awakeDot"></span><span id="awakeText"></span></div>
+        </div>
+      </nav>
+
+      <main class="main" id="content">
+        <div id="pages"></div>
+
+        <!-- General -->
+        <section class="page" id="page-general" hidden>
+          <div class="top"><div class="crumb">GitGremlin / <b>General</b></div></div>
+          <section class="hero">
+            <div class="hero-text">
+              <div class="kicker"><i></i>Settings for every pet</div>
+              <h1 class="title">GENERAL</h1>
+              <p class="lede">How your pets share the desktop, and how GitGremlin starts. Each pet's own settings live on its page.</p>
+              <div class="stats" id="generalStats"></div>
+            </div>
+            <div class="stage lineup" aria-hidden="true">
+              <div class="trail"></div>
+              <div class="floor"></div>
+              <div class="lineup-pets" id="lineup"></div>
+              <div class="bubble"><span id="lineupBubble"></span><span class="caret"></span><span class="tail t1"></span><span class="tail t2"></span></div>
+            </div>
+          </section>
+          <section class="cards">
+            <article class="card">
+              <div class="card-head"><h2 class="card-title"><i></i>Where pets live</h2></div>
+              <div class="opts two" role="radiogroup" aria-label="Where pets live">
+                <button type="button" class="opt" role="radio" data-layer="desktop">
+                  <span class="mini"><span class="win"></span><span class="mini-pet" style="left: 76%"></span></span>
+                  <b>On the desktop</b><span>App windows cover them. They show wherever the wallpaper does.</span>
+                </button>
+                <button type="button" class="opt" role="radio" data-layer="top">
+                  <span class="mini"><span class="win"></span><span class="mini-pet" style="left: 40%; bottom: 22px"></span></span>
+                  <b>On top of apps</b><span>Always visible, above every window.</span>
+                </button>
+              </div>
+            </article>
+            <article class="card">
+              <div class="card-head"><h2 class="card-title"><i></i>System</h2></div>
+              <div class="lines">
+                <div class="line-row">
+                  <div><div class="t">Start with Windows</div><div class="s">Pets appear when you sign in</div></div>
+                  <button type="button" class="switch" role="switch" id="startWithWindows" aria-label="Start GitGremlin with Windows"><span class="knob"></span></button>
+                </div>
+                <div class="line-row">
+                  <div><div class="t">Hide all pets</div><div class="s" id="hideHint">They come back on their own after an hour</div></div>
+                  <button type="button" class="btn glass sm" id="hidePets">Hide for 1 h</button>
+                </div>
+                <div class="line-row">
+                  <div><div class="t">Theme</div><div class="s">This panel's colours</div></div>
+                  <div class="seg small" role="group" aria-label="Theme">
+                    <button type="button" data-theme="system">Auto</button><button type="button" data-theme="light">Light</button><button type="button" data-theme="dark">Dark</button>
+                  </div>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <div class="card-head"><h2 class="card-title"><i></i>About</h2><span class="chip" id="version"></span></div>
+              <p class="muted">GitGremlin is free and open source (MIT). Every pixel of every pet is drawn in code.</p>
+              <div class="lines">
+                <div class="line-row">
+                  <div class="t">Pet guides</div>
+                  <button type="button" class="link" data-url="https://github.com/premkajiwala-hub/git-gremlin/tree/main/docs/pets">Open <span aria-hidden="true">›</span></button>
+                </div>
+                <div class="line-row">
+                  <div class="t">Source on GitHub</div>
+                  <button type="button" class="link" data-url="https://github.com/premkajiwala-hub/git-gremlin">Open <span aria-hidden="true">›</span></button>
+                </div>
+              </div>
+            </article>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <!-- One page per pet, built from this template -->
+    <template id="petPage">
+      <div class="top">
+        <div class="crumb">Pets / <b class="crumb-name"></b></div>
+        <div class="switch-row">
+          <span>On desktop</span>
+          <button type="button" class="switch" role="switch" data-k="enabled"><span class="knob"></span></button>
         </div>
       </div>
-      <h2 class="nav-head">Your pets</h2>
-      <ul id="petList"></ul>
-      <button type="button" class="nav-item general" data-page="general">
-        <span class="gear" aria-hidden="true">&#9881;</span>
-        <span>General</span>
-      </button>
-    </nav>
-
-    <main id="content">
-      <!-- One page per pet, built from this template -->
-      <template id="petPage">
-        <section class="pet-head">
-          <img class="portrait" alt="" />
-          <div class="pet-title">
-            <h2 class="pet-name"></h2>
-            <p class="purpose"></p>
-            <p class="status-line"></p>
+      <section class="hero">
+        <div class="hero-text">
+          <div class="kicker"><i></i><span class="kicker-text"></span></div>
+          <h1 class="title"></h1>
+          <p class="lede"></p>
+          <div class="stats"></div>
+          <div class="actions">
+            <button type="button" class="btn hero-primary"></button>
+            <button type="button" class="link hero-link"></button>
           </div>
-          <label class="switch" title="Show this pet on the desktop">
-            <input type="checkbox" data-k="enabled" />
-            <span class="track"><span class="thumb"></span></span>
-            <span class="switch-label">On desktop</span>
-          </label>
-        </section>
-
+        </div>
+        <div class="stage" aria-hidden="true">
+          <div class="trail"></div>
+          <div class="floor"></div>
+          <canvas class="pet-xl"></canvas>
+          <div class="bubble"><span class="bubble-text"></span><span class="caret"></span><span class="tail t1"></span><span class="tail t2"></span></div>
+        </div>
+      </section>
+      <section class="cards">
         <div class="purpose-slot"></div>
-
-        <section class="card">
-          <h3>Look and movement</h3>
-          <label>Name <input data-k="name" maxlength="24" /></label>
-          <div class="row">
-            <label>Size <span class="val" data-v="petSize"></span> <input data-k="petSize" type="range" min="48" max="112" step="4" /></label>
-            <label
-              >Walking speed <span class="val" data-v="petSpeed"></span>
-              <input data-k="petSpeed" type="range" min="10" max="150" step="5"
-            /></label>
+        <article class="card look">
+          <div class="card-head">
+            <h2 class="card-title"><i></i>Look and movement</h2>
+            <button type="button" class="link look-toggle">Edit <span aria-hidden="true">›</span></button>
           </div>
-          <fieldset>
-            <legend>Where it wanders</legend>
-            <label class="check"><input type="radio" data-k="movement" value="roam" /> Anywhere on the screen (walks, runs, crawls and hops)</label>
-            <label class="check"><input type="radio" data-k="movement" value="ground" /> Only along the bottom of the screen</label>
-          </fieldset>
-          <label class="check"><input type="checkbox" data-k="followCursor" /> Follow my cursor when I move it over the desktop</label>
-        </section>
-      </template>
-
-      <!-- Catbot: GitHub -->
-      <template id="catbotPurpose">
-        <section class="card">
-          <h3>GitHub</h3>
-          <p class="hint">
-            Catbot's mood follows today's square on your GitHub contribution chart: no contributions today means hungry, and more
-            contributions make a happier, livelier catbot.
-          </p>
-
-          <div id="ghSignedOut" hidden>
-            <button type="button" id="signIn" class="github">
-              <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.150-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-              Sign in with GitHub
-            </button>
-            <p class="hint" id="signInHint"></p>
-            <button type="button" id="useCli" class="link" hidden>Use my GitHub CLI login instead</button>
+          <div class="lines look-summary">
+            <div class="line-row"><div class="t">Name</div><span class="mono ls-name"></span></div>
+            <div class="line-row"><div class="t">Size</div><span class="mono ls-size"></span></div>
+            <div class="line-row"><div class="t">Walking speed</div><span class="mono ls-speed"></span></div>
+            <div class="line-row"><div class="t">Wanders</div><span class="mono ls-move"></span></div>
+            <div class="line-row"><div class="t">Follows cursor</div><span class="mono ls-follow"></span></div>
           </div>
-
-          <div id="ghPending" class="gh-pending" hidden>
-            <p>Enter this code on GitHub (it's already copied):</p>
-            <div class="device-code" id="deviceCode">----</div>
-            <div class="actions">
-              <button type="button" id="openGitHub" class="github">Open github.com/login/device</button>
-              <button type="button" id="cancelSignIn">Cancel</button>
-            </div>
-            <p class="hint waiting">Waiting for you to approve GitGremlin on GitHub...</p>
-          </div>
-
-          <div id="ghSignedIn" hidden>
-            <div class="gh-account">
-              <img id="avatar" alt="" width="44" height="44" />
-              <div>
-                <div class="gh-name" id="ghName"></div>
-                <div class="gh-login" id="ghLogin"></div>
+          <div class="look-edit" hidden>
+            <div class="fields">
+              <label class="field"><span class="field-top">Name</span><input class="input" data-k="name" maxlength="24" /></label>
+              <label class="field"
+                ><span class="field-top">Size <b data-v="petSize"></b></span><input class="range" type="range" data-k="petSize" min="48" max="112" step="4"
+              /></label>
+              <label class="field"
+                ><span class="field-top">Walking speed <b data-v="petSpeed"></b></span
+                ><input class="range" type="range" data-k="petSpeed" min="10" max="150" step="5"
+              /></label>
+              <div class="field">
+                <span class="field-top">Where it wanders</span>
+                <div class="seg" role="group" aria-label="Where it wanders">
+                  <button type="button" data-move="roam">Anywhere</button><button type="button" data-move="ground">Along the bottom</button>
+                </div>
               </div>
             </div>
-            <div id="ghStatus" class="gh-status" role="status"></div>
-            <div class="actions">
-              <button type="button" id="refresh">Refresh now</button>
-              <button type="button" id="signOut">Sign out</button>
+            <div class="line-row">
+              <div><div class="t">Follow my cursor</div><div class="s">Walks after the cursor while you move it over the desktop.</div></div>
+              <button type="button" class="switch" role="switch" data-k="followCursor" aria-label="Follow my cursor"><span class="knob"></span></button>
             </div>
           </div>
-          <p class="err" id="ghError" role="alert" hidden></p>
-        </section>
-      </template>
+        </article>
+      </section>
+    </template>
 
-      <!-- Dusty: junk cleaning -->
-      <template id="dustyPurpose">
-        <section class="card">
-          <div class="card-head">
-            <h3>Junk found</h3>
-            <div class="actions">
-              <button type="button" id="scanNow">Scan now</button>
-              <button type="button" id="cleanNow" class="primary">Clean selected</button>
-            </div>
+    <!-- Catbot: GitHub -->
+    <template id="catbotPurpose">
+      <article class="card">
+        <div class="card-head"><h2 class="card-title"><i></i>Today</h2><span class="chip" id="cbLevel"></span></div>
+        <div class="row bottom"><span class="big" id="cbToday">0</span><span class="muted" id="cbTodayLabel"></span></div>
+        <div class="meter" id="cbMeter" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <p class="muted" id="cbMood"></p>
+      </article>
+      <article class="card">
+        <div class="card-head"><h2 class="card-title"><i></i>Last 7 days</h2><span class="chip" id="cbStreak"></span></div>
+        <div class="week" id="cbWeek"></div>
+        <p class="muted">The same squares as your GitHub profile. Today is outlined.</p>
+      </article>
+      <article class="card">
+        <div class="card-head"><h2 class="card-title"><i></i>GitHub</h2><span class="chip">read-only</span></div>
+        <div id="ghSignedOut" hidden>
+          <p class="body">Sign in so Catbot can read your contribution chart. You approve it on github.com, so your password never touches this app.</p>
+          <div class="row" style="margin-top: 12px">
+            <button type="button" id="signIn" class="btn sm"
+              ><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg
+              >Sign in with GitHub</button
+            >
+            <button type="button" id="useCli" class="link" hidden>Use my GitHub CLI login <span aria-hidden="true">›</span></button>
           </div>
-          <p class="hint" id="scanInfo"></p>
-          <table class="junk">
-            <thead>
-              <tr>
-                <th scope="col"><span class="sr">Clean</span></th>
-                <th scope="col">What</th>
-                <th scope="col" class="num">Size</th>
-                <th scope="col" class="num">Items</th>
-              </tr>
-            </thead>
-            <tbody id="junkRows"></tbody>
-          </table>
-        </section>
-
-        <section class="card">
-          <h3>What Dusty does with junk</h3>
-          <fieldset>
-            <label class="check option"
-              ><input type="radio" name="cleanMode" value="ask" />
-              <span><b>Ask me first</b> (recommended)<br /><span class="hint">Dusty tells you what it found. Nothing is deleted until you click Clean.</span></span></label
-            >
-            <label class="check option"
-              ><input type="radio" name="cleanMode" value="auto" />
-              <span
-                ><b>Clean automatically</b><br /><span class="hint"
-                  >After each scan Dusty eats the caches and temp files by itself. It always asks before emptying the Recycle Bin.</span
-                ></span
-              ></label
-            >
-            <label class="check option"
-              ><input type="radio" name="cleanMode" value="report" />
-              <span><b>Only report</b><br /><span class="hint">Dusty shows what it found and never deletes anything.</span></span></label
-            >
-          </fieldset>
-        </section>
-
-        <section class="card">
-          <h3>Where Dusty looks</h3>
-          <label class="check option"
-            ><input type="checkbox" data-t="devCaches" />
-            <span
-              ><b>Developer caches</b> <span class="found" data-f="devCaches"></span><br /><span class="hint"
-                >npm, Yarn, pnpm, pip, NuGet and Electron download caches. Tools download what they need again.</span
-              ></span
-            ></label
-          >
-          <label class="check option"
-            ><input type="checkbox" data-t="recycleBin" />
-            <span
-              ><b>Recycle Bin</b> <span class="found" data-f="recycleBin"></span><br /><span class="hint"
-                >Emptying it deletes those files for good, so Dusty always asks first.</span
-              ></span
-            ></label
-          >
-          <label class="check option"
-            ><input type="checkbox" data-t="temp" />
-            <span
-              ><b>Temp files</b> <span class="found" data-f="temp"></span><br /><span class="hint"
-                >Everything currently in your Temp folder (%TEMP%). Files that programs are using right now are skipped.</span
-              ></span
-            ></label
-          >
-          <label class="check option"
-            ><input type="checkbox" data-t="browser" />
-            <span
-              ><b>Browser caches</b> <span class="found" data-f="browser"></span><br /><span class="hint"
-                >Chrome, Edge, Brave and Firefox page caches (not history, passwords or cookies), only while that browser is closed.</span
-              ></span
-            ></label
-          >
-          <label class="inline"
-            >Scan every
-            <select id="scanEvery">
-              <option value="15">15 minutes</option>
-              <option value="30">30 minutes</option>
-              <option value="60">hour</option>
-              <option value="180">3 hours</option>
-              <option value="360">6 hours</option>
-              <option value="720">12 hours</option>
-              <option value="1440">day</option>
-            </select>
-          </label>
-        </section>
-      </template>
-
-      <!-- Syncy: work not on GitHub -->
-      <template id="syncyPurpose">
-        <section class="card">
-          <div class="card-head">
-            <h3>Work not on GitHub</h3>
-            <div class="actions">
-              <button type="button" id="syncyScan">Check now</button>
-            </div>
-          </div>
-          <p class="hint" id="syncyInfo"></p>
-          <ul class="repos" id="syncyRepos"></ul>
-          <details class="all-repos">
-            <summary id="syncyAllTitle">All repos</summary>
-            <ul class="repos compact" id="syncyAll"></ul>
-          </details>
-        </section>
-
-        <section class="card">
-          <h3>When Syncy nudges you</h3>
+          <p class="muted" id="signInHint" hidden></p>
+        </div>
+        <div id="ghPending" hidden>
+          <p class="body">Enter this code on GitHub. It's already copied.</p>
+          <div class="code" id="deviceCode">----</div>
           <div class="row">
-            <label
-              >Nudge me about work older than
-              <select id="syncyStale">
-                <option value="4">4 hours</option>
-                <option value="24">1 day</option>
-                <option value="72">3 days</option>
-                <option value="168">1 week</option>
-              </select>
-            </label>
-            <label
-              >Evening summary
-              <select id="syncySummary">
+            <button type="button" id="openGitHub" class="btn sm">Open github.com/login/device</button>
+            <button type="button" id="cancelSignIn" class="btn glass sm">Cancel</button>
+          </div>
+          <p class="muted waiting">Waiting for you to approve GitGremlin on GitHub...</p>
+        </div>
+        <div id="ghSignedIn" hidden>
+          <div class="who">
+            <img id="avatar" class="avatar" alt="" />
+            <div><b id="ghName"></b><span class="muted" id="ghLogin"></span></div>
+          </div>
+          <div class="row" style="margin-top: 14px">
+            <button type="button" id="refresh" class="btn glass sm">Refresh now</button>
+            <button type="button" id="signOut" class="btn glass sm">Sign out</button>
+          </div>
+        </div>
+        <p class="err" id="ghError" role="alert" hidden></p>
+      </article>
+    </template>
+
+    <!-- Dusty: junk -->
+    <template id="dustyPurpose">
+      <article class="card wide">
+        <div class="card-head"><h2 class="card-title"><i></i>Junk found</h2><span class="muted" id="scanInfo"></span></div>
+        <div class="rows" id="junkRows"></div>
+        <div class="total">
+          <span class="muted">Selected <b id="junkTotal">0 B</b></span>
+          <button type="button" class="btn sm" id="cleanNow">Clean selected</button>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-head"><h2 class="card-title"><i></i>With junk, Dusty will</h2></div>
+        <div class="opts" role="radiogroup" aria-label="Cleaning mode">
+          <button type="button" class="opt row-opt" role="radio" data-mode="ask"><span class="radio"></span><span><b>Ask me first</b><span>Shows what it found. Nothing goes until you confirm.</span></span></button>
+          <button type="button" class="opt row-opt" role="radio" data-mode="auto"><span class="radio"></span><span><b>Clean automatically</b><span>Eats caches and temp files after each scan. Always asks before the Recycle Bin.</span></span></button>
+          <button type="button" class="opt row-opt" role="radio" data-mode="report"><span class="radio"></span><span><b>Only report</b><span>Looks, never touches.</span></span></button>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-head">
+          <h2 class="card-title"><i></i>Where Dusty looks</h2>
+          <label class="chip-select"
+            ><span class="sr">Scan every</span
+            ><select id="scanEvery">
+              <option value="15">every 15 min</option>
+              <option value="30">every 30 min</option>
+              <option value="60">every 1 h</option>
+              <option value="180">every 3 h</option>
+              <option value="360">every 6 h</option>
+              <option value="720">every 12 h</option>
+              <option value="1440">once a day</option>
+            </select></label
+          >
+        </div>
+        <div class="lines">
+          <div class="line-row"><div><div class="t">Developer caches <span class="found" data-f="devCaches"></span></div><div class="s">npm, Yarn, pnpm, pip, NuGet, Electron</div></div><button type="button" class="switch" role="switch" data-t="devCaches" aria-label="Developer caches"><span class="knob"></span></button></div>
+          <div class="line-row"><div><div class="t">Recycle Bin <span class="found" data-f="recycleBin"></span></div><div class="s">Permanent, so it always asks first</div></div><button type="button" class="switch" role="switch" data-t="recycleBin" aria-label="Recycle Bin"><span class="knob"></span></button></div>
+          <div class="line-row"><div><div class="t">Temp files <span class="found" data-f="temp"></span></div><div class="s">Everything in %TEMP% that isn't in use</div></div><button type="button" class="switch" role="switch" data-t="temp" aria-label="Temp files"><span class="knob"></span></button></div>
+          <div class="line-row"><div><div class="t">Browser caches <span class="found" data-f="browser"></span></div><div class="s">Only while that browser is closed</div></div><button type="button" class="switch" role="switch" data-t="browser" aria-label="Browser caches"><span class="knob"></span></button></div>
+        </div>
+      </article>
+    </template>
+
+    <!-- Syncy: work not on GitHub -->
+    <template id="syncyPurpose">
+      <article class="card wide">
+        <div class="card-head"><h2 class="card-title"><i></i>Not on GitHub</h2><span class="muted" id="syncyInfo"></span></div>
+        <div class="repos" id="syncyRepos"></div>
+        <details class="all-repos">
+          <summary id="syncyAllTitle">All repos</summary>
+          <div class="repos compact" id="syncyAll"></div>
+        </details>
+      </article>
+      <article class="card" id="syncyNudges">
+        <div class="card-head"><h2 class="card-title"><i></i>Nudges</h2></div>
+        <div class="field">
+          <span class="field-top">Nudge me about work older than</span>
+          <div class="seg" role="group" aria-label="Nudge after" id="syncyStale">
+            <button type="button" data-h="4">4 h</button><button type="button" data-h="24">1 day</button><button type="button" data-h="72">3 days</button><button type="button" data-h="168">1 week</button>
+          </div>
+        </div>
+        <div class="lines">
+          <div class="line-row">
+            <div><div class="t">Evening summary</div><div class="s">One check-in before you log off</div></div>
+            <label class="chip-select"
+              ><span class="sr">Evening summary</span
+              ><select id="syncySummary">
                 <option value="off">Off</option>
                 <option value="17">5 PM</option>
                 <option value="18">6 PM</option>
@@ -244,81 +298,52 @@
                 <option value="20">8 PM</option>
                 <option value="21">9 PM</option>
                 <option value="22">10 PM</option>
-              </select>
-            </label>
+              </select></label
+            >
           </div>
-          <div class="row">
-            <label
-              >Check my repos every
-              <select id="syncyEvery">
-                <option value="5">5 minutes</option>
-                <option value="10">10 minutes</option>
-                <option value="15">15 minutes</option>
-                <option value="30">30 minutes</option>
-                <option value="60">hour</option>
-              </select>
-            </label>
+          <div class="line-row">
+            <div><div class="t">Check my repos every</div></div>
+            <label class="chip-select"
+              ><span class="sr">Check every</span
+              ><select id="syncyEvery">
+                <option value="5">5 min</option>
+                <option value="10">10 min</option>
+                <option value="15">15 min</option>
+                <option value="30">30 min</option>
+                <option value="60">1 h</option>
+              </select></label
+            >
           </div>
-          <label class="check option"
-            ><input type="checkbox" id="syncyBranches" />
-            <span
-              ><b>Find merged branches</b><br /><span class="hint"
-                >Lists local branches already merged into your main branch, and offers to delete them. Deleting always asks first, and git
-                itself refuses to delete anything that isn't fully merged.</span
-              ></span
-            ></label
-          >
-        </section>
-
-        <section class="card">
-          <h3>Where Syncy looks</h3>
-          <label class="check option"
-            ><input type="checkbox" id="syncyAuto" />
-            <span><b>Find my repos automatically</b><br /><span class="hint" id="syncyAutoHint"></span></span
-          ></label>
-          <div class="list-head">
-            <span>Also search these folders</span>
-            <button type="button" id="syncyAddFolder">Add folder...</button>
+          <div class="line-row">
+            <div><div class="t">Find merged branches</div><div class="s">Offers to delete them, always asks</div></div>
+            <button type="button" class="switch" role="switch" id="syncyBranches" aria-label="Find merged branches"><span class="knob"></span></button>
           </div>
-          <ul class="paths" id="syncyFolders"></ul>
-          <div id="syncyIgnoredBox">
-            <div class="list-head"><span>Ignored repos</span></div>
-            <ul class="paths" id="syncyIgnored"></ul>
-          </div>
-        </section>
-      </template>
-
-      <div id="pages"></div>
-
-      <section class="page" id="page-general" hidden>
-        <section class="pet-head plain">
-          <div class="pet-title">
-            <h2>General</h2>
-            <p class="purpose">Settings for all pets.</p>
-          </div>
-        </section>
-        <section class="card">
-          <h3>Layering</h3>
-          <label class="check"><input type="checkbox" id="onTopOfApps" /> Show pets on top of apps</label>
-          <p class="hint">Off: pets live on the desktop and hide behind your app windows. On: they stay on top of everything.</p>
-        </section>
-        <section class="card">
-          <h3>System</h3>
-          <label class="check"><input type="checkbox" id="startWithWindows" /> Start GitGremlin with Windows</label>
-          <p class="hint">GitGremlin lives in the tray, bottom right. Click its icon to open this panel, or right-click it for quick actions.</p>
-        </section>
-      </section>
-    </main>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-head"><h2 class="card-title"><i></i>Where Syncy looks</h2><button type="button" class="ib" id="syncyAddFolder">+ Add folder</button></div>
+        <div class="line-row">
+          <div><div class="t">Find my repos automatically</div><div class="s" id="syncyAutoHint"></div></div>
+          <button type="button" class="switch" role="switch" id="syncyAuto" aria-label="Find my repos automatically"><span class="knob"></span></button>
+        </div>
+        <div class="paths" id="syncyFolders"></div>
+        <div id="syncyIgnoredBox" hidden>
+          <div class="sublabel">Ignored repos</div>
+          <div class="paths" id="syncyIgnored"></div>
+        </div>
+        <p class="muted">Syncy only reads your repos and never fetches or pushes.</p>
+      </article>
+    </template>
 
     <dialog id="confirm">
       <form method="dialog">
         <h3 id="confirmTitle"></h3>
         <ul id="confirmList"></ul>
         <p class="warn" id="confirmWarn" hidden></p>
-        <p class="hint" id="confirmHint"></p>
-        <div class="actions end">
-          <button value="cancel">Cancel</button>
-          <button value="ok" class="primary" id="confirmOk">Delete</button>
+        <p class="muted" id="confirmHint"></p>
+        <div class="row end">
+          <button value="cancel" class="btn glass sm">Cancel</button>
+          <button value="ok" class="btn sm" id="confirmOk">Delete</button>
         </div>
       </form>
     </dialog>

@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, nativeTheme } from 'electron'
 import { APP_NAME, IPC } from '../shared/constants'
 
 let win: BrowserWindow | null = null
@@ -17,12 +17,12 @@ export function openHub(page?: string): BrowserWindow {
     return win
   }
   win = new BrowserWindow({
-    width: 900,
-    height: 720,
-    minWidth: 700,
-    minHeight: 520,
+    width: 1120,
+    height: 780,
+    minWidth: 760,
+    minHeight: 560,
     title: APP_NAME,
-    backgroundColor: '#10151b',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#0C0D0F' : '#F1F1EE',
     autoHideMenuBar: true,
     icon: join(app.getAppPath(), 'assets', 'icon.png'),
     show: false,

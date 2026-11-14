@@ -141,9 +141,13 @@ export interface SyncyConfig {
   trackBranches: boolean
 }
 
+/** The GitGremlin panel's colours: follow Windows, or always light / dark. */
+export type ThemeMode = 'system' | 'light' | 'dark'
+
 export interface Settings {
   /** true = pets are drawn on top of every app; false = only on the desktop, behind app windows. */
   onTopOfApps: boolean
+  theme: ThemeMode
   pets: Record<PetId, PetConfig>
   dusty: DustyConfig
   syncy: SyncyConfig
@@ -264,6 +268,9 @@ export interface GitHubView {
 
 /** Everything the GitGremlin panel shows. */
 export interface HubView {
+  version: string
+  /** Pets are hidden for a while (tray or panel). */
+  hidden: boolean
   settings: Settings
   startWithWindows: boolean
   status: Record<PetId, PetStatus>

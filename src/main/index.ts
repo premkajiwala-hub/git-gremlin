@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { app, BrowserWindow, clipboard, dialog, ipcMain, powerMonitor, shell } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, powerMonitor, shell } from 'electron'
 import { APP_ID, IPC, PET_IDS } from '../shared/constants'
 import type { ActionResult, FeedEvent, HubView, PetId, PetStatus, RepoAction, Settings, SignInCode, SignInResult } from '../shared/types'
 import { clientId, DeviceFlow } from './github-auth'
@@ -73,6 +73,7 @@ let hinted = false
 function start(): void {
   store = new Store()
   store.load()
+  nativeTheme.themeSource = store.state.settings.theme
 
   tracker = new WindowTracker(
     (ledge) => overlays.broadcast(IPC.ledge, ledge),
@@ -237,6 +238,8 @@ async function hubView(): Promise<HubView> {
   const linked = github.source !== 'none'
   const mood = moodFrom(data.days)
   return {
+    version: app.getVersion(),
+    hidden: overlays.isHidden,
     settings: store.state.settings,
     startWithWindows: startWithWindows(),
     status: allStatus(),
@@ -277,6 +280,7 @@ function registerHubIpc(): void {
     const next = normalizeSettings(s)
     store.state.settings = next
     overlays.setOnTop(next.onTopOfApps)
+    nativeTheme.themeSource = next.theme
     overlays.syncPets()
     if (next.dusty.scanEveryMinutes !== before.dusty.scanEveryMinutes) dusty.reschedule()
     // A newly enabled place to look (or Dusty switched on): sniff around right away.
@@ -301,6 +305,11 @@ function registerHubIpc(): void {
     return hubView()
   })
   ipcMain.handle(IPC.syncyAction, (_e, action: RepoAction) => repoAction(action))
+  ipcMain.handle(IPC.hidePets, (_e, hide: boolean) => {
+    if (hide) setHidden(true, 60 * 60_000)
+    else setHidden(false)
+    return hubView()
+  })
   ipcMain.handle(IPC.pickFolder, async (e): Promise<string | null> => {
     const win = BrowserWindow.fromWebContents(e.sender)
     const opts = { title: 'Choose a folder with your repos', properties: ['openDirectory' as const] }

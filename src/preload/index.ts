@@ -57,6 +57,7 @@ const api = {
   syncyScan: (): Promise<HubView> => ipcRenderer.invoke(IPC.syncyScan),
   syncyAction: (action: RepoAction): Promise<ActionResult> => ipcRenderer.invoke(IPC.syncyAction, action),
   pickFolder: (): Promise<string | null> => ipcRenderer.invoke(IPC.pickFolder),
+  hidePets: (hide: boolean): Promise<HubView> => ipcRenderer.invoke(IPC.hidePets, hide),
   refreshGitHub: (): Promise<HubView> => ipcRenderer.invoke(IPC.githubRefresh),
   /** Start "Sign in with GitHub"; resolves with the one-time code (already copied, github.com opened). */
   signInWithGitHub: (): Promise<SignInCode> => ipcRenderer.invoke(IPC.githubSignIn),
