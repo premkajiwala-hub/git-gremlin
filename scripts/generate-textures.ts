@@ -12,7 +12,8 @@
  *   assets/icon.png, build/icon.png    GitGremlin app (tray / installer) icon
  *   assets/icon.ico                    the same, for the Start menu shortcut
  *
- * Run with:  npm run textures   (overwrites repainted files)
+ * Run with:  npm run textures              (every pet; overwrites repainted files)
+ *            npm run textures -- syncy     (only the pets named)
  * Each pet's drawing lives in scripts/art/<pet>.ts.
  */
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
@@ -20,6 +21,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { catbot } from './art/catbot.ts'
 import { dusty } from './art/dusty.ts'
+import { syncy } from './art/syncy.ts'
 import { Img, png, scale, stamp, type PetArt } from './art/pixel.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -70,7 +72,9 @@ function writePet(art: PetArt): number {
 
 mkdirSync(PETS, { recursive: true })
 mkdirSync(TEX, { recursive: true })
-const pets = [catbot(), dusty()]
+const only = process.argv.slice(2)
+const pets = [catbot, dusty, syncy].filter((f) => !only.length || only.includes(f.name)).map((f) => f())
+if (only.length && pets.length !== only.length) throw new Error(`Unknown pet in: ${only.join(', ')}`)
 for (const art of pets) console.log(`${art.id}: ${writePet(art)} frames`)
 
 // Shared particles.

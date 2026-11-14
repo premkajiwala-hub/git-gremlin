@@ -47,8 +47,9 @@ src/
     launcher.ts     Start menu shortcut, self-rebuild on launch
     native.ts       Win32 helpers (koffi FFI)
     junk.ts         Dusty's junk scanner and cleaner
+    repos.ts        Syncy's repo finder and git checks
     github*.ts      GitHub sign-in and contribution calendar
-    pets/           each pet's "purpose" service (catbot.ts, dusty.ts)
+    pets/           each pet's "purpose" service (catbot.ts, dusty.ts, syncy.ts)
   preload/        the IPC bridge exposed to the renderers
   renderer/       overlay (pets) and panel (hub.*) pages
     pet/            brain (movement, behaviour), personas, sprites, particles
@@ -97,10 +98,11 @@ Every pet is drawn in code:
 | `assets/textures/heart.png`, `zzz.png` | Shared particles |
 | `assets/icon.png`, `assets/icon.ico`, `build/icon.png` | Tray, Start menu and installer icons |
 
-You can edit any PNG in a pixel editor (Aseprite, Piskel, ...) and restart the app. Or regenerate everything from code. This **overwrites** your edits, and needs Node.js 23.6+, which runs TypeScript directly:
+You can edit any PNG in a pixel editor (Aseprite, Piskel, ...) and restart the app. Or regenerate from code. This **overwrites** your edits, and needs Node.js 23.6+, which runs TypeScript directly:
 
 ```bash
-npm run textures
+npm run textures            # every pet
+npm run textures -- syncy   # just one pet
 ```
 
 The README images in `docs/images/` are rendered from the asset PNGs, so they always match what the app draws. Re-render them after changing the art:
@@ -113,7 +115,7 @@ npm run docs-images
 
 1. **Art:** write `scripts/art/<pet>.ts` returning a `PetArt` (see `catbot.ts` / `dusty.ts`), add it to `generate-textures.ts`, and run `npm run textures`.
 2. **Identity:** add the id to `PetId` in `src/shared/types.ts`, then to `PET_IDS`, `PET_PURPOSE` and `DEFAULT_SETTINGS` in `src/shared/constants.ts`.
-3. **Purpose:** write `src/main/pets/<pet>.ts`, which returns the pet's `PetStatus`, and wire it into `status()` in `src/main/index.ts`.
+3. **Purpose:** write `src/main/pets/<pet>.ts`, which returns the pet's `PetStatus`. Wire it into `src/main/index.ts` (start-up, `status()`, and any panel IPC) and give it tray actions in `src/main/tray.ts`.
 4. **Personality:** add a persona (lines, extra habits, bubble colours) to `src/renderer/pet/personas.ts`.
 5. **Panel:** add a `<template id="<pet>Purpose">` to `src/renderer/hub.html` for its own settings, and a tray submenu entry in `src/main/tray.ts`.
 6. **Docs:** add `docs/pets/<pet>.md` (copy an existing one) and a row in the README's pet table.
@@ -142,8 +144,9 @@ A second launch passes these to the running app:
 | Flag | Effect |
 |---|---|
 | `--settings` | Open the GitGremlin panel |
-| `--feed [catbot\|dusty]` | Give a pet a debug snack |
+| `--feed [catbot\|dusty\|syncy]` | Give a pet a debug snack |
 | `--scan` | Make Dusty scan now |
+| `--check` | Make Syncy check your repos now |
 | `--say "text"` | Make Catbot say something |
 | `--install-shortcut` | Create or refresh the Start menu shortcut, then exit (used by `npm run install-app`) |
 
@@ -157,7 +160,7 @@ For example: `npx electron . --feed dusty`.
 | `npm run install-app` | Build and add GitGremlin to the Start menu |
 | `npm run compile` | Build into `out/` |
 | `npm run typecheck` | Type-check all code |
-| `npm run textures` | Regenerate all pet art from code |
+| `npm run textures` | Regenerate all pet art from code (`npm run textures -- syncy` for one pet) |
 | `npm run docs-images` | Re-render the README images |
 | `npm run build` | Build the Windows installer |
 

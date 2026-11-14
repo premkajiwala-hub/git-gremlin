@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { app } from 'electron'
 import { DEFAULT_SETTINGS, PET_IDS, PET_SIZE_MAX, PET_SIZE_MIN } from '../shared/constants'
-import type { CleanResult, ContributionDay, GitHubSource, PetConfig, PetId, PetSnapshot, ScanResult, Settings } from '../shared/types'
+import type { CleanResult, ContributionDay, GitHubSource, PetConfig, PetId, PetSnapshot, RepoScan, ScanResult, Settings, SyncyConfig } from '../shared/types'
 
 export interface AppState {
   version: 4
@@ -23,6 +23,7 @@ export interface AppState {
   /** Where each pet was, so it reappears there. */
   pets: Record<PetId, PetSnapshot | null>
   dusty: { lastScan: ScanResult | null; lastClean: CleanResult | null }
+  syncy: { lastScan: RepoScan | null; lastSummaryDay: string | null }
 }
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T
@@ -34,8 +35,9 @@ function defaults(): AppState {
     githubAuth: null,
     githubTokenEnc: null,
     github: { login: null, name: null, avatarUrl: null, days: [], source: 'none', fetchedAt: 0 },
-    pets: { catbot: null, dusty: null },
-    dusty: { lastScan: null, lastClean: null }
+    pets: { catbot: null, dusty: null, syncy: null },
+    dusty: { lastScan: null, lastClean: null },
+    syncy: { lastScan: null, lastSummaryDay: null }
   }
 }
 
@@ -51,6 +53,23 @@ function petConfig(raw: Partial<PetConfig> | undefined, def: PetConfig): PetConf
   }
 }
 
+const strings = (v: unknown): string[] =>
+  Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string' && x.trim() !== '').map((x) => x.trim()))].slice(0, 100) : []
+
+function syncyConfig(raw: Partial<SyncyConfig> | undefined, def: SyncyConfig): SyncyConfig {
+  const r = raw ?? {}
+  const hour = r.summaryHour === null ? null : Number(r.summaryHour ?? def.summaryHour)
+  return {
+    autoFind: typeof r.autoFind === 'boolean' ? r.autoFind : def.autoFind,
+    folders: r.folders === undefined ? def.folders : strings(r.folders),
+    ignored: r.ignored === undefined ? def.ignored : strings(r.ignored),
+    staleHours: Math.min(24 * 30, Math.max(1, Number(r.staleHours) || def.staleHours)),
+    scanEveryMinutes: Math.min(24 * 60, Math.max(5, Number(r.scanEveryMinutes) || def.scanEveryMinutes)),
+    summaryHour: hour === null || !Number.isInteger(hour) || hour < 0 || hour > 23 ? null : hour,
+    trackBranches: typeof r.trackBranches === 'boolean' ? r.trackBranches : def.trackBranches
+  }
+}
+
 /** Fill in / clamp settings from anything (old versions, hand edits, the panel). */
 export function normalizeSettings(raw: Partial<Settings> | undefined): Settings {
   const d = DEFAULT_SETTINGS
@@ -60,7 +79,8 @@ export function normalizeSettings(raw: Partial<Settings> | undefined): Settings 
     onTopOfApps: Boolean(r.onTopOfApps),
     pets: {
       catbot: petConfig(r.pets?.catbot, d.pets.catbot),
-      dusty: petConfig(r.pets?.dusty, d.pets.dusty)
+      dusty: petConfig(r.pets?.dusty, d.pets.dusty),
+      syncy: petConfig(r.pets?.syncy, d.pets.syncy)
     },
     dusty: {
       mode: dusty.mode === 'auto' || dusty.mode === 'report' ? dusty.mode : 'ask',
@@ -71,7 +91,8 @@ export function normalizeSettings(raw: Partial<Settings> | undefined): Settings 
         browser: Boolean(dusty.targets?.browser ?? d.dusty.targets.browser)
       },
       scanEveryMinutes: Math.min(24 * 60, Math.max(15, Number(dusty.scanEveryMinutes) || d.dusty.scanEveryMinutes))
-    }
+    },
+    syncy: syncyConfig(r.syncy, d.syncy)
   }
 }
 
@@ -104,10 +125,11 @@ export class Store {
               movement: s.movement,
               followCursor: s.followCursor
             },
-            dusty: d.settings.pets.dusty
+            dusty: d.settings.pets.dusty,
+            syncy: d.settings.pets.syncy
           }
         })
-        pets = { catbot: raw.pet ?? null, dusty: null }
+        pets = { catbot: raw.pet ?? null, dusty: null, syncy: null }
       }
       const linked = (raw.version ?? 0) >= 3 && (raw.githubAuth === 'oauth' || raw.githubAuth === 'gh')
       this.state = {
@@ -117,7 +139,8 @@ export class Store {
         githubTokenEnc: linked ? (raw.githubTokenEnc ?? null) : null,
         github: linked ? { ...d.github, ...(raw.github ?? {}) } : d.github,
         pets,
-        dusty: { lastScan: raw.dusty?.lastScan ?? null, lastClean: raw.dusty?.lastClean ?? null }
+        dusty: { lastScan: raw.dusty?.lastScan ?? null, lastClean: raw.dusty?.lastClean ?? null },
+        syncy: { lastScan: raw.syncy?.lastScan ?? null, lastSummaryDay: raw.syncy?.lastSummaryDay ?? null }
       }
     } catch {
       this.state = defaults()

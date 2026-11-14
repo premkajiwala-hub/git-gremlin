@@ -28,24 +28,35 @@ export const PET_SIZE_MIN = 48
 export const PET_SIZE_MAX = 112
 
 /** Every pet, in the order the GitGremlin panel lists them. */
-export const PET_IDS: PetId[] = ['catbot', 'dusty']
+export const PET_IDS: PetId[] = ['catbot', 'dusty', 'syncy']
 
 /** What each pet is for (shown in the panel). */
 export const PET_PURPOSE: Record<PetId, string> = {
   catbot: 'Robot cat fed by your GitHub contributions',
-  dusty: 'Raccoon that eats junk files and caches'
+  dusty: 'Raccoon that eats junk files and caches',
+  syncy: "Beaver that guards work you haven't pushed to GitHub"
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   onTopOfApps: false,
   pets: {
     catbot: { enabled: true, name: 'Catbot', petSize: 72, petSpeed: 45, movement: 'roam', followCursor: true },
-    dusty: { enabled: true, name: 'Dusty', petSize: 64, petSpeed: 40, movement: 'roam', followCursor: false }
+    dusty: { enabled: true, name: 'Dusty', petSize: 64, petSpeed: 40, movement: 'roam', followCursor: false },
+    syncy: { enabled: true, name: 'Syncy', petSize: 64, petSpeed: 38, movement: 'roam', followCursor: false }
   },
   dusty: {
     mode: 'ask',
     targets: { devCaches: true, recycleBin: true, temp: false, browser: false },
     scanEveryMinutes: 60
+  },
+  syncy: {
+    autoFind: true,
+    folders: [],
+    ignored: [],
+    staleHours: 24,
+    scanEveryMinutes: 10,
+    summaryHour: 18,
+    trackBranches: true
   }
 }
 
@@ -81,6 +92,9 @@ export const IPC = {
   settingsSave: 'settings:save',
   dustyScan: 'hub:dusty-scan',
   dustyClean: 'hub:dusty-clean',
+  syncyScan: 'hub:syncy-scan',
+  syncyAction: 'hub:syncy-action',
+  pickFolder: 'hub:pick-folder',
   githubRefresh: 'settings:github-refresh',
   githubSignIn: 'settings:github-sign-in',
   githubCancelSignIn: 'settings:github-cancel-sign-in',

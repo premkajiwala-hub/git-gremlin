@@ -23,6 +23,7 @@ export type Activity =
   | 'air'
   | 'wash'
   | 'rummage'
+  | 'slap'
 
 /** Everything the view needs to draw one frame. */
 export interface RenderState {
@@ -291,7 +292,7 @@ export class PetBrain {
     this.stand = null
     this.following = this.crossing = this.thenHop = this.walkingOff = this.afterTap = false
     this.handedOff = false
-    const known: Activity[] = ['idle', 'walk', 'run', 'crawl', 'sit', 'curious', 'sleep', 'happy', 'hurt', 'starving', 'air', 'wash', 'rummage']
+    const known: Activity[] = ['idle', 'walk', 'run', 'crawl', 'sit', 'curious', 'sleep', 'happy', 'hurt', 'starving', 'air', 'wash', 'rummage', 'slap']
     this.activity = b.activity && known.includes(b.activity) ? b.activity : 'idle'
     if (this.z > 0) this.activity = 'air'
     if (!this.roam) this.y = this.world.groundY
@@ -393,6 +394,7 @@ export class PetBrain {
       case 'curious':
       case 'hurt':
       case 'wash':
+      case 'slap':
         this.slide(dt)
         if (this.t > this.dur) {
           if (this.afterTap) {
@@ -991,6 +993,9 @@ export class PetBrain {
     if (this.status.alert && chance(0.6)) {
       // Something for you to do (sign in, review junk): clicking the pet opens its page.
       this.hooks.say(this.status.alert, 4000)
+      // Syncy slaps its tail, the beaver warning.
+      const anim = p.alertAnim
+      if (anim && this.sprites.anims[anim] && !this.stand && this.z <= 0 && PAUSABLE.includes(this.activity)) this.set(anim, 1.4)
       this.nagT = rand(150, 300)
     } else if (this.stage === 'hungry') {
       this.hooks.say(pickOne(p.hungryLines), 3000)
@@ -1092,6 +1097,10 @@ export class PetBrain {
         break
       case 'rummage':
         anim = 'rummage'
+        mood = 'alert'
+        break
+      case 'slap':
+        anim = 'slap'
         mood = 'alert'
         break
     }

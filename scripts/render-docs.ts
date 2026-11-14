@@ -2,9 +2,10 @@
  * Renders the README images from the pets' actual asset PNGs (so they show
  * exactly what the app draws, including repainted frames):
  *
- *   docs/images/pets-hero.png      Catbot and Dusty together
+ *   docs/images/pets-hero.png      all the pets together
  *   docs/images/catbot-poses.png   a strip of Catbot's animations
  *   docs/images/dusty-poses.png    a strip of Dusty's animations
+ *   docs/images/syncy-poses.png    a strip of Syncy's animations
  *
  * Run with:  npm run docs-images
  */
@@ -130,13 +131,15 @@ function strip(pet: string, poses: Pose[]): Img {
 
 mkdirSync(DOCS, { recursive: true })
 
-const hero = new Img(150, 66)
+const hero = new Img(200, 66)
 hero.round(0, 0, hero.w, hero.h, BG)
 hero.rect(1, 56, hero.w - 2, 1, FLOOR)
-place(hero, 'catbot', { anim: 'idle', frame: 0, eyes: 'happy' }, 50, 56)
-place(hero, 'dusty', { anim: 'idle', frame: 0, eyes: 'idle' }, 102, 56, true)
+place(hero, 'catbot', { anim: 'idle', frame: 0, eyes: 'happy' }, 46, 56)
+place(hero, 'syncy', { anim: 'sit', frame: 0, eyes: 'idle' }, 100, 56)
+place(hero, 'dusty', { anim: 'idle', frame: 0, eyes: 'idle' }, 154, 56, true)
 const heart = readPng(join(ROOT, 'assets', 'textures', 'heart.png'))
-hero.over(heart, 72, 16)
+hero.over(heart, 70, 14)
+hero.over(heart, 124, 18)
 writeFileSync(join(DOCS, 'pets-hero.png'), png(scale(hero, 5)))
 
 const catbot: Pose[] = [
@@ -162,5 +165,17 @@ const dusty: Pose[] = [
   { anim: 'sleep', frame: 0, eyes: 'blink', zzz: true }
 ]
 writeFileSync(join(DOCS, 'dusty-poses.png'), png(scale(strip('dusty', dusty), 3)))
+
+const syncy: Pose[] = [
+  { anim: 'idle', frame: 0, eyes: 'idle' },
+  { anim: 'walk', frame: 1, eyes: 'idle' },
+  { anim: 'rummage', frame: 1, eyes: 'idle' },
+  { anim: 'slap', frame: 1, eyes: 'alert' },
+  { anim: 'eat', frame: 1, eyes: 'happy', food: true },
+  { anim: 'happy', frame: 0, eyes: 'happy', hearts: true },
+  { anim: 'wash', frame: 0, eyes: 'happy' },
+  { anim: 'sleep', frame: 0, eyes: 'blink', zzz: true }
+]
+writeFileSync(join(DOCS, 'syncy-poses.png'), png(scale(strip('syncy', syncy), 3)))
 
 console.log(`Wrote README images to ${DOCS}`)

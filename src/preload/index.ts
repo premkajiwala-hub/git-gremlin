@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../shared/constants'
 import type {
+  ActionResult,
+  RepoAction,
   DisplayInfo,
   FeedEvent,
   HubView,
@@ -52,6 +54,9 @@ const api = {
   saveSettings: (s: Settings, startWithWindows: boolean): Promise<HubView> => ipcRenderer.invoke(IPC.settingsSave, s, startWithWindows),
   dustyScan: (): Promise<HubView> => ipcRenderer.invoke(IPC.dustyScan),
   dustyClean: (ids: string[]): Promise<HubView> => ipcRenderer.invoke(IPC.dustyClean, ids),
+  syncyScan: (): Promise<HubView> => ipcRenderer.invoke(IPC.syncyScan),
+  syncyAction: (action: RepoAction): Promise<ActionResult> => ipcRenderer.invoke(IPC.syncyAction, action),
+  pickFolder: (): Promise<string | null> => ipcRenderer.invoke(IPC.pickFolder),
   refreshGitHub: (): Promise<HubView> => ipcRenderer.invoke(IPC.githubRefresh),
   /** Start "Sign in with GitHub"; resolves with the one-time code (already copied, github.com opened). */
   signInWithGitHub: (): Promise<SignInCode> => ipcRenderer.invoke(IPC.githubSignIn),

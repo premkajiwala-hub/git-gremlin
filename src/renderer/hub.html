@@ -205,6 +205,89 @@
         </section>
       </template>
 
+      <!-- Syncy: work not on GitHub -->
+      <template id="syncyPurpose">
+        <section class="card">
+          <div class="card-head">
+            <h3>Work not on GitHub</h3>
+            <div class="actions">
+              <button type="button" id="syncyScan">Check now</button>
+            </div>
+          </div>
+          <p class="hint" id="syncyInfo"></p>
+          <ul class="repos" id="syncyRepos"></ul>
+          <details class="all-repos">
+            <summary id="syncyAllTitle">All repos</summary>
+            <ul class="repos compact" id="syncyAll"></ul>
+          </details>
+        </section>
+
+        <section class="card">
+          <h3>When Syncy nudges you</h3>
+          <div class="row">
+            <label
+              >Nudge me about work older than
+              <select id="syncyStale">
+                <option value="4">4 hours</option>
+                <option value="24">1 day</option>
+                <option value="72">3 days</option>
+                <option value="168">1 week</option>
+              </select>
+            </label>
+            <label
+              >Evening summary
+              <select id="syncySummary">
+                <option value="off">Off</option>
+                <option value="17">5 PM</option>
+                <option value="18">6 PM</option>
+                <option value="19">7 PM</option>
+                <option value="20">8 PM</option>
+                <option value="21">9 PM</option>
+                <option value="22">10 PM</option>
+              </select>
+            </label>
+          </div>
+          <div class="row">
+            <label
+              >Check my repos every
+              <select id="syncyEvery">
+                <option value="5">5 minutes</option>
+                <option value="10">10 minutes</option>
+                <option value="15">15 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="60">hour</option>
+              </select>
+            </label>
+          </div>
+          <label class="check option"
+            ><input type="checkbox" id="syncyBranches" />
+            <span
+              ><b>Find merged branches</b><br /><span class="hint"
+                >Lists local branches already merged into your main branch, and offers to delete them. Deleting always asks first, and git
+                itself refuses to delete anything that isn't fully merged.</span
+              ></span
+            ></label
+          >
+        </section>
+
+        <section class="card">
+          <h3>Where Syncy looks</h3>
+          <label class="check option"
+            ><input type="checkbox" id="syncyAuto" />
+            <span><b>Find my repos automatically</b><br /><span class="hint" id="syncyAutoHint"></span></span
+          ></label>
+          <div class="list-head">
+            <span>Also search these folders</span>
+            <button type="button" id="syncyAddFolder">Add folder...</button>
+          </div>
+          <ul class="paths" id="syncyFolders"></ul>
+          <div id="syncyIgnoredBox">
+            <div class="list-head"><span>Ignored repos</span></div>
+            <ul class="paths" id="syncyIgnored"></ul>
+          </div>
+        </section>
+      </template>
+
       <div id="pages"></div>
 
       <section class="page" id="page-general" hidden>
@@ -229,13 +312,13 @@
 
     <dialog id="confirm">
       <form method="dialog">
-        <h3>Let Dusty eat this junk?</h3>
+        <h3 id="confirmTitle"></h3>
         <ul id="confirmList"></ul>
-        <p class="warn" id="confirmWarn" hidden>The Recycle Bin is emptied for good: those files can't be restored afterwards.</p>
-        <p class="hint">Apps rebuild their caches when they need them. Files in use are skipped.</p>
+        <p class="warn" id="confirmWarn" hidden></p>
+        <p class="hint" id="confirmHint"></p>
         <div class="actions end">
           <button value="cancel">Cancel</button>
-          <button value="ok" class="primary">Delete</button>
+          <button value="ok" class="primary" id="confirmOk">Delete</button>
         </div>
       </form>
     </dialog>

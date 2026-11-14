@@ -1,6 +1,6 @@
 import { PET_IDS, PET_PURPOSE } from '../shared/constants'
 import { ago, formatBytes } from '../shared/format'
-import type { CleanMode, HubView, JunkTarget, PetConfig, PetId, Settings } from '../shared/types'
+import type { CleanMode, HubView, JunkTarget, PetConfig, PetId, RepoInfo, Settings } from '../shared/types'
 
 /**
  * The GitGremlin panel: every pet in one place. The sidebar lists the pets
@@ -30,6 +30,7 @@ function saveSoon(ms = 250): void {
     renderNav()
     renderStatusLines()
     renderDusty()
+    renderSyncy()
     toast('Saved')
   }, ms)
 }
@@ -41,6 +42,27 @@ function toast(text: string): void {
   el.classList.add('show')
   if (toastTimer !== null) window.clearTimeout(toastTimer)
   toastTimer = window.setTimeout(() => el.classList.remove('show'), 1400)
+}
+
+/** Ask before doing something that can't be undone. Resolves true when confirmed. */
+function confirmDialog(o: { pet: PetId; title: string; items: string[]; warn?: string; hint: string; ok: string }): Promise<boolean> {
+  const dlg = $<HTMLDialogElement>('confirm')
+  dlg.dataset.pet = o.pet
+  $('confirmTitle').textContent = o.title
+  $('confirmList').replaceChildren(
+    ...o.items.map((t) => {
+      const li = document.createElement('li')
+      li.textContent = t
+      return li
+    })
+  )
+  $('confirmWarn').hidden = !o.warn
+  $('confirmWarn').textContent = o.warn ?? ''
+  $('confirmHint').textContent = o.hint
+  $('confirmOk').textContent = o.ok
+  dlg.returnValue = ''
+  dlg.showModal()
+  return new Promise((done) => dlg.addEventListener('close', () => done(dlg.returnValue === 'ok'), { once: true }))
 }
 
 const cleanError = (err: unknown) => (err as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
@@ -101,7 +123,11 @@ function renderStatusLines(): void {
 /** "I SNIFFED OUT 1.2 GB OF JUNK!" -> "I sniffed out 1.2 GB of junk!" (keeps units readable). */
 function sentence(text: string): string {
   const lower = text.toLowerCase().replace(/\b(\d+(?:\.\d+)?) (b|kb|mb|gb|tb)\b/g, (_m, n: string, u: string) => `${n} ${u.toUpperCase()}`)
-  return lower.charAt(0).toUpperCase() + lower.slice(1).replace(/\bi\b/g, 'I').replace(/github/g, 'GitHub').replace(/click me/g, 'click the pet')
+  return (lower.charAt(0).toUpperCase() + lower.slice(1))
+    .replace(/\bi\b/g, 'I')
+    .replace(/github/g, 'GitHub')
+    .replace(/click me/g, 'click the pet')
+    .replace(/([.!?]\s+)([a-z])/g, (_m, gap: string, c: string) => gap + c.toUpperCase())
 }
 
 // --- pet pages ------------------------------------------------------------------------------------
@@ -383,33 +409,222 @@ function wireDusty(): void {
     await reload() // show "Sniffing..." right away
     apply(await p)
   })
-  $('cleanNow').addEventListener('click', () => {
+  $('cleanNow').addEventListener('click', async () => {
     const cats = selectedJunk()
     if (!cats.length) return
-    const list = $('confirmList')
-    list.replaceChildren(
-      ...cats.map((c) => {
-        const li = document.createElement('li')
-        li.textContent = `${c.label}: ${formatBytes(c.bytes)}`
-        return li
+    const ok = await confirmDialog({
+      pet: 'dusty',
+      title: `Let ${view.settings.pets.dusty.name} eat this junk?`,
+      items: cats.map((c) => `${c.label}: ${formatBytes(c.bytes)}`),
+      warn: cats.some((c) => c.target === 'recycleBin') ? "The Recycle Bin is emptied for good: those files can't be restored afterwards." : undefined,
+      hint: 'Apps rebuild their caches when they need them. Files in use are skipped.',
+      ok: 'Delete'
+    })
+    if (!ok) return
+    const p = api.dustyClean(cats.map((c) => c.id))
+    await reload()
+    const v = await p
+    apply(v)
+    if (v.dusty.lastClean) toast(`Freed ${formatBytes(v.dusty.lastClean.freedBytes)}`)
+  })
+}
+
+// --- Syncy: work not on GitHub ------------------------------------------------------------------
+const plural = (n: number, word: string, many = `${word}s`) => `${n} ${n === 1 ? word : many}`
+
+function isStale(r: RepoInfo): boolean {
+  const limit = view.settings.syncy.staleHours * 3_600_000
+  return [r.changesSince, r.unpushedSince, r.stashSince].some((t) => t !== null && Date.now() - t > limit)
+}
+
+const hasWork = (r: RepoInfo) => r.changes > 0 || r.unpushed > 0 || r.stashes > 0
+const oldestOf = (r: RepoInfo) => Math.min(...[r.changesSince, r.unpushedSince, r.stashSince].map((t) => t ?? Infinity))
+
+function badge(text: string, kind: '' | 'stale' | 'fresh' | 'info' | 'ok' = ''): HTMLElement {
+  const b = document.createElement('span')
+  b.className = `badge ${kind}`.trim()
+  b.textContent = text
+  return b
+}
+
+function button(label: string, title: string, onClick: () => void, cls = 'small'): HTMLButtonElement {
+  const b = document.createElement('button')
+  b.type = 'button'
+  b.className = cls
+  b.textContent = label
+  b.title = title
+  b.addEventListener('click', onClick)
+  return b
+}
+
+async function repoAction(action: Parameters<typeof api.syncyAction>[0]): Promise<void> {
+  const r = await api.syncyAction(action)
+  toast(r.message)
+  await reload()
+}
+
+function repoRow(r: RepoInfo): HTMLElement {
+  const li = document.createElement('li')
+  li.className = 'repo'
+  const main = document.createElement('div')
+  main.className = 'repo-main'
+  const name = document.createElement('b')
+  name.textContent = r.name
+  main.append(name)
+  if (r.branch) main.append(badge(r.branch, 'info'))
+  const path = document.createElement('div')
+  path.className = 'repo-path'
+  path.textContent = r.path
+  path.title = r.path
+  main.append(path)
+
+  const badges = document.createElement('div')
+  badges.className = 'badges'
+  const limit = view.settings.syncy.staleHours * 3_600_000
+  const kind = (t: number | null) => (t !== null && Date.now() - t > limit ? 'stale' : 'fresh')
+  const since = (t: number | null) => (t ? ` · since ${ago(t)}` : '')
+  if (r.error) badges.append(badge(`Couldn't check: ${r.error}`, 'stale'))
+  if (r.changes) badges.append(badge(`${plural(r.changes, 'uncommitted change')}${since(r.changesSince)}`, kind(r.changesSince)))
+  if (r.unpushed) badges.append(badge(`${plural(r.unpushed, 'commit')} not on GitHub${since(r.unpushedSince)}`, kind(r.unpushedSince)))
+  if (r.stashes) badges.append(badge(`${plural(r.stashes, 'stash', 'stashes')}${since(r.stashSince)}`, kind(r.stashSince)))
+  if (!r.hasRemote && !r.error) badges.append(badge('no remote: nothing here is backed up', 'info'))
+  if (r.merged.length) badges.append(badge(`${plural(r.merged.length, 'merged branch', 'merged branches')}`, 'info'))
+
+  const actions = document.createElement('div')
+  actions.className = 'repo-actions'
+  actions.append(
+    button('Open folder', 'Open this repo in File Explorer', () => void repoAction({ kind: 'open', path: r.path })),
+    button('Terminal', 'Open a terminal in this repo', () => void repoAction({ kind: 'terminal', path: r.path }))
+  )
+  if (r.merged.length) {
+    actions.append(
+      button(`Delete ${plural(r.merged.length, 'merged branch', 'merged branches')}`, r.merged.join(', '), async () => {
+        const ok = await confirmDialog({
+          pet: 'syncy',
+          title: `Delete merged branches in ${r.name}?`,
+          items: r.merged,
+          hint: `These local branches are already merged into ${r.base ?? 'your main branch'}, so their work is safe there. Remote branches on GitHub aren't touched, and git refuses to delete a branch that isn't fully merged.`,
+          ok: 'Delete branches'
+        })
+        if (ok) await repoAction({ kind: 'deleteBranches', path: r.path, branches: r.merged })
       })
     )
-    $('confirmWarn').hidden = !cats.some((c) => c.target === 'recycleBin')
-    const dlg = $<HTMLDialogElement>('confirm')
-    dlg.returnValue = ''
-    dlg.showModal()
-    dlg.addEventListener(
-      'close',
-      async () => {
-        if (dlg.returnValue !== 'ok') return
-        const p = api.dustyClean(cats.map((c) => c.id))
-        await reload()
-        const v = await p
-        apply(v)
-        if (v.dusty.lastClean) toast(`Freed ${formatBytes(v.dusty.lastClean.freedBytes)}`)
-      },
-      { once: true }
-    )
+  }
+  actions.append(button('Ignore', 'Stop watching this repo', () => void repoAction({ kind: 'ignore', path: r.path }), 'small subtle'))
+  li.append(main, badges, actions)
+  if (isStale(r)) li.classList.add('stale')
+  return li
+}
+
+function pathRow(path: string, label: string, title: string, onClick: () => void): HTMLElement {
+  const li = document.createElement('li')
+  const span = document.createElement('span')
+  span.textContent = path
+  span.title = path
+  li.append(span, button(label, title, onClick))
+  return li
+}
+
+function renderSyncy(): void {
+  const v = view.syncy
+  const scan = v.scan
+  const cfg = draft.syncy
+  const enabled = view.settings.pets.syncy.enabled
+  const name = view.settings.pets.syncy.name
+  $<HTMLSelectElement>('syncyStale').value = String(cfg.staleHours)
+  $<HTMLSelectElement>('syncySummary').value = cfg.summaryHour === null ? 'off' : String(cfg.summaryHour)
+  $<HTMLSelectElement>('syncyEvery').value = String(cfg.scanEveryMinutes)
+  $<HTMLInputElement>('syncyBranches').checked = cfg.trackBranches
+  $<HTMLInputElement>('syncyAuto').checked = cfg.autoFind
+  $('syncyAutoHint').textContent = `Searches inside your user folder, common code folders and your other local drives: ${v.autoRoots.join(', ') || 'none found'}.`
+
+  $('syncyFolders').replaceChildren(
+    ...(cfg.folders.length
+      ? cfg.folders.map((f) =>
+          pathRow(f, 'Remove', 'Stop searching this folder', () => {
+            draft.syncy.folders = draft.syncy.folders.filter((x) => x !== f)
+            saveSoon(0)
+            renderSyncy()
+          })
+        )
+      : [Object.assign(document.createElement('li'), { className: 'empty', textContent: 'None yet.' })])
+  )
+  $('syncyIgnoredBox').hidden = !cfg.ignored.length
+  $('syncyIgnored').replaceChildren(
+    ...cfg.ignored.map((p) => pathRow(p, 'Watch again', 'Watch this repo again', () => void repoAction({ kind: 'unignore', path: p })))
+  )
+
+  const scanBtn = $<HTMLButtonElement>('syncyScan')
+  scanBtn.disabled = Boolean(v.busy) || !enabled
+  scanBtn.textContent = v.busy === 'scanning' ? 'Checking...' : 'Check now'
+
+  const repos = scan?.repos ?? []
+  const info: string[] = []
+  if (!enabled) info.push(`Turn ${name} on to check your repos.`)
+  else if (v.busy === 'scanning') info.push(`${name} is checking your repos...`)
+  else if (v.busy === 'cleaning') info.push(`${name} is clearing old branches...`)
+  if (scan?.gitMissing) info.push("Git isn't installed (or isn't on PATH), so Syncy can't check your repos. Install Git, then click Check now.")
+  else if (scan) info.push(`Watching ${plural(repos.length, 'repo')} · last check ${ago(scan.at)}.`)
+  else info.push('Not checked yet.')
+  info.push("Syncy doesn't fetch, so \"not on GitHub\" is as of your last fetch or pull.")
+  $('syncyInfo').textContent = info.join(' ')
+
+  const needs = repos
+    .filter((r) => hasWork(r) || r.merged.length || r.error)
+    .sort((a, b) => Number(isStale(b)) - Number(isStale(a)) || oldestOf(a) - oldestOf(b))
+  const list = $('syncyRepos')
+  list.replaceChildren(...needs.map(repoRow))
+  if (!needs.length) {
+    const li = document.createElement('li')
+    li.className = 'empty'
+    li.textContent = !scan ? 'Click Check now to look at your repos.' : repos.length ? 'Everything is on GitHub. Nothing to do!' : 'No repos found yet. Add a folder below.'
+    list.append(li)
+  }
+
+  $('syncyAllTitle').textContent = `All ${plural(repos.length, 'repo')}`
+  $('syncyAll').replaceChildren(
+    ...repos.map((r) => {
+      const li = document.createElement('li')
+      li.className = 'repo compact'
+      const b = document.createElement('b')
+      b.textContent = r.name
+      const path = document.createElement('span')
+      path.className = 'repo-path'
+      path.textContent = r.path
+      li.append(b, badge(r.error ? 'error' : hasWork(r) ? 'unsaved work' : 'all on GitHub', r.error || isStale(r) ? 'stale' : hasWork(r) ? 'fresh' : 'ok'), path)
+      return li
+    })
+  )
+}
+
+function wireSyncy(): void {
+  const select = (id: string, set: (v: string) => void) =>
+    $(id).addEventListener('change', (e) => {
+      set((e.target as HTMLSelectElement).value)
+      saveSoon(0)
+    })
+  select('syncyStale', (v) => (draft.syncy.staleHours = Number(v)))
+  select('syncySummary', (v) => (draft.syncy.summaryHour = v === 'off' ? null : Number(v)))
+  select('syncyEvery', (v) => (draft.syncy.scanEveryMinutes = Number(v)))
+  $('syncyBranches').addEventListener('change', (e) => {
+    draft.syncy.trackBranches = (e.target as HTMLInputElement).checked
+    saveSoon(0)
+  })
+  $('syncyAuto').addEventListener('change', (e) => {
+    draft.syncy.autoFind = (e.target as HTMLInputElement).checked
+    saveSoon(0)
+  })
+  $('syncyAddFolder').addEventListener('click', async () => {
+    const folder = await api.pickFolder()
+    if (!folder || draft.syncy.folders.some((f) => f.toLowerCase() === folder.toLowerCase())) return
+    draft.syncy.folders.push(folder)
+    saveSoon(0)
+    renderSyncy()
+  })
+  $('syncyScan').addEventListener('click', async () => {
+    const p = api.syncyScan()
+    await reload() // show "Checking..." right away
+    apply(await p)
   })
 }
 
@@ -439,6 +654,7 @@ function apply(v: HubView, refill = false): void {
   renderStatusLines()
   renderGitHub()
   renderDusty()
+  renderSyncy()
 }
 
 async function reload(): Promise<void> {
@@ -457,6 +673,7 @@ async function start(): Promise<void> {
   }
   wireGitHub()
   wireDusty()
+  wireSyncy()
   wireGeneral()
   apply(view, true)
   show(page)

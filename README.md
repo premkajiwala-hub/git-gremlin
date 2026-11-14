@@ -14,10 +14,10 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/pets-hero.png" alt="Catbot, a white robot cat, and Dusty, a grey raccoon with a teal bandana, facing each other with a heart between them" width="600" />
+  <img src="docs/images/pets-hero.png" alt="Catbot, a white robot cat, Syncy, a brown beaver in a yellow hard hat, and Dusty, a grey raccoon with a teal bandana, with hearts between them" width="720" />
 </p>
 
-GitGremlin puts little pixel-art pets on your Windows desktop, and each one does a job for you. Catbot keeps an eye on your GitHub contributions. Dusty cleans junk files off your PC. They roam, play and talk to you, and you manage them all from one app.
+GitGremlin puts little pixel-art pets on your Windows desktop, and each one does a job for you. Catbot keeps an eye on your GitHub contributions. Dusty cleans junk files off your PC. Syncy makes sure your work actually reaches GitHub. They roam, play and talk to you, and you manage them all from one app.
 
 ## Contents
 
@@ -47,6 +47,7 @@ GitGremlin is a home for **pets with a purpose**:
 |:---:|---|---|---|
 | <img src="assets/pets/catbot/portrait.png" alt="Catbot" width="60" /> | **Catbot**<br /><sub>robot cat</sub> | Mirrors today's square on your **GitHub contribution chart**: hungry on days you haven't contributed, happier and livelier the greener the square. New contributions feed it. | [Catbot's guide →](docs/pets/catbot.md) |
 | <img src="assets/pets/dusty/portrait.png" alt="Dusty" width="66" /> | **Dusty**<br /><sub>raccoon</sub> | Sniffs out **junk files**: developer caches, the Recycle Bin, and optionally temp files and browser caches. Cleans them only the way you allow: ask first, automatically, or report only. | [Dusty's guide →](docs/pets/dusty.md) |
+| <img src="assets/pets/syncy/portrait.png" alt="Syncy" width="66" /> | **Syncy**<br /><sub>beaver</sub> | Guards **work that isn't on GitHub**: uncommitted changes, unpushed commits and forgotten stashes across all your repos. Nudges you when work sits too long, gives an end-of-day check, and tidies merged branches. | [Syncy's guide →](docs/pets/syncy.md) |
 
 More pets are on the way.
 
@@ -70,7 +71,7 @@ GitGremlin runs on **Windows 10 or 11 (x64)**. These steps install it as a norma
 | Tool | Why | Version |
 |---|---|---|
 | [Node.js](https://nodejs.org/) (includes npm) | Installs GitGremlin's packages and builds the app | 22.12 or newer (the current LTS is recommended) |
-| [Git](https://git-scm.com/) | Downloads the project (optional: you can download a ZIP instead) | any recent version |
+| [Git](https://git-scm.com/) | Downloads the project, and Syncy uses it to check your repos | any recent version |
 | winget (App Installer) | Installs the two tools above with one command each | comes with Windows 10 (1809+) and 11 |
 | A GitHub account | For Catbot, which reads your contribution chart | – |
 
@@ -262,7 +263,8 @@ Pets are awake the whole time GitGremlin runs. Turn one off with its switch, or 
 
 - **Your GitHub account:** Catbot links through GitHub's own sign-in, with read-only access. The token is stored encrypted on your PC. [Details →](docs/pets/catbot.md#privacy-and-your-github-account)
 - **Your files:** Dusty only looks in a fixed list of junk locations inside your user folders. It never follows links, skips files in use, and by default deletes nothing until you confirm. [Safety rules →](docs/pets/dusty.md#safety-rules)
-- **Network:** the only network access is Catbot's GitHub check.
+- **Your repos:** Syncy only reads them with git. It never fetches or pushes, and the only change it can make is deleting merged local branches, after you confirm. [Safety →](docs/pets/syncy.md#safety)
+- **Network:** the only network access is Catbot's GitHub check. Syncy works offline.
 - **Your data stays local:** settings and state are in `%APPDATA%\GitGremlin\state.json`.
 
 ## Troubleshooting
@@ -284,7 +286,7 @@ Pets are awake the whole time GitGremlin runs. Turn one off with its switch, or 
 - **Full-screen games and apps cover the pets, even in on-top mode.** So do the Start menu, notification centre, Alt+Tab and Task View.
 - Window hopping uses the **focused** window only, and skips maximised and full-screen windows.
 - Dragging works only on the monitor the pet is on. To change monitors, toss it or let it walk.
-- Each pet has its own limits; see [Catbot's](docs/pets/catbot.md#limitations) and [Dusty's](docs/pets/dusty.md#limitations) guides.
+- Each pet has its own limits; see [Catbot's](docs/pets/catbot.md#limitations), [Dusty's](docs/pets/dusty.md#limitations) and [Syncy's](docs/pets/syncy.md#limitations) guides.
 
 ## Documentation
 
@@ -292,6 +294,7 @@ Pets are awake the whole time GitGremlin runs. Turn one off with its switch, or 
 |---|---|
 | [Catbot](docs/pets/catbot.md) | Linking GitHub, how its mood works, feeding, settings, privacy |
 | [Dusty](docs/pets/dusty.md) | Cleaning modes, where it looks, safety rules, settings |
+| [Syncy](docs/pets/syncy.md) | What counts as unsaved work, where it looks, nudges, merged branches, safety |
 | [Development guide](docs/development.md) | Dev mode, project structure, how it works, pet art, adding a pet, building the installer |
 
 ## License

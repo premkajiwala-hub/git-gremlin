@@ -1,4 +1,4 @@
-<sub>[← Catbot](catbot.md) · **Dusty** · [Back to GitGremlin →](../../README.md)</sub>
+<sub>[← Catbot](catbot.md) · **Dusty** · [Syncy →](syncy.md)</sub>
 
 <p align="center">
   <img src="../../assets/pets/dusty/portrait.png" alt="Dusty's head: a grey raccoon with a dark eye mask and a teal bandana" width="104" />
@@ -157,4 +157,4 @@ To repaint or regenerate the art, see the [development guide](../development.md#
 
 ---
 
-<sub>[← Catbot](catbot.md) · [Back to GitGremlin](../../README.md)</sub>
+<sub>[← Catbot](catbot.md) · [Back to GitGremlin](../../README.md) · [Syncy →](syncy.md)</sub>

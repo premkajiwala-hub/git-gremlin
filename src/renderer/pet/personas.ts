@@ -16,6 +16,8 @@ export interface Persona {
   extraWeights: [string, number][]
   /** Washes its paws after eating (raccoons do). */
   washAfterEat: boolean
+  /** An animation to play when it nags you about something (Syncy's tail slap). */
+  alertAnim?: 'slap'
   bubble: BubbleTheme
 }
 
@@ -70,4 +72,31 @@ const DUSTY: Persona = {
   }
 }
 
-export const PERSONAS: Record<PetId, Persona> = { catbot: CATBOT, dusty: DUSTY }
+const SYNCY: Persona = {
+  hungryLines: ['SO MUCH WORK NOT ON GITHUB...', 'MY DAM IS LEAKING! PUSH YOUR COMMITS.', 'ONE LAPTOP SPILL AND IT IS GONE...'],
+  starvingLines: ['...'],
+  fedLines: [
+    [],
+    ['THAT WORK HAS BEEN SITTING A WHILE...', 'GIT PUSH. PLEASE?'],
+    ['SOME WORK STILL NEEDS PUSHING.', 'DON’T FORGET TO PUSH TODAY.', 'COMMIT SMALL, PUSH OFTEN.'],
+    ['FRESH WORK IN PROGRESS. NICE!', 'GNAWING ON YOUR GIT LOG.', 'PUSH WHEN YOU ARE READY.'],
+    ['EVERYTHING IS ON GITHUB. SAFE!', 'NOTHING LEAKS PAST THIS DAM.', 'ALL SYNCED. TIME FOR A SNACK.']
+  ],
+  thrownLines: ['WHOA! MY HARD HAT!', 'HEY, I WAS BUILDING!', 'SPLASH!'],
+  tapLines: ['*TAP TAP* PUSH IT?', 'KNOCK KNOCK. GIT PUSH?'],
+  extraWeights: [
+    ['rummage', 9],
+    ['wash', 5]
+  ],
+  washAfterEat: true,
+  alertAnim: 'slap',
+  bubble: {
+    header: '#f2c230',
+    headerShade: '#c99a1c',
+    headerText: '#2a1a06',
+    cable: '#f2c230',
+    text: '#ffe2a8'
+  }
+}
+
+export const PERSONAS: Record<PetId, Persona> = { catbot: CATBOT, dusty: DUSTY, syncy: SYNCY }

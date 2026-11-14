@@ -67,7 +67,7 @@ export type GitHubSource = 'oauth' | 'gh' | 'none'
 export type HungerStage = 'fed' | 'hungry' | 'starving'
 
 /** Every pet GitGremlin can host. */
-export type PetId = 'catbot' | 'dusty'
+export type PetId = 'catbot' | 'dusty' | 'syncy'
 
 /**
  * A pet's live state, built by its "purpose" service in the main process
@@ -123,11 +123,30 @@ export interface DustyConfig {
   scanEveryMinutes: number
 }
 
+/** What Syncy watches, and when it nudges you. */
+export interface SyncyConfig {
+  /** Look for repos in common code folders and on data drives. */
+  autoFind: boolean
+  /** Extra folders to search (a few levels deep). */
+  folders: string[]
+  /** Repos to leave alone. */
+  ignored: string[]
+  /** Unsaved work older than this many hours gets a nudge. */
+  staleHours: number
+  /** Minutes between repo checks. */
+  scanEveryMinutes: number
+  /** Local hour (0-23) for the evening summary, or null for none. */
+  summaryHour: number | null
+  /** List local branches that are already merged, and offer to delete them. */
+  trackBranches: boolean
+}
+
 export interface Settings {
   /** true = pets are drawn on top of every app; false = only on the desktop, behind app windows. */
   onTopOfApps: boolean
   pets: Record<PetId, PetConfig>
   dusty: DustyConfig
+  syncy: SyncyConfig
 }
 
 export interface PetInit {
@@ -174,6 +193,56 @@ export interface DustyView {
   lastClean: CleanResult | null
   busy: 'scanning' | 'cleaning' | null
 }
+/** One git repository as Syncy last saw it. */
+export interface RepoInfo {
+  path: string
+  name: string
+  /** Current branch, or null when detached. */
+  branch: string | null
+  /** The repo has at least one remote (somewhere to push to). */
+  hasRemote: boolean
+  /** Uncommitted changes (modified, added, deleted and untracked files). */
+  changes: number
+  /** When the oldest uncommitted change was made (ms), or null. */
+  changesSince: number | null
+  /** Commits on local branches that aren't on any remote. */
+  unpushed: number
+  unpushedSince: number | null
+  stashes: number
+  stashSince: number | null
+  /** Local branches already merged into the default branch (safe to delete). */
+  merged: string[]
+  /** The default branch they were checked against, e.g. "main". */
+  base: string | null
+  error: string | null
+}
+
+export interface RepoScan {
+  at: number
+  repos: RepoInfo[]
+  /** Folders that were searched. */
+  roots: string[]
+  /** Git isn't installed (or not on PATH). */
+  gitMissing: boolean
+}
+
+export interface SyncyView {
+  scan: RepoScan | null
+  busy: 'scanning' | 'cleaning' | null
+  /** Folders Syncy searches automatically (when auto-find is on). */
+  autoRoots: string[]
+}
+
+/** Something to do with a repo from the GitGremlin panel. */
+export type RepoAction =
+  | { kind: 'open' | 'terminal' | 'ignore' | 'unignore'; path: string }
+  | { kind: 'deleteBranches'; path: string; branches: string[] }
+
+export interface ActionResult {
+  ok: boolean
+  message: string
+}
+
 export interface GitHubView {
   /** The linked account, or null when not signed in. */
   login: string | null
@@ -200,6 +269,7 @@ export interface HubView {
   status: Record<PetId, PetStatus>
   github: GitHubView
   dusty: DustyView
+  syncy: SyncyView
 }
 
 /** Shown while signing in: enter this code at the verification URL. */

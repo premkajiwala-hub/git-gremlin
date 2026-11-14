@@ -1,6 +1,9 @@
-import { app, BrowserWindow, clipboard, ipcMain, powerMonitor, shell } from 'electron'
+import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
+import { join, resolve } from 'node:path'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, powerMonitor, shell } from 'electron'
 import { APP_ID, IPC, PET_IDS } from '../shared/constants'
-import type { FeedEvent, HubView, PetId, PetStatus, Settings, SignInCode, SignInResult } from '../shared/types'
+import type { ActionResult, FeedEvent, HubView, PetId, PetStatus, RepoAction, Settings, SignInCode, SignInResult } from '../shared/types'
 import { clientId, DeviceFlow } from './github-auth'
 import { GitHubWatcher, moodFrom, type GitHubData } from './github'
 import { hubWindow, openHub } from './hub-window'
@@ -8,6 +11,7 @@ import { installStartMenuShortcut, rebuildIfStale } from './launcher'
 import { OverlayManager } from './overlay'
 import { catbotFeedText, catbotStatus, newContributions } from './pets/catbot'
 import { DustyService } from './pets/dusty'
+import { SyncyService } from './pets/syncy'
 import { normalizeSettings, Store } from './store'
 import { AppTray } from './tray'
 import { WindowTracker } from './windows'
@@ -45,8 +49,10 @@ if (process.argv.includes('--install-shortcut')) {
     const sayText = after('--say')
     if (argv.includes('--feed')) {
       const pet = petArg('--feed')
-      feed(pet, { text: pet === 'dusty' ? 'MMM, A TEST CRUMB!' : catbotFeedText(1), debug: true })
+      const text = pet === 'dusty' ? 'MMM, A TEST CRUMB!' : pet === 'syncy' ? 'CRUNCHY LOG!' : catbotFeedText(1)
+      feed(pet, { text, debug: true })
     } else if (argv.includes('--scan')) void dusty.scan()
+    else if (argv.includes('--check')) void syncy.check()
     else if (sayText) overlays.sendToPet('catbot', IPC.say, sayText.toUpperCase())
     else if (argv.includes('--settings')) openHub()
     else if (overlays.isHidden) setHidden(false)
@@ -59,6 +65,7 @@ let overlays: OverlayManager
 let tracker: WindowTracker
 let github: GitHubWatcher
 let dusty: DustyService
+let syncy: SyncyService
 let tray: AppTray
 let hideTimer: NodeJS.Timeout | null = null
 let hinted = false
@@ -89,6 +96,11 @@ function start(): void {
     feed: (text) => feed('dusty', { text }),
     say: (text) => overlays.sendToPet('dusty', IPC.say, text)
   })
+  syncy = new SyncyService(store, {
+    changed: () => pushStatus(),
+    feed: (text) => feed('syncy', { text }),
+    say: (text) => overlays.sendToPet('syncy', IPC.say, text)
+  })
   tray = new AppTray({
     openHub: (page) => openHub(page),
     setPetEnabled: (id, enabled) => {
@@ -100,6 +112,8 @@ function start(): void {
     catbotFeed: () => feed('catbot', { text: catbotFeedText(1), debug: true }),
     dustyScan: () => void dusty.scan(),
     dustyReview: () => openHub('dusty'),
+    syncyCheck: () => void syncy.check(),
+    syncyReview: () => openHub('syncy'),
     hideForHour: () => setHidden(true, 60 * 60_000),
     showPets: () => setHidden(false),
     toggleStartWithWindows: () => {
@@ -113,6 +127,7 @@ function start(): void {
   tracker.start()
   github.start()
   dusty.start()
+  syncy.start()
   if (github.source === 'none') hintSignIn(6000)
   registerHubIpc()
 
@@ -133,11 +148,12 @@ function hintSignIn(delay: number): void {
 
 function status(id: PetId): PetStatus {
   const cfg = store.state.settings.pets[id]
-  return id === 'catbot' ? catbotStatus(cfg, github.data, github.source !== 'none') : dusty.status(cfg)
+  if (id === 'catbot') return catbotStatus(cfg, github.data, github.source !== 'none')
+  return id === 'dusty' ? dusty.status(cfg) : syncy.status(cfg)
 }
 
 function allStatus(): Record<PetId, PetStatus> {
-  return { catbot: status('catbot'), dusty: status('dusty') }
+  return Object.fromEntries(PET_IDS.map((id) => [id, status(id)])) as Record<PetId, PetStatus>
 }
 
 /** Push fresh status to the pets, the tray and the panel. */
@@ -238,7 +254,8 @@ async function hubView(): Promise<HubView> {
       signInAvailable: clientId() !== '',
       ghAvailable: await ghAvailable()
     },
-    dusty: dusty.view()
+    dusty: dusty.view(),
+    syncy: syncy.view()
   }
 }
 
@@ -267,9 +284,28 @@ function registerHubIpc(): void {
       (t) => next.dusty.targets[t] && !before.dusty.targets[t]
     )
     if (newTarget || (next.pets.dusty.enabled && !before.pets.dusty.enabled)) setTimeout(() => void dusty.scan(), 500)
+    // Syncy: new interval, or new places to look (or switched on): check again right away.
+    const a = before.syncy
+    const b = next.syncy
+    if (b.scanEveryMinutes !== a.scanEveryMinutes) syncy.reschedule()
+    const where = (c: typeof a) => JSON.stringify([c.autoFind, c.folders, c.ignored, c.trackBranches])
+    if (where(a) !== where(b) || (next.pets.syncy.enabled && !before.pets.syncy.enabled)) setTimeout(() => void syncy.check(), 500)
     if (sww !== startWithWindows()) setStartWithWindows(Boolean(sww))
     changed()
     return hubView()
+  })
+
+  // --- Syncy ---------------------------------------------------------------------------
+  ipcMain.handle(IPC.syncyScan, async () => {
+    await syncy.check()
+    return hubView()
+  })
+  ipcMain.handle(IPC.syncyAction, (_e, action: RepoAction) => repoAction(action))
+  ipcMain.handle(IPC.pickFolder, async (e): Promise<string | null> => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const opts = { title: 'Choose a folder with your repos', properties: ['openDirectory' as const] }
+    const r = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts)
+    return r.canceled ? null : (r.filePaths[0] ?? null)
   })
 
   // --- Dusty ---------------------------------------------------------------------------
@@ -341,7 +377,52 @@ app.on('before-quit', () => {
   store?.flush()
   github?.stop()
   dusty?.stop()
+  syncy?.stop()
   tracker?.stop()
   overlays?.stop()
   tray?.destroy()
 })
+
+/** A repo the panel may act on: one from Syncy's last check, or an ignored one. */
+function knownRepo(path: unknown): string | null {
+  if (typeof path !== 'string') return null
+  const key = resolve(path).toLowerCase()
+  const known = [...(store.state.syncy.lastScan?.repos.map((r) => r.path) ?? []), ...store.state.settings.syncy.ignored]
+  return known.find((p) => resolve(p).toLowerCase() === key) ?? null
+}
+
+/** Open a terminal in a folder: Windows Terminal if installed, otherwise PowerShell. */
+function openTerminal(dir: string): void {
+  const wt = join(process.env.LOCALAPPDATA ?? '', 'Microsoft', 'WindowsApps', 'wt.exe')
+  const [exe, args] = existsSync(wt) ? [wt, ['-d', dir]] : ['powershell.exe', ['-NoExit']]
+  spawn(exe, args, { cwd: dir, detached: true, stdio: 'ignore', windowsHide: false }).unref()
+}
+
+async function repoAction(action: RepoAction): Promise<ActionResult> {
+  const path = knownRepo(action?.path)
+  if (!path) return { ok: false, message: 'Unknown repo.' }
+  const cfg = store.state.settings.syncy
+  switch (action.kind) {
+    case 'open': {
+      const err = await shell.openPath(path)
+      return { ok: !err, message: err || 'Opened.' }
+    }
+    case 'terminal':
+      openTerminal(path)
+      return { ok: true, message: 'Opened a terminal.' }
+    case 'ignore': {
+      if (!cfg.ignored.some((p) => resolve(p).toLowerCase() === resolve(path).toLowerCase())) cfg.ignored.push(path)
+      const scan = store.state.syncy.lastScan
+      if (scan) scan.repos = scan.repos.filter((r) => r.path !== path)
+      changed()
+      return { ok: true, message: 'Syncy will leave that repo alone.' }
+    }
+    case 'unignore':
+      cfg.ignored = cfg.ignored.filter((p) => resolve(p).toLowerCase() !== resolve(path).toLowerCase())
+      changed()
+      setTimeout(() => void syncy.check(), 300)
+      return { ok: true, message: 'Syncy is watching that repo again.' }
+    case 'deleteBranches':
+      return syncy.deleteMerged(path, Array.isArray(action.branches) ? action.branches.filter((b) => typeof b === 'string') : [])
+  }
+}

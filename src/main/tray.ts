@@ -10,6 +10,8 @@ export interface TrayActions {
   catbotFeed(): void
   dustyScan(): void
   dustyReview(): void
+  syncyCheck(): void
+  syncyReview(): void
   hideForHour(): void
   showPets(): void
   toggleStartWithWindows(): void
@@ -45,16 +47,21 @@ export class AppTray {
     const pets: MenuItemConstructorOptions[] = PET_IDS.map((id) => {
       const cfg = s.settings.pets[id]
       const status = s.status[id]
-      const extra: MenuItemConstructorOptions[] =
-        id === 'catbot'
-          ? [
-              { label: 'Refresh GitHub now', enabled: cfg.enabled, click: () => a.catbotRefresh() },
-              { label: 'Feed (debug)', enabled: cfg.enabled, click: () => a.catbotFeed() }
-            ]
-          : [
-              { label: 'Scan for junk now', enabled: cfg.enabled, click: () => a.dustyScan() },
-              { label: 'Review and clean...', enabled: cfg.enabled, click: () => a.dustyReview() }
-            ]
+      const extras: Record<PetId, MenuItemConstructorOptions[]> = {
+        catbot: [
+          { label: 'Refresh GitHub now', enabled: cfg.enabled, click: () => a.catbotRefresh() },
+          { label: 'Feed (debug)', enabled: cfg.enabled, click: () => a.catbotFeed() }
+        ],
+        dusty: [
+          { label: 'Scan for junk now', enabled: cfg.enabled, click: () => a.dustyScan() },
+          { label: 'Review and clean...', enabled: cfg.enabled, click: () => a.dustyReview() }
+        ],
+        syncy: [
+          { label: 'Check my repos now', enabled: cfg.enabled, click: () => a.syncyCheck() },
+          { label: 'Show unsaved work...', enabled: cfg.enabled, click: () => a.syncyReview() }
+        ]
+      }
+      const extra = extras[id]
       return {
         label: cfg.name,
         submenu: [

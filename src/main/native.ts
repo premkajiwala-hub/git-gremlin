@@ -28,6 +28,7 @@ interface Win32 {
   WindowFromPoint: Fn
   SHQueryRecycleBinW: Fn
   SHEmptyRecycleBinW: Fn
+  GetDriveTypeW: Fn
 }
 
 let api: Win32 | null = null
@@ -62,7 +63,8 @@ try {
       `intptr_t __stdcall WindowFromPoint(${koffi.struct('POINT', { x: 'long', y: 'long' }).name} pt)`
     ),
     SHQueryRecycleBinW: shell32.func('long __stdcall SHQueryRecycleBinW(str16 pszRootPath, void *pSHQueryRBInfo)'),
-    SHEmptyRecycleBinW: shell32.func('long __stdcall SHEmptyRecycleBinW(intptr_t hwnd, str16 pszRootPath, uint32_t dwFlags)')
+    SHEmptyRecycleBinW: shell32.func('long __stdcall SHEmptyRecycleBinW(intptr_t hwnd, str16 pszRootPath, uint32_t dwFlags)'),
+    GetDriveTypeW: koffi.load('kernel32.dll').func('uint32_t __stdcall GetDriveTypeW(str16 lpRootPathName)')
   }
 } catch (err) {
   console.warn('[native] koffi unavailable, using fallbacks:', err)
@@ -246,4 +248,19 @@ export function getWindowInfo(hwnd: number): NativeWindowInfo | null {
     maximized: api.IsZoomed(hwnd),
     cloaked
   }
+}
+
+const DRIVE_FIXED = 3
+
+/** Local hard drives other than the Windows drive (e.g. D:\), skipping network, USB and optical drives. */
+export function fixedDataDrives(): string[] {
+  const system = (process.env.SystemDrive ?? 'C:').toUpperCase()
+  const out: string[] = []
+  for (let c = 67; c <= 90; c++) {
+    const letter = `${String.fromCharCode(c)}:`
+    if (letter === system) continue
+    const root = `${letter}\\`
+    if (api && api.GetDriveTypeW(root) === DRIVE_FIXED) out.push(root)
+  }
+  return out
 }
