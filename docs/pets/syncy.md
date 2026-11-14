@@ -81,7 +81,7 @@ When work has been sitting unsaved longer than your threshold, Syncy:
 - now and then says how many repos need you, and **slaps its tail**, the beaver warning;
 - turns its dot in the panel orange.
 
-Clicking Syncy opens its page in the panel.
+Right-click Syncy and choose **Review unsaved work...** to open its page in the panel.
 
 At **6 PM** each day it gives an **end-of-day check**. You can change the time or turn it off:
 
@@ -128,7 +128,7 @@ NOT ON GITHUB: 3 REPOS
 - API: 5 CHANGES, 2D
 LAST CHECK: 3M AGO
 
-> CLICK ME TO SEE THEM.
+> RIGHT-CLICK ME TO SEE THEM.
 ```
 
 ## Settings

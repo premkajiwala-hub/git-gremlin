@@ -39,8 +39,8 @@
 Dusty starts working as soon as GitGremlin runs:
 
 1. Shortly after start-up it **scans** the places it's allowed to look. It does this again every hour, and whenever you click **Scan now**.
-2. If it finds 50 MB of junk or more, it tells you, for example: `I SNIFFED OUT 1.2 GB OF JUNK! CLICK ME TO REVIEW.`
-3. Click Dusty (or open the panel → **Dusty**) to see exactly what it found: each kind of junk with its size and number of files.
+2. If it finds 50 MB of junk or more, it tells you, for example: `I SNIFFED OUT 1.2 GB OF JUNK! RIGHT-CLICK ME TO REVIEW.`
+3. Right-click Dusty and choose **Review junk...** (or open the panel → **Dusty**) to see exactly what it found: each kind of junk with its size and number of files.
 4. Tick what you want gone and click **Clean**. A confirmation lists everything that will be deleted. Dusty eats it, tells you how much it freed, and washes its paws.
 
 <p align="center">
@@ -106,7 +106,7 @@ MODE: ASK FIRST
 LAST SCAN: 3M AGO
 LAST CLEAN: 2H AGO (850 MB)
 
-> CLICK ME TO REVIEW AND CLEAN.
+> RIGHT-CLICK ME TO REVIEW AND CLEAN.
 ```
 
 ## Settings

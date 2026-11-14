@@ -31,14 +31,14 @@ export function catbotStatus(cfg: PetConfig, data: GitHubData, linked: boolean):
         '',
         `> ${mood.stage === 'fed' ? pick(RANDOM_LINES) : 'NO CONTRIBUTIONS TODAY. ONE COMMIT WOULD FEED ME!'}`
       ]
-    : ['GITHUB NOT LINKED YET.', '', '> CLICK ME, THEN SIGN IN WITH GITHUB.']
+    : ['GITHUB NOT LINKED YET.', '', '> RIGHT-CLICK ME TO SIGN IN WITH GITHUB.']
   return {
     name: cfg.name,
     stage: connected ? mood.stage : 'fed',
     level: connected ? mood.level : 1,
     report,
     grid: connected ? mood.week : null,
-    alert: connected ? null : 'SIGN IN WITH GITHUB SO I KNOW IF YOU CODED TODAY! CLICK ME.',
+    alert: connected ? null : 'SIGN IN WITH GITHUB SO I KNOW IF YOU CODED TODAY! RIGHT-CLICK ME.',
     busy: null,
     connected
   }

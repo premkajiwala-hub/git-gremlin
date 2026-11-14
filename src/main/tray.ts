@@ -91,6 +91,11 @@ export class AppTray {
     )
   }
 
+  /** Show a menu at the cursor (used for the pets' right-click menus). */
+  popUp(menu: Menu): void {
+    this.tray.popUpContextMenu(menu)
+  }
+
   destroy(): void {
     this.tray.destroy()
   }

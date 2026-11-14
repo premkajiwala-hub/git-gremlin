@@ -191,7 +191,7 @@ export class SyncyService {
       return { ...base, stage: 'fed', level: 3, alert: null, report: ['CHECKING YOUR REPOS SOON...', '', '> I KEEP YOUR WORK SAFE.'] }
     }
     if (scan.gitMissing) {
-      const alert = 'I NEED GIT TO CHECK YOUR REPOS. INSTALL GIT, THEN CLICK ME.'
+      const alert = 'I NEED GIT TO CHECK YOUR REPOS. INSTALL GIT, THEN RIGHT-CLICK ME.'
       return { ...base, stage: 'fed', level: 2, alert, report: ['GIT NOT FOUND.', '', `> ${alert}`] }
     }
     const repos = scan.repos.filter((r) => !r.error)
@@ -199,7 +199,7 @@ export class SyncyService {
     const stale = unsaved.filter((r) => this.isStale(r, now))
     const oldestStale = Math.min(...stale.map((r) => oldest(r) ?? now))
     const level = !unsaved.length ? 4 : !stale.length ? 3 : stale.length >= 3 || now - oldestStale > 7 * DAY ? 1 : 2
-    const alert = stale.length ? `${stale.length} REPO${s(stale.length)} HAVE WORK THAT ISN'T ON GITHUB! CLICK ME.` : null
+    const alert = stale.length ? `${stale.length} REPO${s(stale.length)} HAVE WORK THAT ISN'T ON GITHUB! RIGHT-CLICK ME.` : null
 
     const lines: string[] = []
     if (this.busy === 'scanning') lines.push('CHECKING YOUR REPOS...')
@@ -208,7 +208,7 @@ export class SyncyService {
     for (const r of unsaved.slice(0, 3)) lines.push(`- ${short(r.name)}: ${what(r, now)}`)
     if (unsaved.length > 3) lines.push(`  ...AND ${unsaved.length - 3} MORE`)
     lines.push(`LAST CHECK: ${ago(scan.at).toUpperCase()}`)
-    lines.push('', `> ${stale.length ? 'CLICK ME TO SEE THEM.' : unsaved.length ? 'FRESH WORK. PUSH WHEN READY!' : repos.length ? pick(RANDOM_LINES) : 'NO REPOS FOUND. ADD A FOLDER ON MY PAGE.'}`)
+    lines.push('', `> ${stale.length ? 'RIGHT-CLICK ME TO SEE THEM.' : unsaved.length ? 'FRESH WORK. PUSH WHEN READY!' : repos.length ? pick(RANDOM_LINES) : 'NO REPOS FOUND. ADD A FOLDER ON MY PAGE.'}`)
     return { ...base, stage: level === 1 ? 'hungry' : 'fed', level, alert, report: lines }
   }
 }

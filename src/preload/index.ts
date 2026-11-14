@@ -35,6 +35,7 @@ const api = {
   sendSnapshot: (id: PetId, snap: PetSnapshot): void => ipcRenderer.send(IPC.snapshot, id, snap),
   setStanding: (id: PetId, hwnd: number): void => ipcRenderer.send(IPC.standing, id, hwnd),
   openHub: (id: PetId): void => ipcRenderer.send(IPC.openHub, id),
+  petMenu: (id: PetId): void => ipcRenderer.send(IPC.petMenu, id),
 
   onAdopt: (cb: (id: PetId, snap: PetSnapshot | null, status: PetStatus) => void): Unsub => on(IPC.adopt, cb),
   onRelease: (cb: (id: PetId) => void): Unsub => on(IPC.release, cb),

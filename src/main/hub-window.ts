@@ -5,15 +5,26 @@ import { APP_NAME, IPC } from '../shared/constants'
 let win: BrowserWindow | null = null
 
 /**
+ * Bring the panel to the front. Windows only lets the foreground app take
+ * focus, so it briefly goes always-on-top (a common trick) to come forward
+ * when opened from the tray or a pet's menu.
+ */
+function bringToFront(w: BrowserWindow): void {
+  if (w.isMinimized()) w.restore()
+  w.setAlwaysOnTop(true)
+  w.show()
+  w.focus()
+  w.setAlwaysOnTop(false)
+}
+
+/**
  * The GitGremlin panel: one window to manage every pet and its settings.
  * `page` selects what to show: a pet id, or 'general'.
  */
 export function openHub(page?: string): BrowserWindow {
   if (win && !win.isDestroyed()) {
     if (page) win.webContents.send(IPC.hubShowPage, page)
-    if (win.isMinimized()) win.restore()
-    win.show()
-    win.focus()
+    bringToFront(win)
     return win
   }
   win = new BrowserWindow({
@@ -24,7 +35,8 @@ export function openHub(page?: string): BrowserWindow {
     title: APP_NAME,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#0C0D0F' : '#F1F1EE',
     autoHideMenuBar: true,
-    icon: join(app.getAppPath(), 'assets', 'icon.png'),
+    // The multi-size .ico gives Windows a crisp taskbar icon at every scale.
+    icon: join(app.getAppPath(), 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
     show: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -37,7 +49,7 @@ export function openHub(page?: string): BrowserWindow {
   const url = process.env['ELECTRON_RENDERER_URL']
   if (url) void win.loadURL(`${url}/hub.html${page ? `?page=${encodeURIComponent(page)}` : ''}`)
   else void win.loadFile(join(__dirname, '../renderer/hub.html'), page ? { query: { page } } : undefined)
-  win.once('ready-to-show', () => win?.show())
+  win.once('ready-to-show', () => win && bringToFront(win))
   win.on('closed', () => {
     win = null
   })

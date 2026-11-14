@@ -54,9 +54,9 @@ const syncy = (stale: boolean): PetStatus => ({
   name: 'Syncy',
   stage: 'fed',
   level: stale ? 2 : 4,
-  report: stale ? ['WATCHING 7 REPOS', 'NOT ON GITHUB: 2 REPOS', '- API: 3 UNPUSHED, 4D', '', '> CLICK ME TO SEE THEM.'] : ['WATCHING 7 REPOS', 'ALL WORK IS ON GITHUB!'],
+  report: stale ? ['WATCHING 7 REPOS', 'NOT ON GITHUB: 2 REPOS', '- API: 3 UNPUSHED, 4D', '', '> RIGHT-CLICK ME TO SEE THEM.'] : ['WATCHING 7 REPOS', 'ALL WORK IS ON GITHUB!'],
   grid: null,
-  alert: stale ? "2 REPOS HAVE WORK THAT ISN'T ON GITHUB! CLICK ME." : null,
+  alert: stale ? "2 REPOS HAVE WORK THAT ISN'T ON GITHUB! RIGHT-CLICK ME." : null,
   busy: null,
   connected: true
 })
@@ -113,7 +113,7 @@ const actions: Record<string, () => void> = {
   'Catbot: level 4': () => level(4, 14),
   'Dusty: scan': () => {
     setStatus('dusty', dusty('scanning'))
-    window.setTimeout(() => setStatus('dusty', dusty(null, 'I SNIFFED OUT 1.2 GB OF JUNK! CLICK ME TO REVIEW.')), 9000)
+    window.setTimeout(() => setStatus('dusty', dusty(null, 'I SNIFFED OUT 1.2 GB OF JUNK! RIGHT-CLICK ME TO REVIEW.')), 9000)
   },
   'Dusty: clean': () => {
     setStatus('dusty', dusty('cleaning'))

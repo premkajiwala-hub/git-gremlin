@@ -42,6 +42,7 @@ GitGremlin puts little pixel-art pets on your Windows desktop, and each one does
 - **Syncy the beaver:** guards work you haven't pushed to GitHub. [Meet Syncy →](docs/pets/syncy.md)
 - **A real Windows app:** open GitGremlin from the Start menu or search ([Installation](#installation), step 5).
 - **More in General:** **Hide all pets** for an hour, and the app version.
+- **Right-click a pet** for its menu (review, run its job now, open GitGremlin). A plain click just shows its report.
 
 ## About
 
@@ -66,7 +67,7 @@ More pets are on the way.
 
 - **One panel for every pet.** Click the tray icon to open the GitGremlin panel. It lists your pets with what each is up to, and gives each pet a page for its job and its look. Changes save as you make them. Light and dark themes follow Windows.
 - **Lives on your desktop.** Pets sit just above the wallpaper, so your app windows cover them. Or turn on **Show pets on top of apps** to keep them above everything.
-- **Hover to read their minds.** Hover over a pet and its message box shows its status report. It closes as soon as you move away. Click a pet that wants something (sign in, review junk) and its page opens in the panel.
+- **Hover to read their minds.** Hover over a pet and its message box shows its status report. It closes as soon as you move away. Right-click a pet for its menu: review what it found, run its job now, or open GitGremlin.
 - **Roams freely.** Pets walk, run, crawl and hop anywhere on the screen. They sit, get curious, walk between monitors and jump onto the window you're working in. Or keep a pet along the bottom of the screen.
 - **Plays with you.** Pets can follow your cursor, and you can pick them up, drag them and toss them.
 - **Crisp pixel art.** Everything is drawn in whole device pixels, so it stays sharp at any Windows scaling.
@@ -264,7 +265,8 @@ Click the tray icon to open it. The sidebar lists every pet with a status dot:
 |---|---|
 | Move the cursor over the desktop | Follows it (if **Follow my cursor** is on) and stops when it reaches it |
 | Hover over it | Stops, faces you and shows its message box; it closes the moment you move away |
-| Click it | Looks up and shows its report; if it wants something, its page opens in the panel |
+| Click it | Looks up at you and shows its report |
+| Right-click it | Opens its menu: its own actions (like **Review junk...** or **Check my repos now**), **Open GitGremlin** and **Put it away** |
 | Drag it | Dangles from your cursor |
 | Toss it | Flies, bounces off the screen edges and may land on a window; flick it hard for a red flash |
 

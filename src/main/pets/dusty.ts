@@ -81,7 +81,7 @@ export class DustyService {
       const ids = this.cleanable().filter((c) => c.target !== 'recycleBin').map((c) => c.id)
       if (ids.length) await this.clean(ids)
     } else if (this.cfg.mode === 'ask' && this.cleanableBytes() >= JUNK_ALERT_BYTES) {
-      this.hooks.say(`I SNIFFED OUT ${formatBytes(this.cleanableBytes())} OF JUNK! CLICK ME TO REVIEW.`)
+      this.hooks.say(`I SNIFFED OUT ${formatBytes(this.cleanableBytes())} OF JUNK! RIGHT-CLICK ME TO REVIEW.`)
     }
     return this.store.state.dusty.lastScan
   }
@@ -130,9 +130,9 @@ export class DustyService {
     const mode = this.cfg.mode
 
     let alert: string | null = null
-    if (mode === 'ask' && junk >= JUNK_ALERT_BYTES) alert = `I SNIFFED OUT ${formatBytes(junk)} OF JUNK! CLICK ME TO REVIEW.`
+    if (mode === 'ask' && junk >= JUNK_ALERT_BYTES) alert = `I SNIFFED OUT ${formatBytes(junk)} OF JUNK! RIGHT-CLICK ME TO REVIEW.`
     else if (mode === 'auto' && recycle && recycle.bytes >= JUNK_ALERT_BYTES) {
-      alert = `THE RECYCLE BIN HAS ${formatBytes(recycle.bytes)}. CLICK ME TO EMPTY IT.`
+      alert = `THE RECYCLE BIN HAS ${formatBytes(recycle.bytes)}. RIGHT-CLICK ME TO EMPTY IT.`
     }
 
     const report = [
@@ -141,7 +141,7 @@ export class DustyService {
       `LAST SCAN: ${lastScan ? ago(lastScan.at).toUpperCase() : 'NOT YET'}`,
       `LAST CLEAN: ${lastClean ? `${ago(lastClean.at).toUpperCase()} (${formatBytes(lastClean.freedBytes)})` : 'NOT YET'}`,
       '',
-      `> ${alert ? 'CLICK ME TO REVIEW AND CLEAN.' : mode === 'report' ? 'I ONLY LOOK, I NEVER TOUCH.' : pick(RANDOM_LINES)}`
+      `> ${alert ? 'RIGHT-CLICK ME TO REVIEW AND CLEAN.' : mode === 'report' ? 'I ONLY LOOK, I NEVER TOUCH.' : pick(RANDOM_LINES)}`
     ]
     return {
       name: cfg.name,

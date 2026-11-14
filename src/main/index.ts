@@ -1,8 +1,9 @@
 import { spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { lstatSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, powerMonitor, shell } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeTheme, powerMonitor, shell, type MenuItemConstructorOptions } from 'electron'
 import { APP_ID, IPC, PET_IDS } from '../shared/constants'
+import { formatBytes } from '../shared/format'
 import type { ActionResult, FeedEvent, HubView, PetId, PetStatus, RepoAction, Settings, SignInCode, SignInResult } from '../shared/types'
 import { clientId, DeviceFlow } from './github-auth'
 import { GitHubWatcher, moodFrom, type GitHubData } from './github'
@@ -144,7 +145,7 @@ function start(): void {
 function hintSignIn(delay: number): void {
   if (hinted || !store.state.settings.pets.catbot.enabled) return
   hinted = true
-  setTimeout(() => overlays.sendToPet('catbot', IPC.say, 'SIGN IN WITH GITHUB SO I KNOW IF YOU CODED TODAY! CLICK ME.'), delay)
+  setTimeout(() => overlays.sendToPet('catbot', IPC.say, 'SIGN IN WITH GITHUB SO I KNOW IF YOU CODED TODAY! RIGHT-CLICK ME.'), delay)
 }
 
 function status(id: PetId): PetStatus {
@@ -273,7 +274,48 @@ function linkedHello(): void {
   overlays.sendToPet('catbot', IPC.say, `LINKED TO @${github.data.login}! LET'S SEE YOUR SQUARES.`)
 }
 
+/** The menu you get by right-clicking a pet: its own actions, then GitGremlin's. */
+function showPetMenu(id: PetId): void {
+  const cfg = store.state.settings.pets[id]
+  const s = status(id)
+  const own: MenuItemConstructorOptions[] = []
+  if (id === 'catbot') {
+    if (github.source === 'none') own.push({ label: 'Sign in with GitHub...', click: () => openHub('catbot') })
+    else own.push({ label: 'Refresh GitHub now', click: () => void github.refresh() }, { label: 'Show my contributions...', click: () => openHub('catbot') })
+  } else if (id === 'dusty') {
+    const junk = dusty.cleanable().reduce((n, c) => n + c.bytes, 0)
+    own.push(
+      { label: junk ? `Review ${formatBytes(junk)} of junk...` : 'Review junk...', click: () => openHub('dusty') },
+      { label: 'Scan for junk now', enabled: !dusty.busy, click: () => void dusty.scan() }
+    )
+  } else {
+    own.push(
+      { label: s.alert ? 'Review unsaved work...' : 'Show my repos...', click: () => openHub('syncy') },
+      { label: 'Check my repos now', enabled: !syncy.busy, click: () => void syncy.check() }
+    )
+  }
+  const menu = Menu.buildFromTemplate([
+    { label: cfg.name, enabled: false },
+    { type: 'separator' },
+    ...own,
+    { type: 'separator' },
+    { label: 'Open GitGremlin', click: () => openHub(id) },
+    {
+      label: `Put ${cfg.name} away`,
+      click: () => {
+        store.state.settings.pets[id].enabled = false
+        overlays.syncPets()
+        changed()
+      }
+    }
+  ])
+  tray.popUp(menu)
+}
+
 function registerHubIpc(): void {
+  ipcMain.on(IPC.petMenu, (_e, id: unknown) => {
+    if (PET_IDS.includes(id as PetId)) showPetMenu(id as PetId)
+  })
   ipcMain.handle(IPC.hubGet, () => hubView())
   ipcMain.handle(IPC.settingsSave, async (_e, s: Settings, sww: boolean) => {
     const before = store.state.settings
@@ -400,11 +442,28 @@ function knownRepo(path: unknown): string | null {
   return known.find((p) => resolve(p).toLowerCase() === key) ?? null
 }
 
+/** Is this file there? (lstat, because Windows Terminal is an app alias that existsSync can't follow.) */
+function present(path: string): boolean {
+  try {
+    lstatSync(path)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** A new PowerShell window in a folder. `start` gives it its own visible console. */
+function openPowerShell(dir: string): void {
+  spawn('cmd.exe', ['/c', 'start', '', 'powershell.exe', '-NoExit'], { cwd: dir, detached: true, stdio: 'ignore', windowsHide: true }).unref()
+}
+
 /** Open a terminal in a folder: Windows Terminal if installed, otherwise PowerShell. */
 function openTerminal(dir: string): void {
   const wt = join(process.env.LOCALAPPDATA ?? '', 'Microsoft', 'WindowsApps', 'wt.exe')
-  const [exe, args] = existsSync(wt) ? [wt, ['-d', dir]] : ['powershell.exe', ['-NoExit']]
-  spawn(exe, args, { cwd: dir, detached: true, stdio: 'ignore', windowsHide: false }).unref()
+  if (!present(wt)) return openPowerShell(dir)
+  const child = spawn(wt, ['-d', dir], { cwd: dir, detached: true, stdio: 'ignore' })
+  child.on('error', () => openPowerShell(dir))
+  child.unref()
 }
 
 async function repoAction(action: RepoAction): Promise<ActionResult> {

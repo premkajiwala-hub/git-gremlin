@@ -192,7 +192,7 @@ function sentence(text: string): string {
   return (lower.charAt(0).toUpperCase() + lower.slice(1))
     .replace(/\bi\b/g, 'I')
     .replace(/github/g, 'GitHub')
-    .replace(/click me/g, 'click the pet')
+    .replace(/(right-)?click me/g, 'right-click the pet')
     .replace(/([.!?]\s+)([a-z])/g, (_m, gap: string, c: string) => gap + c.toUpperCase())
 }
 
@@ -202,7 +202,7 @@ function bubbleText(id: PetId): string {
   if (!view.settings.pets[id].enabled) return 'ZZZ... TURN ME ON TO WAKE ME.'
   if (s.busy) return s.report[0] ?? '...'
   // "Click me" means nothing inside the panel itself.
-  if (s.alert) return s.alert.replace(/\s*CLICK ME.*$/, '')
+  if (s.alert) return s.alert.replace(/\s*(RIGHT-)?CLICK ME.*$/, '')
   const remark = s.report.find((l) => l.startsWith('> '))
   return remark ? remark.slice(2) : (s.report[0] ?? '')
 }

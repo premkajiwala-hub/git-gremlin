@@ -71,6 +71,7 @@ export const GRID_MARK = '▦'
 export const IPC = {
   getInit: 'overlay:get-init',
   openHub: 'pet:open-hub',
+  petMenu: 'pet:menu',
   setInteractive: 'overlay:set-interactive',
   displaysChanged: 'overlay:displays-changed',
   handoff: 'pet:handoff',

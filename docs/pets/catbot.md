@@ -43,7 +43,7 @@
 
 Already signed in with the [GitHub CLI](https://cli.github.com/) (`gh auth login`)? The panel also offers **Use my GitHub CLI login instead**.
 
-Until you link an account, Catbot reminds you now and then. Clicking it opens its page in the panel.
+Until you link an account, Catbot reminds you now and then. Right-click it and choose **Sign in with GitHub...** to open its page.
 
 ## How Catbot's mood works
 

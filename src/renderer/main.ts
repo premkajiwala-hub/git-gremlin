@@ -270,11 +270,9 @@ class PetHost {
       this.brain.release()
       this.dragging = false
     } else if (this.pending) {
-      // Click: look up and give the status report. If the pet wants something
-      // from you (sign in, review junk), open its page in the GitGremlin panel too.
+      // Click: look up and give the status report. (Right-click opens the pet's menu.)
       this.brain.clicked()
       this.showStatus(this.hovered ? Infinity : 6000)
-      if (this.status.alert) api.openHub(this.id)
     }
     this.pending = null
     this.updateHover()
@@ -415,6 +413,15 @@ async function boot(): Promise<void> {
       .reverse()
       .find((h) => h.hit(g.x, g.y))
     target?.mouseDown(e.clientX, e.clientY)
+  })
+  // Right-click a pet: its menu (Review, Scan now, Open GitGremlin...), shown by the main process.
+  window.addEventListener('contextmenu', (e) => {
+    e.preventDefault()
+    const g = world.toGlobal(e.clientX, e.clientY)
+    const target = list()
+      .reverse()
+      .find((h) => h.hit(g.x, g.y))
+    if (target) api.petMenu(target.id)
   })
   window.addEventListener('mouseup', (e) => {
     if (e.button !== 0) return
