@@ -741,16 +741,21 @@ summary:focus-visible {
   display: contents;
 }
 
+/*
+ * Cards wrap into rows, and the cards in each row share its full width
+ * equally, so no row ever leaves an empty column. The last row stretches to
+ * the bottom, so a tall window has no empty band either.
+ */
 .page > .cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 16px;
-  /* The last row stretches to the bottom, so a tall window has no empty band. */
   align-content: stretch;
   flex: 1;
 }
 
 .card {
+  flex: 1 1 290px;
   background: var(--glass);
   backdrop-filter: blur(26px) saturate(1.4);
   border: 1px solid var(--edge);
@@ -765,7 +770,7 @@ summary:focus-visible {
 
 .card.wide,
 .card.look.editing {
-  grid-column: 1 / -1;
+  flex-basis: 100%;
 }
 
 .card-head {
