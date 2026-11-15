@@ -20,7 +20,7 @@
 | **Species** | Robot dog: gunmetal plating with a blue status light, a dog's snout, hinged metal ears, a radio antenna and a red collar with a gold tag |
 | **Job** | Reads your **public** GitHub repos (current files and recent commits) and reports anything secret that's in them |
 | **Feeds on** | Plugged leaks: when a leak is gone from a repo, Rex crunches a metal bone |
-| **Needs** | GitHub linked through Catbot's **Sign in with GitHub** (or the GitHub CLI). No extra permissions: public repos only |
+| **Needs** | Your GitHub account, linked once in **General → GitHub account** (or the GitHub CLI). No extra permissions: public repos only |
 | **Panel page** | GitGremlin panel → **Rex** |
 
 ## Contents
@@ -39,7 +39,7 @@
 
 ## Getting started
 
-1. Link GitHub on **Catbot**'s page (**Sign in with GitHub**). Rex uses the same account. If you've already done this for Catbot, there's nothing to do.
+1. Sign in with GitHub in **General → GitHub account** (Rex's page has the same button until you're signed in). It's the same sign-in Catbot uses, so if you're already signed in, there's nothing to do.
 2. About a minute after GitGremlin starts, Rex sniffs every public repo you own. After that it sniffs once a day, and shortly after you push.
 3. Open GitGremlin → **Rex** to see what it found, or click **Sniff now**.
 
@@ -54,7 +54,7 @@
 | **Database files** | `.sqlite`, `.db`, `dump.rdb`, and `.sql` dumps that contain data | check |
 | **Hard-coded passwords** | `password = "..."`, `api_key: "..."`, `client_secret` and similar, when the value looks real; Django `SECRET_KEY`; passwords inside URLs | check |
 
-**high** means it's almost certainly a real secret. **check** means it might be harmless (a test password, a Firebase web key, a sample database), so take a look.
+**high** means it's almost certainly a real secret. **check** means it might be harmless (a Firebase web key, a sample database), so take a look. In test code (`tests/`, `e2e/`, `fixtures/`, `*.test.*`, `*.spec.*`), Rex only reports **high** finds: made-up test passwords there are skipped, but a real key format is a leak wherever it is.
 
 Rex skips obvious placeholders such as `your_api_key_here`, `${DB_PASSWORD}`, `process.env.X`, `<password>`, `changeme` and AWS's documented example key. It also skips lock files, minified files, `node_modules` and build output.
 
@@ -94,7 +94,7 @@ Test passwords, sample data and public Firebase web keys can be fine. **Not a se
 - **Public repos only.** Rex lists your repos with GitHub's public listing and reads nothing private, even if your GitHub CLI login could.
 - **Read-only.** Rex only sends GET requests. It never commits, opens issues or changes a repo.
 - **Secrets never leave GitHub's copy.** Rex keeps only a masked preview (like `AKIA••••••••OP`) and a fingerprint. The secret itself is never saved, shown in full, or sent anywhere.
-- **Your token** is Catbot's existing sign-in, stored encrypted on your PC. Rex asks GitHub for nothing new.
+- **Your token** is your one GitHub sign-in (shared with Catbot), stored encrypted on your PC. Rex asks GitHub for nothing new.
 - **Gentle on GitHub.** A sweep of a few repos takes a few dozen requests out of your 5,000 per hour. If the limit runs out, Rex stops and tries again later.
 
 ## Rex at work

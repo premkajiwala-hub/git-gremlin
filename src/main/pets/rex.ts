@@ -3,7 +3,7 @@ import { net } from 'electron'
 import { ago } from '../../shared/format'
 import type { ActionResult, Leak, PetConfig, PetStatus, RexAction, RexRepo, RexScan, RexView } from '../../shared/types'
 import { GitHubReader, MAX_REPO_KB, RateLimited, type PublicRepo } from '../ghscan'
-import type { Hit } from '../secrets'
+import { RULES_VERSION, type Hit } from '../secrets'
 import type { RexCache, Store } from '../store'
 
 const RANDOM_LINES = ['SNIFF SNIFF... ALL CLEAN.', 'NO SECRETS ON GITHUB. GOOD HUMAN.', 'GUARD DOG MODE: ON.', 'WOOF! NOTHING LEAKED.']
@@ -112,7 +112,7 @@ export class RexService {
     this.login = login
     const prev = this.scanState
     if (!login) {
-      this.store.state.rex.scan = { at: Date.now(), login: '', repos: [], leaks: [], error: 'Sign in with GitHub on Catbot\'s page, so Rex knows whose repos to guard.' }
+      this.store.state.rex.scan = { at: Date.now(), login: '', repos: [], leaks: [], error: 'Sign in with GitHub (in General), so Rex knows whose repos to guard.' }
       this.hooks.changed()
       return this.scanState
     }
@@ -120,6 +120,11 @@ export class RexService {
     this.progress = 'Fetching your public repos...'
     this.hooks.changed()
     const gh = new GitHubReader(fetcher, token)
+    // New rules: what was cached was found with the old ones, so read everything again.
+    if (this.store.state.rex.rules !== RULES_VERSION) {
+      this.store.state.rex.cache = {}
+      this.store.state.rex.rules = RULES_VERSION
+    }
     const cache = this.store.state.rex.cache
     const repos: RexRepo[] = []
     const leaks: Leak[] = []
@@ -276,7 +281,7 @@ export class RexService {
     const scan = this.scanState
     if (this.busy) return { ...base, stage: 'fed', level: 3, alert: null, report: [this.progress?.toUpperCase() ?? 'SNIFFING...', '', '> ON THE TRAIL.'] }
     if (!this.login && (!scan || !scan.login)) {
-      return { ...base, stage: 'fed', level: 3, alert: null, report: ['NOT LINKED TO GITHUB YET.', '', "> SIGN IN ON CATBOT'S PAGE AND I'LL GUARD YOUR PUBLIC REPOS."] }
+      return { ...base, stage: 'fed', level: 3, alert: null, report: ['NOT LINKED TO GITHUB YET.', '', "> SIGN IN WITH GITHUB AND I'LL GUARD YOUR PUBLIC REPOS."] }
     }
     if (!scan) return { ...base, stage: 'fed', level: 3, alert: null, report: ['FIRST SNIFF COMING SOON...', '', '> I GUARD YOUR PUBLIC REPOS.'] }
     const leaks = this.active(scan)

@@ -4,7 +4,7 @@
  * diffs. Read-only GET requests; `fetcher` is Electron's net.fetch in the
  * app (plain fetch in tests).
  */
-import { readTarGz, scanFile, scanPatch, skipPath, riskyFile, type Hit } from './secrets'
+import { keep, readTarGz, scanFile, scanPatch, skipPath, riskyFile, type Hit } from './secrets'
 
 export type Fetcher = (url: string, init?: { headers?: Record<string, string>; redirect?: 'follow' }) => Promise<Response>
 
@@ -113,7 +113,7 @@ export class GitHubReader {
       if (skipPath(f.filename) || f.status === 'removed') continue
       if (f.status === 'added' || f.status === 'renamed' || f.status === 'copied') {
         const r = riskyFile(f.filename, f.patch ? f.patch.split('\n').filter((l) => l.startsWith('+')).map((l) => l.slice(1)).join('\n') : null)
-        if (r) hits.push(r)
+        if (r && keep(r)) hits.push(r)
       }
       if (f.patch) hits.push(...scanPatch(f.filename, f.patch))
     }

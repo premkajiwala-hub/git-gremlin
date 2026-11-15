@@ -8,6 +8,18 @@ import { gunzipSync } from 'node:zlib'
 
 export type Severity = 'high' | 'medium'
 
+/** Bump when the rules change, so cached results are scanned again. */
+export const RULES_VERSION = 2
+
+/** Test code: made-up passwords and sample databases live here. */
+const TEST_PATH = /(^|\/)(tests?|__tests__|specs?|e2e|fixtures?|mocks?|testdata)\/|\.(test|spec)\.[a-z]+$/i
+
+/**
+ * In test code, only real key formats count (a live AWS or GitHub key is a
+ * leak wherever it is); "check"-level finds there are made-up test values.
+ */
+export const keep = (h: Hit) => h.severity === 'high' || !TEST_PATH.test(h.path)
+
 /** One thing Rex sniffed out. The secret itself is never kept: only a masked preview and a fingerprint. */
 export interface Hit {
   /** Stable fingerprint of rule + secret (or rule + path for risky files). */
@@ -177,14 +189,14 @@ export function scanText(path: string, text: string, lineOf?: (index: number) =>
   }
   // A more specific rule already covers this spot: drop the generic one.
   const specific = new Set(hits.filter((h) => h.rule !== 'generic-secret').map((h) => h.line))
-  return hits.filter((h) => h.rule !== 'generic-secret' || !specific.has(h.line))
+  return hits.filter((h) => (h.rule !== 'generic-secret' || !specific.has(h.line)) && keep(h))
 }
 
 /** Everything wrong with one file: its name and its contents. */
 export function scanFile(path: string, text: string | null): Hit[] {
   const hits: Hit[] = []
   const risky = riskyFile(path, text)
-  if (risky) hits.push(risky)
+  if (risky && keep(risky)) hits.push(risky)
   if (text !== null) hits.push(...scanText(path, text))
   return hits
 }

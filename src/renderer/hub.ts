@@ -67,6 +67,12 @@ const PET_UI: Record<PetId, { n: string; species: string; accent: string; lede: 
   }
 }
 
+/** Pets that need GitHub: what their sign-in prompt says. */
+const GH_PROMPT: Partial<Record<PetId, string>> = {
+  catbot: 'Catbot runs on your GitHub contribution chart. Sign in so it knows when you have coded today.',
+  rex: 'Rex sniffs your public GitHub repos for leaked secrets. Sign in so it knows which repos are yours.'
+}
+
 // --- pet artwork, drawn from the real sprites -----------------------------------------------------
 interface FrameMeta {
   file: string
@@ -284,7 +290,14 @@ function buildPetPage(id: PetId): HTMLElement {
   p.append(($('petPage') as HTMLTemplateElement).content.cloneNode(true))
   p.querySelector('.kicker-text')!.textContent = `${ui.n} · ${ui.species}`
   p.querySelector('.lede')!.textContent = ui.lede
-  p.querySelector('.purpose-slot')!.append(($(`${id}Purpose`) as HTMLTemplateElement).content.cloneNode(true))
+  const slot = p.querySelector('.purpose-slot')!
+  if (GH_PROMPT[id]) {
+    slot.append(($('ghPrompt') as HTMLTemplateElement).content.cloneNode(true))
+    slot.querySelector('.gh-prompt-text')!.textContent = GH_PROMPT[id]!
+    slot.querySelector('.gh-signin')!.addEventListener('click', () => void startSignIn())
+    slot.querySelector('.gh-cli')!.addEventListener('click', () => void useCli())
+  }
+  slot.append(($(`${id}Purpose`) as HTMLTemplateElement).content.cloneNode(true))
   void petCanvas(id, ui.art[0], ui.art[1], ui.art[2], ui.scale, p.querySelector<HTMLCanvasElement>('.pet-xl')!).then(fitPets)
 
   const cfg = () => draft.pets[id]
@@ -411,7 +424,7 @@ function heroInfo(id: PetId): HeroInfo {
   if (id === 'rex') {
     const r = view.rex
     const scan = r.scan
-    if (!r.login && !scan?.login) return { stats: ['GitHub not linked', 'public repos only'], primary: { label: "Sign in on Catbot's page" }, link: null }
+    if (!r.login && !scan?.login) return { stats: ['GitHub not linked', 'public repos only'], primary: { label: 'Sign in with GitHub', disabled: !view.github.signInAvailable }, link: null }
     const leaks = activeLeaks()
     const repos = (scan?.repos ?? []).filter((x) => !x.skipped)
     return {
@@ -454,7 +467,7 @@ async function heroAction(id: PetId, which: 'primary' | 'link'): Promise<void> {
   }
   if (id === 'rex') {
     const linked = Boolean(view.rex.login || view.rex.scan?.login)
-    if (which === 'primary' && !linked) return show('catbot')
+    if (which === 'primary' && !linked) return startSignIn()
     if (which === 'primary') return sniff()
     return $('rexLeaks').closest('.card')!.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
@@ -512,6 +525,11 @@ function renderCatbot(): void {
     })
   )
 
+  for (const box of document.querySelectorAll<HTMLElement>('.gh-prompt')) {
+    box.hidden = linked || signingIn
+    box.querySelector<HTMLButtonElement>('.gh-signin')!.disabled = !g.signInAvailable
+    box.querySelector<HTMLElement>('.gh-cli')!.hidden = !g.ghAvailable
+  }
   if (signingIn) return
   $('ghPending').hidden = true
   $('ghSignedOut').hidden = linked
@@ -543,7 +561,9 @@ async function startSignIn(): Promise<void> {
     signingIn = true
     $('ghSignedOut').hidden = true
     $('ghPending').hidden = false
-    show('catbot')
+    for (const box of document.querySelectorAll<HTMLElement>('.gh-prompt')) box.hidden = true
+    // The code and the waiting state live in General's GitHub account card.
+    show('general')
   } catch (err) {
     ghError(cleanError(err))
   } finally {
@@ -1122,7 +1142,7 @@ function renderRex(): void {
   if (!leaks.length) {
     const linked = Boolean(r.login || scan?.login)
     $('rexLeaks').append(
-      el('div', 'empty', !linked ? "Sign in with GitHub on Catbot's page, and Rex will guard your public repos." : !scan ? 'Click Sniff now to check your public repos.' : 'No leaks in your public repos. Good human!')
+      el('div', 'empty', !linked ? 'Sign in with GitHub, and Rex will guard your public repos.' : !scan ? 'Click Sniff now to check your public repos.' : 'No leaks in your public repos. Good human!')
     )
   }
   $<HTMLDetailsElement>('rexFixBox').hidden = !leaks.length

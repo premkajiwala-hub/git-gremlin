@@ -330,6 +330,7 @@ function showPetMenu(id: PetId): void {
     })
     own.push({ label: 'Show running servers...', click: () => openHub('mole') })
   } else if (id === 'rex') {
+    if (github.source === 'none') own.push({ label: 'Sign in with GitHub...', click: () => openHub('rex') })
     own.push(
       { label: s.alert ? 'Show leaked secrets...' : 'Show my public repos...', click: () => openHub('rex') },
       { label: 'Sniff my repos now', enabled: !rex.busy, click: () => void rex.scan() }

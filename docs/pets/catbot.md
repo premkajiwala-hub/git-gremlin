@@ -36,12 +36,12 @@
 
 ## Getting started
 
-1. Open the **GitGremlin panel** (click the tray icon) and choose **Catbot**.
+1. Open the **GitGremlin panel** (click the tray icon) and go to **General → GitHub account**. Until you're signed in, Catbot's page has the same **Sign in with GitHub** button.
 2. Click **Sign in with GitHub**. GitGremlin shows a one-time code, copies it to your clipboard and opens <https://github.com/login/device>.
 3. Paste the code on GitHub and approve **GitGremlin**.
 4. The panel shows your avatar, name and @username, and Catbot greets you on the desktop.
 
-Already signed in with the [GitHub CLI](https://cli.github.com/) (`gh auth login`)? The panel also offers **Use my GitHub CLI login instead**.
+This is one sign-in for every pet that uses GitHub: Rex uses the same account. Already signed in with the [GitHub CLI](https://cli.github.com/) (`gh auth login`)? The panel also offers **Use my GitHub CLI login**.
 
 Until you link an account, Catbot reminds you now and then. Right-click it and choose **Sign in with GitHub...** to open its page.
 
@@ -93,7 +93,7 @@ GitGremlin panel → **Catbot**:
 | Setting | What it does | Default |
 |---|---|---|
 | **On desktop** | Shows or hides Catbot | On |
-| **GitHub** | Sign in, refresh, sign out; shows today's count, streak and last 7 days | Not linked |
+| **GitHub account** | In **General**: sign in, refresh, sign out (shared with Rex). Catbot's page shows today's count, streak and last 7 days | Not linked |
 | **Name** | Shown in its message box and the tray | Catbot |
 | **Size** | Height on screen, 48–112 px (snapped to crisp whole pixels) | 72 px |
 | **Walking speed** | Running is about 2.4× and crawling 0.45× this | 45 px/s |

@@ -193,7 +193,7 @@ Copy-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\GitGremlin.lnk" ([
 1. Press the **Windows key** (or click the taskbar search box), type **GitGremlin**, and press **Enter**.
 2. The pets appear on your desktop, and the GitGremlin icon appears in the system tray, bottom right. It may be hidden under the **^** arrow.
 3. Click the tray icon to open the **GitGremlin panel**:
-   - **Catbot → Sign in with GitHub** links your contribution chart.
+   - **General → GitHub account → Sign in with GitHub** links your GitHub account once, for every pet that uses it (Catbot and Rex). Their pages also offer the button until you're signed in.
    - **Dusty** shows the junk it finds. Nothing is deleted until you confirm.
    - **Syncy** lists repos with work that isn't on GitHub yet. It finds your repos by itself.
    - **Mole** shows your running dev servers and their ports, and frees a port you need.
@@ -245,7 +245,7 @@ Click the tray icon to open it. The sidebar lists every pet with a status dot:
 | Page | What's there |
 |---|---|
 | **A pet's page** | An **On desktop** switch, the pet's own job settings (see its guide), and **Look and movement** |
-| **General** | **Where pets live** (on the desktop, or on top of apps), **Start GitGremlin with Windows**, **Hide all pets** for an hour, **Theme** (Auto, Light or Dark) and the app version |
+| **General** | **GitHub account** (one sign-in for Catbot and Rex), **Where pets live** (on the desktop, or on top of apps), **Start GitGremlin with Windows**, **Hide all pets** for an hour, **Theme** (Auto, Light or Dark) and the app version |
 
 **Look and movement** is the same for every pet:
 
@@ -285,7 +285,7 @@ Pets are awake the whole time GitGremlin runs. Turn one off with its switch, or 
 - **Your files:** Dusty only looks in a fixed list of junk locations inside your user folders. It never follows links, skips files in use, and by default deletes nothing until you confirm. [Safety rules →](docs/pets/dusty.md#safety-rules)
 - **Your repos:** Syncy only reads them with git. It never fetches or pushes, and the only change it can make is deleting merged local branches, after you confirm. [Safety →](docs/pets/syncy.md#safety)
 - **Your processes:** Mole only reads which programs listen on which ports. It stops a server only when you ask and confirm, never Windows itself or your terminal. [Safety →](docs/pets/mole.md#safety)
-- **Your public repos:** Rex only reads public repos you own, with GET requests and Catbot's existing sign-in. It never changes a repo, and keeps only masked previews of what it finds, never the secrets themselves. [Safety →](docs/pets/rex.md#safety-and-privacy)
+- **Your public repos:** Rex only reads public repos you own, with GET requests and your one GitHub sign-in (General → GitHub account). It never changes a repo, and keeps only masked previews of what it finds, never the secrets themselves. [Safety →](docs/pets/rex.md#safety-and-privacy)
 - **Network:** the only network access is GitHub: Catbot's contribution check and Rex's reads of your public repos. Dusty, Syncy and Mole work offline.
 - **Your data stays local:** settings and state are in `%APPDATA%\GitGremlin\state.json`.
 

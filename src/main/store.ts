@@ -28,7 +28,7 @@ export interface AppState {
   /** The port each project usually runs on (learned), keyed by lower-case project folder. */
   mole: { usual: Record<string, number> }
   /** Rex's last scan, and what it already read (by commit), so unchanged repos aren't downloaded again. */
-  rex: { scan: RexScan | null; cache: Record<string, RexCache> }
+  rex: { scan: RexScan | null; cache: Record<string, RexCache>; rules?: number }
 }
 
 /** Per repo: the file findings at one commit, and findings per commit already read (masked previews only). */
@@ -189,7 +189,7 @@ export class Store {
         dusty: { lastScan: raw.dusty?.lastScan ?? null, lastClean: raw.dusty?.lastClean ?? null },
         syncy: { lastScan: raw.syncy?.lastScan ?? null },
         mole: { usual: usualPorts(raw.mole?.usual) },
-        rex: { scan: raw.rex?.scan ?? null, cache: raw.rex?.cache && typeof raw.rex.cache === 'object' ? raw.rex.cache : {} }
+        rex: { scan: raw.rex?.scan ?? null, cache: raw.rex?.cache && typeof raw.rex.cache === 'object' ? raw.rex.cache : {}, rules: Number(raw.rex?.rules) || 0 }
       }
     } catch {
       this.state = defaults()
