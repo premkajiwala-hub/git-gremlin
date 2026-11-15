@@ -43,11 +43,12 @@ GitGremlin puts little pixel-art pets on your Windows desktop, and each one does
 - **One GitHub sign-in, in General:** sign in once under **General → GitHub account**, and every pet that uses GitHub (Catbot and Rex) shares it. Their pages offer the button until you're signed in.
 - **Syncy watches repos live:** edits, commits and pushes show up within seconds. **+ Add repo** takes git repos only and refuses duplicates, and unpushed commits name the branch they're on. **Open in VS Code** replaces the terminal button.
 - **A new logo:** a black pixel gremlin head on a white tile, minimal and crisp from the 16 px tray icon to the Start menu.
+- **Stay along the bottom:** right-click any pet and tick it to keep that pet walking along the bottom of the screen.
 - **A tidier panel:** cards in a row share its full width, with no empty columns.
 
 ### 0.2
 
-- **A new logo:** a little pixel gremlin with glowing GitHub-green eyes, on a three-commit graph in the pets' colours.
+- **A new logo:** a little pixel gremlin with glowing GitHub-green eyes, on a three-commit graph in the pets' colours (replaced by the black-and-white logo in 0.3).
 - **A redesigned panel, "pixel glass":** frosted-glass cards, pixel headings, and each pet drawn large in scanlines. It fills the whole window, and follows your Windows theme (or pick **Light** or **Dark** under General).
 - **A new message box on the desktop:** in the same style, sized to its words, with all the text there at once. It opens when you hover a pet and closes the moment you move away.
 - **Syncy the beaver:** guards work you haven't pushed to GitHub. [Meet Syncy →](docs/pets/syncy.md)
@@ -208,7 +209,7 @@ Copy-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\GitGremlin.lnk" ([
    - **Syncy** lists repos with work that isn't on GitHub yet. It finds your repos by itself.
    - **Mole** shows your running dev servers and their ports, and frees a port you need.
    - **Rex** sniffs your public GitHub repos for leaked secrets, using the same GitHub sign-in.
-   - **General → Start GitGremlin with Windows** brings the pets back every time you sign in.
+   - **General → System → Start with Windows** brings the pets back every time you sign in.
 
 To keep it handy, right-click **GitGremlin** in the Start menu and choose **Pin to Start** or **Pin to taskbar**. Opening GitGremlin while it's already running opens the panel. To stop it, right-click the tray icon and choose **Quit**.
 
@@ -226,7 +227,7 @@ Then open GitGremlin as usual. If the code changed, it rebuilds itself on start,
 
 ### Uninstalling
 
-1. In the panel, turn off **Start GitGremlin with Windows**, then choose **Quit** from the tray icon.
+1. In the panel, turn off **General → System → Start with Windows**, then choose **Quit** from the tray icon.
 2. Remove the shortcut, your GitGremlin data (settings, pet positions, the encrypted GitHub token) and the project folder:
 
    ```powershell
@@ -255,7 +256,7 @@ Click the tray icon to open it. The sidebar lists every pet with a status dot:
 | Page | What's there |
 |---|---|
 | **A pet's page** | An **On desktop** switch, the pet's own job settings (see its guide), and **Look and movement** |
-| **General** | **GitHub account** (one sign-in for Catbot and Rex), **Where pets live** (on the desktop, or on top of apps), **Start GitGremlin with Windows**, **Hide all pets** for an hour, **Theme** (Auto, Light or Dark) and the app version |
+| **General** | **GitHub account** (one sign-in for Catbot and Rex), **Where pets live** (on the desktop, or on top of apps), **Start with Windows**, **Hide all pets** for an hour, **Theme** (Auto, Light or Dark) and the app version |
 
 **Look and movement** is the same for every pet:
 
@@ -308,6 +309,7 @@ Pets are awake the whole time GitGremlin runs. Turn one off with its switch, or 
 | `winget` is not recognized | Install or update **App Installer** from the Microsoft Store, or install Node.js and Git by hand (step 2). |
 | `npm install` fails with network errors | Check your internet connection or proxy, then run `npm install` again. |
 | `Failed to load URL: ... hub.html ... ERR_FILE_NOT_FOUND` | The built copy is out of date. Quit GitGremlin from the tray and run `npm run install-app` again. |
+| The taskbar, Start menu or tray still shows the old logo | Windows caches icons. Run `ie4uinit.exe -show` in PowerShell, or unpin GitGremlin and pin it again. Signing out of Windows and back in also clears it. |
 | Nothing happens when you open GitGremlin | It's probably already running: look for its tray icon. If it's stuck, end **Electron** in Task Manager and open GitGremlin again. |
 | `Unable to move the cache: Access is denied` | Two copies were running at once. Quit GitGremlin, end any leftover **Electron** processes, and open it again. |
 | The pets don't show | App windows hide them in desktop mode: press **Win+D**, or choose **General → Where pets live → On top of apps**. Also check each pet's **On desktop** switch. |
