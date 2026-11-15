@@ -81,7 +81,7 @@ More pets are on the way.
 - **Lives on your desktop.** Pets sit just above the wallpaper, so your app windows cover them. Or choose **General → Where pets live → On top of apps** to keep them above everything.
 - **One GitHub sign-in.** Sign in once in General; Catbot and Rex share it. It's read-only, approved on github.com, and stored encrypted on your PC.
 - **Hover to read their minds.** Hover over a pet and its message box shows its status report. It closes as soon as you move away. Right-click a pet for its menu: review what it found, run its job now, or open GitGremlin.
-- **Roams freely.** Pets walk, run, crawl and hop anywhere on the screen. They sit, get curious, walk between monitors and jump onto the window you're working in. Or keep a pet along the bottom of the screen.
+- **Roams freely.** Pets walk, run, crawl and hop anywhere on the screen. They sit, get curious, walk between monitors and jump onto the window you're working in. Or keep a pet along the bottom of the screen: right-click it and tick **Stay along the bottom**.
 - **Plays with you.** Pets can follow your cursor, and you can pick them up, drag them and toss them.
 - **Crisp pixel art.** Everything is drawn in whole device pixels, so it stays sharp at any Windows scaling.
 - **A real Windows app.** Open it from the Start menu or search, pin it, and start it with Windows.
@@ -263,7 +263,7 @@ Click the tray icon to open it. The sidebar lists every pet with a status dot:
 | **Name** | Shown in its message box and the tray |
 | **Size** | 48–112 px tall, snapped to crisp whole pixels |
 | **Walking speed** | Running is about 2.4× and crawling 0.45× this |
-| **Where it wanders** | Anywhere on the screen, or only along the bottom |
+| **Where it wanders** | Anywhere on the screen, or only along the bottom (also on its right-click menu: **Stay along the bottom**) |
 | **Follow my cursor** | Walks after the cursor while you move it over the desktop |
 
 ### The tray icon
@@ -282,7 +282,7 @@ Click the tray icon to open it. The sidebar lists every pet with a status dot:
 | Move the cursor over the desktop | Follows it (if **Follow my cursor** is on) and stops when it reaches it |
 | Hover over it | Stops, faces you and shows its message box; it closes the moment you move away |
 | Click it | Looks up at you and shows its report |
-| Right-click it | Opens its menu: its own actions (like **Review junk...**, **Check my repos now**, **Free a port** or **Sniff my repos now**), **Open GitGremlin** and **Put it away** |
+| Right-click it | Opens its menu: its own actions (like **Review junk...**, **Check my repos now**, **Free a port** or **Sniff my repos now**), **Stay along the bottom**, **Open GitGremlin** and **Put it away** |
 | Drag it | Dangles from your cursor |
 | Toss it | Flies, bounces off the screen edges and may land on a window; flick it hard for a red flash |
 

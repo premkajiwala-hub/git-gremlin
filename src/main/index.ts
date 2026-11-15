@@ -349,6 +349,17 @@ function showPetMenu(id: PetId): void {
     { type: 'separator' },
     ...own,
     { type: 'separator' },
+    {
+      // Same as "Where it wanders" on the pet's page.
+      label: 'Stay along the bottom',
+      type: 'checkbox',
+      checked: cfg.movement === 'ground',
+      click: () => {
+        const pet = store.state.settings.pets[id]
+        pet.movement = pet.movement === 'ground' ? 'roam' : 'ground'
+        changed()
+      }
+    },
     { label: 'Open GitGremlin', click: () => openHub(id) },
     {
       label: `Put ${cfg.name} away`,
