@@ -56,7 +56,6 @@ export const DEFAULT_SETTINGS: Settings = {
     ignored: [],
     staleHours: 24,
     scanEveryMinutes: 10,
-    summaryHour: 18,
     trackBranches: true
   }
 }

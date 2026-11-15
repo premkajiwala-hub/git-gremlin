@@ -102,10 +102,6 @@ When work has been sitting unsaved longer than your threshold, Syncy:
 
 Right-click Syncy and choose **Review unsaved work...** to open its page in the panel.
 
-At **6 PM** each day it gives an **end-of-day check**. You can change the time or turn it off:
-
-> `END OF DAY CHECK: 3 REPOS STILL HAVE WORK THAT ISN'T ON GITHUB. PUSH BEFORE YOU GO?`
-
 When you **push**, Syncy eats a log:
 
 > `5 COMMITS FROM API SAFE ON GITHUB!`
@@ -158,7 +154,6 @@ GitGremlin panel → **Syncy**:
 |---|---|---|
 | **On desktop** | Shows or hides Syncy (and pauses its checks) | On |
 | **Nudge me about work older than** | 4 hours, 1 day, 3 days or 1 week | 1 day |
-| **Evening summary** | Off, or a time from 5 PM to 10 PM | 6 PM |
 | **Look for new repos every** | 5, 10, 15 or 30 minutes, or every hour. Watched repos update live | 10 minutes |
 | **Find merged branches** | List merged local branches and offer to delete them | On |
 | **Find my repos automatically** | Search common code folders and local drives | On |

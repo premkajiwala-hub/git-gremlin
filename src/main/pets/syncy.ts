@@ -3,7 +3,6 @@ import { basename, resolve } from 'node:path'
 import { ago } from '../../shared/format'
 import type { ActionResult, PetConfig, PetStatus, RepoInfo, RepoScan, SyncyView } from '../../shared/types'
 import { findVSCode } from '../editor'
-import { localDate } from '../github'
 import { autoRoots, deleteBranches, inspectRepo, repoRoot, scanRepos, type SearchRoot } from '../repos'
 import type { Store } from '../store'
 
@@ -68,7 +67,6 @@ export class SyncyService {
   busy: 'scanning' | 'cleaning' | null = null
   private timer: NodeJS.Timeout | null = null
   private firstScan: NodeJS.Timeout | null = null
-  private minute: NodeJS.Timeout | null = null
   private watchers = new Map<string, FSWatcher>()
   private pending = new Map<string, { timer: NodeJS.Timeout; since: number }>()
 
@@ -90,7 +88,6 @@ export class SyncyService {
   start(): void {
     this.reschedule()
     this.firstScan = setTimeout(() => void this.check(), 20_000)
-    this.minute = setInterval(() => this.eveningSummary(), 60_000)
     // Watch the repos from last time right away; the first full check refreshes the list.
     this.syncWatchers()
   }
@@ -98,7 +95,6 @@ export class SyncyService {
   stop(): void {
     if (this.timer) clearInterval(this.timer)
     if (this.firstScan) clearTimeout(this.firstScan)
-    if (this.minute) clearInterval(this.minute)
     for (const w of this.watchers.values()) w.close()
     this.watchers.clear()
     for (const p of this.pending.values()) clearTimeout(p.timer)
@@ -224,22 +220,6 @@ export class SyncyService {
     } else if (committed) {
       this.hooks.say(`NICE COMMIT IN ${committed.toUpperCase()}! PUSH IT TO GITHUB WHEN READY.`)
     }
-  }
-
-  /** Once a day at the chosen hour: what's still not on GitHub. */
-  private eveningSummary(): void {
-    const hour = this.cfg.summaryHour
-    if (hour === null || !this.enabled || new Date().getHours() !== hour) return
-    const today = localDate()
-    if (this.store.state.syncy.lastSummaryDay === today) return
-    this.store.state.syncy.lastSummaryDay = today
-    this.store.saveSoon()
-    const unsaved = this.scan?.repos.filter(hasUnsaved) ?? []
-    this.hooks.say(
-      unsaved.length
-        ? `END OF DAY CHECK: ${unsaved.length} REPO${s(unsaved.length)} STILL HAVE WORK THAT ISN'T ON GITHUB. PUSH BEFORE YOU GO?`
-        : 'END OF DAY CHECK: ALL YOUR WORK IS ON GITHUB. NICE!'
-    )
   }
 
   /** Delete merged local branches the user picked in the panel. */

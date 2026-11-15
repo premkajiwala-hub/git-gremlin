@@ -395,11 +395,10 @@ function heroInfo(id: PetId): HeroInfo {
   const v = view.syncy
   const repos = v.scan?.repos ?? []
   const need = repos.filter(hasWork).length
-  const hour = view.settings.syncy.summaryHour
   return {
     stats: [plural(repos.length, 'repo'), need ? `${need} need${need === 1 ? 's' : ''} a push` : 'all on GitHub', v.scan ? `checked ${ago(v.scan.at)}` : 'not checked yet'],
     primary: { label: v.busy === 'scanning' ? 'Checking...' : 'Check now', disabled: Boolean(v.busy) || !enabled },
-    link: { label: hour === null ? 'Set an evening check-in' : `End-of-day check at ${hour > 12 ? hour - 12 : hour} ${hour >= 12 ? 'PM' : 'AM'}` }
+    link: need ? { label: 'See what needs a push' } : null
   }
 }
 
@@ -415,7 +414,7 @@ async function heroAction(id: PetId, which: 'primary' | 'link'): Promise<void> {
     return scanJunk()
   }
   if (which === 'primary') return checkRepos()
-  $('syncyNudges').scrollIntoView({ behavior: 'smooth', block: 'center' })
+  $('syncyRepos').closest('.card')!.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 // --- Catbot: GitHub -------------------------------------------------------------------------------
@@ -730,7 +729,6 @@ function renderSyncy(): void {
   const scan = v.scan
   const cfg = draft.syncy
   setSeg($('syncyStale'), 'data-h', String(cfg.staleHours))
-  $<HTMLSelectElement>('syncySummary').value = cfg.summaryHour === null ? 'off' : String(cfg.summaryHour)
   $<HTMLSelectElement>('syncyEvery').value = String(cfg.scanEveryMinutes)
   setSwitch($('syncyBranches'), cfg.trackBranches)
   setSwitch($('syncyAuto'), cfg.autoFind)
@@ -801,11 +799,6 @@ function wireSyncy(): void {
       saveSoon(0)
     })
   }
-  $('syncySummary').addEventListener('change', (e) => {
-    const v = (e.target as HTMLSelectElement).value
-    draft.syncy.summaryHour = v === 'off' ? null : Number(v)
-    saveSoon(0)
-  })
   $('syncyEvery').addEventListener('change', (e) => {
     draft.syncy.scanEveryMinutes = Number((e.target as HTMLSelectElement).value)
     saveSoon(0)

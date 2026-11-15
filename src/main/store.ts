@@ -23,7 +23,7 @@ export interface AppState {
   /** Where each pet was, so it reappears there. */
   pets: Record<PetId, PetSnapshot | null>
   dusty: { lastScan: ScanResult | null; lastClean: CleanResult | null }
-  syncy: { lastScan: RepoScan | null; lastSummaryDay: string | null }
+  syncy: { lastScan: RepoScan | null }
 }
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T
@@ -37,7 +37,7 @@ function defaults(): AppState {
     github: { login: null, name: null, avatarUrl: null, days: [], source: 'none', fetchedAt: 0 },
     pets: { catbot: null, dusty: null, syncy: null },
     dusty: { lastScan: null, lastClean: null },
-    syncy: { lastScan: null, lastSummaryDay: null }
+    syncy: { lastScan: null }
   }
 }
 
@@ -58,14 +58,12 @@ const strings = (v: unknown): string[] =>
 
 function syncyConfig(raw: Partial<SyncyConfig> | undefined, def: SyncyConfig): SyncyConfig {
   const r = raw ?? {}
-  const hour = r.summaryHour === null ? null : Number(r.summaryHour ?? def.summaryHour)
   return {
     autoFind: typeof r.autoFind === 'boolean' ? r.autoFind : def.autoFind,
     folders: r.folders === undefined ? def.folders : strings(r.folders),
     ignored: r.ignored === undefined ? def.ignored : strings(r.ignored),
     staleHours: Math.min(24 * 30, Math.max(1, Number(r.staleHours) || def.staleHours)),
     scanEveryMinutes: Math.min(24 * 60, Math.max(5, Number(r.scanEveryMinutes) || def.scanEveryMinutes)),
-    summaryHour: hour === null || !Number.isInteger(hour) || hour < 0 || hour > 23 ? null : hour,
     trackBranches: typeof r.trackBranches === 'boolean' ? r.trackBranches : def.trackBranches
   }
 }
@@ -141,7 +139,7 @@ export class Store {
         github: linked ? { ...d.github, ...(raw.github ?? {}) } : d.github,
         pets,
         dusty: { lastScan: raw.dusty?.lastScan ?? null, lastClean: raw.dusty?.lastClean ?? null },
-        syncy: { lastScan: raw.syncy?.lastScan ?? null, lastSummaryDay: raw.syncy?.lastSummaryDay ?? null }
+        syncy: { lastScan: raw.syncy?.lastScan ?? null }
       }
     } catch {
       this.state = defaults()

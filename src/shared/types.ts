@@ -135,8 +135,6 @@ export interface SyncyConfig {
   staleHours: number
   /** Minutes between repo checks. */
   scanEveryMinutes: number
-  /** Local hour (0-23) for the evening summary, or null for none. */
-  summaryHour: number | null
   /** List local branches that are already merged, and offer to delete them. */
   trackBranches: boolean
 }
