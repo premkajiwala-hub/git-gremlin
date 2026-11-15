@@ -125,8 +125,6 @@ export interface DustyConfig {
 
 /** What Syncy watches, and when it nudges you. */
 export interface SyncyConfig {
-  /** Look for repos in common code folders and on data drives. */
-  autoFind: boolean
   /** Extra folders to search (a few levels deep). */
   folders: string[]
   /** Repos to leave alone. */
@@ -210,6 +208,8 @@ export interface RepoInfo {
   /** Commits on local branches that aren't on any remote. */
   unpushed: number
   unpushedSince: number | null
+  /** The local branches holding those commits, and how many each has (git status only shows the current one). */
+  unpushedBranches?: { name: string; count: number }[]
   stashes: number
   stashSince: number | null
   /** Local branches already merged into the default branch (safe to delete). */

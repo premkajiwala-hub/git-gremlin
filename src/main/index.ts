@@ -333,7 +333,7 @@ function registerHubIpc(): void {
     const a = before.syncy
     const b = next.syncy
     if (b.scanEveryMinutes !== a.scanEveryMinutes) syncy.reschedule()
-    const where = (c: typeof a) => JSON.stringify([c.autoFind, c.folders, c.ignored, c.trackBranches])
+    const where = (c: typeof a) => JSON.stringify([c.folders, c.ignored, c.trackBranches])
     if (where(a) !== where(b) || (next.pets.syncy.enabled && !before.pets.syncy.enabled)) setTimeout(() => void syncy.check(), 500)
     syncy.syncWatchers()
     if (sww !== startWithWindows()) setStartWithWindows(Boolean(sww))

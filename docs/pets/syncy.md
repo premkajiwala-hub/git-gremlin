@@ -52,7 +52,7 @@ Not seeing a repo? Add it with **+ Add repo** under **Watched repos**.
 | Kind of unsaved work | What it means | Why it matters |
 |---|---|---|
 | **Uncommitted changes** | Modified, new or deleted files you haven't committed | Gone if the disk dies or you run the wrong `git checkout` |
-| **Commits not on GitHub** | Commits on any local branch that no remote has | They only exist on this PC |
+| **Commits not on GitHub** | Commits on **any** local branch that no remote has. Syncy names the branch: `git status` only compares your current branch, so a commit on another local branch shows up here but not there | They only exist on this PC |
 | **Stashes** | Work you stashed with `git stash` | Easy to forget, and stashes are never pushed |
 | **No remote** | A repo with nowhere to push to | Nothing in it is backed up |
 | **Merged branches** | Local branches already merged into your main branch | Clutter; safe to delete |
@@ -68,7 +68,7 @@ The two cards on Syncy's page do different jobs:
 
 ### Finding repos automatically
 
-With **Find my repos automatically** on (the default), Syncy searches:
+Syncy always finds your repos by itself. It searches:
 
 - inside your user folder, one level deep (your user folder itself is skipped, since a stray `git init` there isn't a project);
 - common code folders a few levels deep: `source`, `code`, `projects`, `dev`, `repos`, `git`, `src`, `workspace`, `Documents` and `Desktop`;
@@ -156,7 +156,6 @@ GitGremlin panel → **Syncy**:
 | **Nudge me about work older than** | 4 hours, 1 day, 3 days or 1 week | 1 day |
 | **Look for new repos every** | 5, 10, 15 or 30 minutes, or every hour. Watched repos update live | 10 minutes |
 | **Find merged branches** | List merged local branches and offer to delete them | On |
-| **Find my repos automatically** | Search common code folders and local drives | On |
 | **+ Add repo** | Watch a repo it didn't find (git repos only, no duplicates) | None |
 | **Ignored repos** | Repos Syncy leaves alone | None |
 | **Name**, **Size**, **Walking speed**, **Where it wanders**, **Follow my cursor** | Look and movement, as for every pet | Syncy, 64 px, 38 px/s, anywhere, off |

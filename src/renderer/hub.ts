@@ -685,7 +685,14 @@ function repoRow(r: RepoInfo): HTMLElement {
   const limit = view.settings.syncy.staleHours * 3_600_000
   const kind = (t: number | null) => (t !== null && Date.now() - t > limit ? 'b hot' : 'b warn')
   if (r.error) badges.append(el('span', 'b hot', `Couldn't check: ${r.error}`))
-  if (r.unpushed) badges.append(el('span', kind(r.unpushedSince), `${plural(r.unpushed, 'commit')} not on GitHub · ${short(r.unpushedSince)}`))
+  if (r.unpushed) {
+    // Name the branch, so it matches `git status` (which only looks at the current branch).
+    const on = (r.unpushedBranches ?? []).map((b) => (b.name === r.branch ? `${b.name} (current)` : b.name))
+    const where = on.length ? ` on ${on.length > 2 ? `${on.slice(0, 2).join(', ')} +${on.length - 2}` : on.join(', ')}` : ''
+    const badge = el('span', kind(r.unpushedSince), `${plural(r.unpushed, 'commit')} not on GitHub${where} · ${short(r.unpushedSince)}`)
+    badge.title = (r.unpushedBranches ?? []).map((b) => `${b.name}: ${plural(b.count, 'commit')} only on this PC`).join('\n')
+    badges.append(badge)
+  }
   if (r.changes) badges.append(el('span', kind(r.changesSince), `${plural(r.changes, 'uncommitted change')} · ${short(r.changesSince)}`))
   if (r.stashes) badges.append(el('span', kind(r.stashSince), `${plural(r.stashes, 'stash', 'stashes')} · ${short(r.stashSince)}`))
   if (!r.hasRemote && !r.error) badges.append(el('span', 'b', 'no remote: not backed up'))
@@ -731,13 +738,12 @@ function renderSyncy(): void {
   setSeg($('syncyStale'), 'data-h', String(cfg.staleHours))
   $<HTMLSelectElement>('syncyEvery').value = String(cfg.scanEveryMinutes)
   setSwitch($('syncyBranches'), cfg.trackBranches)
-  setSwitch($('syncyAuto'), cfg.autoFind)
-  // How many repos auto-find found (the rest were added by you).
+  // How many repos Syncy found by itself (the rest were added by you).
   const added = new Set(cfg.folders.map((f) => f.toLowerCase()))
   const auto = (scan?.repos ?? []).filter((r) => !added.has(r.path.toLowerCase())).length
-  $('syncyAutoHint').textContent = cfg.autoFind
-    ? `${plural(auto, 'repo')} found in your user folder, code folders and other drives`
-    : 'Off: Syncy only watches the repos you add'
+  $('syncyAutoHint').textContent = scan
+    ? `${plural(auto, 'repo')} found automatically in your user folder, code folders and other drives. Missing one? Add it.`
+    : 'Syncy looks for repos in your user folder, code folders and other drives.'
   const invalid = new Set((scan?.invalid ?? []).map((p) => p.toLowerCase()))
   $('syncyAddedBox').hidden = !cfg.folders.length
   $('syncyFolders').replaceChildren(
@@ -805,11 +811,6 @@ function wireSyncy(): void {
   })
   $('syncyBranches').addEventListener('click', () => {
     draft.syncy.trackBranches = !draft.syncy.trackBranches
-    renderSyncy()
-    saveSoon(0)
-  })
-  $('syncyAuto').addEventListener('click', () => {
-    draft.syncy.autoFind = !draft.syncy.autoFind
     renderSyncy()
     saveSoon(0)
   })

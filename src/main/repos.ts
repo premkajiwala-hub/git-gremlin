@@ -181,7 +181,10 @@ export async function inspectRepo(path: string, trackBranches: boolean): Promise
     if (info.hasRemote) {
       const times = lines(await git(path, ['log', '--branches', '--not', '--remotes', '--format=%ct', '--max-count=2000']))
       info.unpushed = times.length
-      if (times.length) info.unpushedSince = Math.min(...times.map(Number)) * 1000
+      if (times.length) {
+        info.unpushedSince = Math.min(...times.map(Number)) * 1000
+        info.unpushedBranches = await unpushedByBranch(path)
+      }
     }
 
     // Stashes.
@@ -194,6 +197,17 @@ export async function inspectRepo(path: string, trackBranches: boolean): Promise
     info.error = (err as Error).message.slice(0, 200)
   }
   return info
+}
+
+/** How many commits each local branch has that no remote has (up to 20 branches). */
+async function unpushedByBranch(path: string): Promise<{ name: string; count: number }[]> {
+  const names = lines(await git(path, ['for-each-ref', '--format=%(refname:short)', 'refs/heads/'])).slice(0, 20)
+  const out: { name: string; count: number }[] = []
+  for (const name of names) {
+    const count = Number((await git(path, ['rev-list', '--count', `refs/heads/${name}`, '--not', '--remotes'])).trim())
+    if (count > 0) out.push({ name, count })
+  }
+  return out.sort((a, b) => b.count - a.count)
 }
 
 /** Local branches already merged into the default branch. */

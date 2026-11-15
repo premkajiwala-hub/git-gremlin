@@ -51,7 +51,6 @@ export const DEFAULT_SETTINGS: Settings = {
     scanEveryMinutes: 60
   },
   syncy: {
-    autoFind: true,
     folders: [],
     ignored: [],
     staleHours: 24,

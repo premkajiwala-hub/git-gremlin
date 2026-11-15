@@ -107,7 +107,7 @@ export class SyncyService {
   }
 
   roots(): SearchRoot[] {
-    return this.cfg.autoFind ? autoRoots() : []
+    return autoRoots()
   }
 
   // --- live watching ---------------------------------------------------------------------------

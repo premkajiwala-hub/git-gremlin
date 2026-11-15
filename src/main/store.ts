@@ -59,7 +59,6 @@ const strings = (v: unknown): string[] =>
 function syncyConfig(raw: Partial<SyncyConfig> | undefined, def: SyncyConfig): SyncyConfig {
   const r = raw ?? {}
   return {
-    autoFind: typeof r.autoFind === 'boolean' ? r.autoFind : def.autoFind,
     folders: r.folders === undefined ? def.folders : strings(r.folders),
     ignored: r.ignored === undefined ? def.ignored : strings(r.ignored),
     staleHours: Math.min(24 * 30, Math.max(1, Number(r.staleHours) || def.staleHours)),
