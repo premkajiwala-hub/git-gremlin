@@ -741,7 +741,7 @@ function renderSyncy(): void {
   // How many repos Syncy found by itself (the rest were added by you).
   const added = new Set(cfg.folders.map((f) => f.toLowerCase()))
   const auto = (scan?.repos ?? []).filter((r) => !added.has(r.path.toLowerCase())).length
-  $('syncyAutoHint').textContent = scan ? `${plural(auto, 'repo')} found automatically` : 'Looking for your repos...'
+  $('syncyAutoHint').textContent = scan ? `${plural(auto, 'repo')} found automatically` : 'Looking for repos'
   const invalid = new Set((scan?.invalid ?? []).map((p) => p.toLowerCase()))
   $('syncyAddedBox').hidden = !cfg.folders.length
   $('syncyFolders').replaceChildren(

@@ -276,6 +276,18 @@
           <summary id="syncyAllTitle">All repos</summary>
           <div class="repos compact" id="syncyAll"></div>
         </details>
+        <div class="repo-foot">
+          <button type="button" class="ib" id="syncyAddRepo">+ Add repo</button>
+          <span class="muted"><span id="syncyAutoHint"></span> · updated live · read-only</span>
+        </div>
+        <div id="syncyAddedBox">
+          <div class="sublabel">Added by you</div>
+          <div class="paths" id="syncyFolders"></div>
+        </div>
+        <div id="syncyIgnoredBox" hidden>
+          <div class="sublabel">Ignored repos</div>
+          <div class="paths" id="syncyIgnored"></div>
+        </div>
       </article>
       <article class="card" id="syncyNudges">
         <div class="card-head"><h2 class="card-title"><i></i>Nudges</h2></div>
@@ -304,19 +316,6 @@
             <button type="button" class="switch" role="switch" id="syncyBranches" aria-label="Find merged branches"><span class="knob"></span></button>
           </div>
         </div>
-      </article>
-      <article class="card">
-        <div class="card-head"><h2 class="card-title"><i></i>Watched repos</h2><button type="button" class="ib" id="syncyAddRepo">+ Add repo</button></div>
-        <p class="body" id="syncyAutoHint"></p>
-        <div id="syncyAddedBox">
-          <div class="sublabel">Added by you</div>
-          <div class="paths" id="syncyFolders"></div>
-        </div>
-        <div id="syncyIgnoredBox" hidden>
-          <div class="sublabel">Ignored repos</div>
-          <div class="paths" id="syncyIgnored"></div>
-        </div>
-        <p class="muted">Updated live · read-only</p>
       </article>
     </template>
 

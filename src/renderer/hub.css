@@ -1283,6 +1283,13 @@ summary:focus-visible {
   padding-top: 12px;
 }
 
+.repo-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .all-repos summary {
   cursor: pointer;
   color: var(--ink-3);
