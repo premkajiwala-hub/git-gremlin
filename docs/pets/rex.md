@@ -1,15 +1,15 @@
 <sub>[← Mole](mole.md) · **Rex** · [Back to GitGremlin →](../../README.md)</sub>
 
 <p align="center">
-  <img src="../../assets/pets/rex/portrait.png" alt="Rex's head: a gunmetal robot dog with blue LED eyes, a radio antenna and a red collar with a gold tag" width="96" />
+  <img src="../../assets/pets/rex/portrait.png" alt="Rex's head: a cream tin toy dog with round headlamp eyes, a black nose and a long floppy red ear" width="96" />
 </p>
 
 <h1 align="center">Rex</h1>
 
-<p align="center"><b>A robot dog that sniffs your public GitHub repos for leaked secrets.</b><br />API keys, tokens, private keys, database passwords, <code>.env</code> files: anything that should never have been pushed. Rex barks the moment it finds one.</p>
+<p align="center"><b>A wind-up tin toy dog that sniffs your public GitHub repos for leaked secrets.</b><br />API keys, tokens, private keys, database passwords, <code>.env</code> files: anything that should never have been pushed. Rex barks the moment it finds one.</p>
 
 <p align="center">
-  <img src="../images/rex-poses.png" alt="Rex's poses: idle, walking, sniffing the ground, barking, eating a metal bone, happy, sitting and powered down asleep" width="100%" />
+  <img src="../images/rex-poses.png" alt="Rex's poses: idle, walking, sniffing the ground, barking with its jaw dropped open, eating a tin bone, happy, sitting and asleep" width="100%" />
   <br /><sub>Idle · walk · sniffing (scanning your repos) · bark (a leak!) · eating a bone · happy · sitting · asleep</sub>
 </p>
 
@@ -17,9 +17,9 @@
 
 | | |
 |---|---|
-| **Species** | Robot dog: gunmetal plating with a blue status light, a dog's snout, hinged metal ears, a radio antenna and a red collar with a gold tag |
+| **Species** | Wind-up tin toy dog: a cream tin barrel body with a red saddle stripe and rivets, a brass wind-up key on its back that turns as it moves, long floppy red ears, round headlamp eyes, little red shoes and a coil-spring tail |
 | **Job** | Reads your **public** GitHub repos (current files and recent commits) and reports anything secret that's in them |
-| **Feeds on** | Plugged leaks: when a leak is gone from a repo, Rex crunches a metal bone |
+| **Feeds on** | Plugged leaks: when a leak is gone from a repo, Rex crunches a tin bone |
 | **Needs** | Your GitHub account, linked once in **General → GitHub account** (or the GitHub CLI). No extra permissions: public repos only |
 | **Panel page** | GitGremlin panel → **Rex** |
 
@@ -101,10 +101,10 @@ Test passwords, sample data and public Firebase web keys can be fine. **Not a se
 
 | What Rex is doing | What you see on the desktop |
 |---|---|
-| Sniffing your repos | Nose to the ground, tail wagging, antenna blinking |
+| Sniffing your repos | Nose to the ground, puffs of dust, wind-up key turning |
 | Found a new leak | Barks (jaw open, sound waves), says what and where |
-| A leak got fixed | Eats a metal bone and hops with hearts |
-| All clean | Wags, scratches behind its ear, naps |
+| A leak got fixed | Eats a tin bone and hops with hearts |
+| All clean | Wags its spring tail, scratches behind its ear, naps |
 
 **Hover** over Rex for its report:
 
@@ -142,16 +142,16 @@ Rex is drawn entirely in code, in [`scripts/art/rex.ts`](../../scripts/art/rex.t
 | `idle`, `idle_sad` | Standing, tail wagging |
 | `walk`, `walk_sad`, `run`, `crawl` | Getting around |
 | `rummage` | Nose to the ground, sniffing: scanning your repos |
-| `bark` | Head up, jaw open, sound waves: a leak |
-| `eat`, `happy`, `wash` | Crunching a bone after a fix, a happy hop, scratching behind its ear |
+| `bark` | Its nutcracker jaw drops open, with sound waves: a leak |
+| `eat`, `happy`, `wash` | Crunching a tin bone after a fix, a happy hop, scratching behind its ear |
 | `sit`, `sleep`, `curious` | Resting and reacting to your cursor |
 | `jump_up`, `jump_down`, `dragged`, `hurt` | Hops, falls, being carried and being flicked hard |
-| `starving`, `tap` | Shared with every pet (Rex never starves, so it doesn't use them) |
+| `starving`, `tap` | Shared with every pet: wound down and tipped over (Rex never starves, so it doesn't use them) |
 
 | Overlay | |
 |---|---|
-| `eyes_*.png` | Blue LED eyes: idle, blink, happy, hurt, alert, sad |
-| `food.png` | A shiny metal bone |
+| `eyes_*.png` | Pupils inside its headlamp eyes: idle, blink, happy, hurt, alert, sad |
+| `food.png` | A tin bone |
 
 To regenerate just Rex's art, run `npm run textures -- rex`.
 

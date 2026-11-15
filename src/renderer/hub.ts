@@ -59,8 +59,8 @@ const PET_UI: Record<PetId, { n: string; species: string; accent: string; lede: 
   },
   rex: {
     n: '05',
-    species: 'Robot dog',
-    accent: '#3D7BF2',
+    species: 'Wind-up tin dog',
+    accent: '#D8433A',
     lede: 'Sniffs your public GitHub repos for API keys, passwords and .env files that should never have been pushed. It only reads.',
     art: ['idle', 0, 'idle'],
     scale: 6

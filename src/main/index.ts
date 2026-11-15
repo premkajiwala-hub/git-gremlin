@@ -51,7 +51,7 @@ if (process.argv.includes('--install-shortcut')) {
     const sayText = after('--say')
     if (argv.includes('--feed')) {
       const pet = petArg('--feed')
-      const text = pet === 'dusty' ? 'MMM, A TEST CRUMB!' : pet === 'syncy' ? 'CRUNCHY LOG!' : pet === 'mole' ? 'A JUICY WORM!' : pet === 'rex' ? 'A SHINY BOLT BONE!' : catbotFeedText(1)
+      const text = pet === 'dusty' ? 'MMM, A TEST CRUMB!' : pet === 'syncy' ? 'CRUNCHY LOG!' : pet === 'mole' ? 'A JUICY WORM!' : pet === 'rex' ? 'A TASTY TIN BONE!' : catbotFeedText(1)
       feed(pet, { text, debug: true })
     } else if (argv.includes('--scan')) void dusty.scan()
     else if (argv.includes('--check')) void syncy.check()

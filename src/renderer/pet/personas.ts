@@ -118,7 +118,7 @@ const REX: Persona = {
     ['SNIFF SNIFF...', 'GUARDING YOUR REPOS.', 'ON PATROL.'],
     ['NO LEAKS. GOOD HUMAN.', 'ALL YOUR REPOS SMELL CLEAN.', 'WOOF! NOTHING TO REPORT.']
   ],
-  thrownLines: ['ARF!', 'MY SERVOS!', 'WHEEE! WOOF!'],
+  thrownLines: ['ARF!', 'MY SPRINGS!', 'WHEEE! WOOF!'],
   tapLines: ['*SCRATCH SCRATCH*', 'WOOF? ANYONE?'],
   extraWeights: [
     ['rummage', 10],
@@ -126,7 +126,7 @@ const REX: Persona = {
   ],
   washAfterEat: false,
   alertAnim: 'bark',
-  bubble: { accent: '#3D7BF2' }
+  bubble: { accent: '#D8433A' }
 }
 
 export const PERSONAS: Record<PetId, Persona> = { catbot: CATBOT, dusty: DUSTY, syncy: SYNCY, mole: MOLE, rex: REX }

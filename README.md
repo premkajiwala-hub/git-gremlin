@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/pets-hero.png" alt="Catbot, a white robot cat, Syncy, a brown beaver in a yellow hard hat, Dusty, a grey raccoon with a teal bandana, Mole, a grey mole in round glasses, and Rex, a gunmetal robot dog with a red collar, with hearts between them" width="720" />
+  <img src="docs/images/pets-hero.png" alt="Catbot, a white robot cat, Syncy, a brown beaver in a yellow hard hat, Dusty, a grey raccoon with a teal bandana, Mole, a grey mole in round glasses, and Rex, a cream wind-up tin toy dog with floppy red ears and a brass key on its back, with hearts between them" width="720" />
 </p>
 
 GitGremlin puts little pixel-art pets on your Windows desktop, and each one does a job for you. Catbot keeps an eye on your GitHub contributions. Dusty cleans junk files off your PC. Syncy makes sure your work actually reaches GitHub. Mole tells you who's sitting on the port you need, and frees it. Rex sniffs your public GitHub repos for leaked secrets. They roam, play and talk to you, and you manage them all from one app.
