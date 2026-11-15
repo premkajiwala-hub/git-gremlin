@@ -1,4 +1,4 @@
-<sub>[← Dusty](dusty.md) · **Syncy** · [Back to GitGremlin →](../../README.md)</sub>
+<sub>[← Dusty](dusty.md) · **Syncy** · [Mole →](mole.md) · [Back to GitGremlin](../../README.md)</sub>
 
 <p align="center">
   <img src="../../assets/pets/syncy/portrait.png" alt="Syncy's head: a brown beaver with big orange front teeth and a yellow hard hat" width="96" />
@@ -193,4 +193,4 @@ To regenerate just Syncy's art, run `npm run textures -- syncy`. See the [develo
 
 ---
 
-<sub>[← Dusty](dusty.md) · [Back to GitGremlin](../../README.md)</sub>
+<sub>[← Dusty](dusty.md) · [Mole →](mole.md) · [Back to GitGremlin](../../README.md)</sub>

@@ -1290,6 +1290,103 @@ summary:focus-visible {
   gap: 12px;
 }
 
+/* Mole */
+.chip.hot {
+  background: var(--hot-bg);
+  color: var(--hot);
+  border-color: transparent;
+}
+
+.card.clash {
+  box-shadow: var(--shadow), 0 0 0 1.5px var(--hot-bg) inset;
+}
+
+.clash-text {
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.portchip {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 7px;
+  border: 0;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.portchip:hover {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.ib.stop:hover {
+  background: var(--hot-bg);
+  color: var(--hot);
+  border-color: transparent;
+}
+
+.port-check {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.port-input {
+  position: relative;
+  width: 120px;
+}
+
+.port-input .colon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-52%);
+  font: 600 15px var(--mono);
+  color: var(--ink-3);
+  pointer-events: none;
+}
+
+.port-input .input {
+  padding-left: 24px;
+  font-family: var(--mono);
+  height: 38px;
+}
+
+.quick {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.quick button {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.quick button:hover {
+  background: var(--glass-2);
+  color: var(--ink);
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
 .all-repos summary {
   cursor: pointer;
   color: var(--ink-3);

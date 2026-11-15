@@ -60,7 +60,17 @@ const syncy = (stale: boolean): PetStatus => ({
   busy: null,
   connected: true
 })
-const status: Record<PetId, PetStatus> = { catbot: catbot(2, 5), dusty: dusty(null), syncy: syncy(false) }
+const mole = (clash: boolean): PetStatus => ({
+  name: 'Mole',
+  stage: 'fed',
+  level: clash ? 1 : 3,
+  report: clash ? ['2 DEV SERVERS RUNNING', ':3000 API', ':5173 WEB', 'PORT FIGHT: WEB WANTS :3000 BUT API HAS IT.', '', '> RIGHT-CLICK ME TO FREE IT.'] : ['1 DEV SERVER RUNNING', ':5173 WEB'],
+  grid: null,
+  alert: clash ? 'WEB WANTS :3000 BUT API HAS IT. RIGHT-CLICK ME TO FREE IT.' : null,
+  busy: null,
+  connected: true
+})
+const status: Record<PetId, PetStatus> = { catbot: catbot(2, 5), dusty: dusty(null), syncy: syncy(false), mole: mole(false) }
 
 const fake = document.getElementById('fakewin')!.getBoundingClientRect()
 const ledge: WindowLedge = { hwnd: 42, x: fake.left, y: fake.top, width: fake.width, height: fake.height }
@@ -71,7 +81,7 @@ const init: OverlayInit = {
   display,
   displays: [display],
   settings,
-  pets: (['catbot', 'dusty', 'syncy'] as PetId[]).map((id) => ({ id, isOwner: true, snapshot: null, status: status[id] })),
+  pets: (['catbot', 'dusty', 'syncy', 'mole'] as PetId[]).map((id) => ({ id, isOwner: true, snapshot: null, status: status[id] })),
   ledge
 }
 
@@ -124,6 +134,11 @@ const actions: Record<string, () => void> = {
   },
   'Dusty: say': () => emit('say', 'dusty', 'TRASH PANDA REPORTING FOR DUTY.'),
   'Syncy: unpushed': () => setStatus('syncy', syncy(true)),
+  'Mole: port taken': () => setStatus('mole', mole(true)),
+  'Mole: port freed': () => {
+    setStatus('mole', mole(false))
+    emit('feed', 'mole', { text: ':3000 IS FREE! SLURP.' })
+  },
   'Syncy: pushed': () => {
     setStatus('syncy', syncy(false))
     emit('feed', 'syncy', { text: '3 COMMITS FROM API SAFE ON GITHUB!' })

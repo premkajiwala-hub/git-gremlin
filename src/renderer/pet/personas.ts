@@ -16,8 +16,8 @@ export interface Persona {
   extraWeights: [string, number][]
   /** Washes its paws after eating (raccoons do). */
   washAfterEat: boolean
-  /** An animation to play when it nags you about something (Syncy's tail slap). */
-  alertAnim?: 'slap'
+  /** An animation to play when it nags you about something (Syncy's tail slap, Mole's digging). */
+  alertAnim?: 'slap' | 'rummage'
   bubble: BubbleTheme
 }
 
@@ -87,4 +87,25 @@ const SYNCY: Persona = {
   bubble: { accent: '#E2A812' }
 }
 
-export const PERSONAS: Record<PetId, Persona> = { catbot: CATBOT, dusty: DUSTY, syncy: SYNCY }
+const MOLE: Persona = {
+  hungryLines: ['NO WORMS IN THESE TUNNELS...'],
+  starvingLines: ['...'],
+  fedLines: [
+    [],
+    ['TWO SERVERS, ONE PORT. THIS ENDS BADLY.', 'SOMEONE IS SITTING ON YOUR PORT.'],
+    ['SOME SERVERS ARE STILL RUNNING WITH NO TERMINAL.', 'FORGOT A SERVER? I DID NOT.'],
+    ['SNIFFING AROUND LOCALHOST.', 'YOUR SERVERS ARE HUMMING.', 'I KNOW WHO HAS PORT 3000.'],
+    ['ALL TUNNELS CLEAR.', 'NO PORT FIGHTS TODAY.', 'EVERY PORT IS FREE FOR YOU.']
+  ],
+  thrownLines: ['MY GLASSES!', 'HEY! I WAS DIGGING!', 'TOO BRIGHT UP HERE!'],
+  tapLines: ['*SCRATCH SCRATCH*', 'ANY PORTS IN THERE?'],
+  extraWeights: [
+    ['rummage', 10],
+    ['wash', 5]
+  ],
+  washAfterEat: true,
+  alertAnim: 'rummage',
+  bubble: { accent: '#D9577F' }
+}
+
+export const PERSONAS: Record<PetId, Persona> = { catbot: CATBOT, dusty: DUSTY, syncy: SYNCY, mole: MOLE }

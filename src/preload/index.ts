@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../shared/constants'
 import type {
   ActionResult,
+  MoleAction,
+  PortLookup,
   RepoAction,
   DisplayInfo,
   FeedEvent,
@@ -59,6 +61,9 @@ const api = {
   syncyAction: (action: RepoAction): Promise<ActionResult> => ipcRenderer.invoke(IPC.syncyAction, action),
   /** Pick a folder and add it to Syncy's watched repos (git repos only, no duplicates). */
   addRepo: (): Promise<ActionResult> => ipcRenderer.invoke(IPC.addRepo),
+  moleAction: (action: MoleAction): Promise<ActionResult> => ipcRenderer.invoke(IPC.moleAction, action),
+  /** Who holds a port, and the next free one. */
+  moleLookup: (port: number): Promise<PortLookup | null> => ipcRenderer.invoke(IPC.moleLookup, port),
   hidePets: (hide: boolean): Promise<HubView> => ipcRenderer.invoke(IPC.hidePets, hide),
   refreshGitHub: (): Promise<HubView> => ipcRenderer.invoke(IPC.githubRefresh),
   /** Start "Sign in with GitHub"; resolves with the one-time code (already copied, github.com opened). */

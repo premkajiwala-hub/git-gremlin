@@ -15,10 +15,10 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/pets-hero.png" alt="Catbot, a white robot cat, Syncy, a brown beaver in a yellow hard hat, and Dusty, a grey raccoon with a teal bandana, with hearts between them" width="720" />
+  <img src="docs/images/pets-hero.png" alt="Catbot, a white robot cat, Syncy, a brown beaver in a yellow hard hat, Dusty, a grey raccoon with a teal bandana, and Mole, a grey mole in round glasses, with hearts between them" width="720" />
 </p>
 
-GitGremlin puts little pixel-art pets on your Windows desktop, and each one does a job for you. Catbot keeps an eye on your GitHub contributions. Dusty cleans junk files off your PC. Syncy makes sure your work actually reaches GitHub. They roam, play and talk to you, and you manage them all from one app.
+GitGremlin puts little pixel-art pets on your Windows desktop, and each one does a job for you. Catbot keeps an eye on your GitHub contributions. Dusty cleans junk files off your PC. Syncy makes sure your work actually reaches GitHub. Mole tells you who's sitting on the port you need, and frees it. They roam, play and talk to you, and you manage them all from one app.
 
 ## Contents
 
@@ -40,6 +40,7 @@ GitGremlin puts little pixel-art pets on your Windows desktop, and each one does
 - **A redesigned panel, "pixel glass":** frosted-glass cards, pixel headings, and each pet drawn large in scanlines. It fills the whole window, and follows your Windows theme (or pick **Light** or **Dark** under General).
 - **A new message box on the desktop:** in the same style, sized to its words, with all the text there at once. It opens when you hover a pet and closes the moment you move away.
 - **Syncy the beaver:** guards work you haven't pushed to GitHub. [Meet Syncy →](docs/pets/syncy.md)
+- **Mole:** port 3000 already taken? Mole tells you who has it and frees it in two clicks, and spots dev servers left running after their terminal closed. [Meet Mole →](docs/pets/mole.md)
 - **A real Windows app:** open GitGremlin from the Start menu or search ([Installation](#installation), step 5).
 - **More in General:** **Hide all pets** for an hour, and the app version.
 - **Right-click a pet** for its menu (review, run its job now, open GitGremlin). A plain click just shows its report.
@@ -60,6 +61,7 @@ GitGremlin is a home for **pets with a purpose**:
 | <img src="assets/pets/catbot/portrait.png" alt="Catbot" width="60" /> | **Catbot**<br /><sub>robot cat</sub> | Mirrors today's square on your **GitHub contribution chart**: hungry on days you haven't contributed, happier and livelier the greener the square. New contributions feed it. | [Catbot's guide →](docs/pets/catbot.md) |
 | <img src="assets/pets/dusty/portrait.png" alt="Dusty" width="66" /> | **Dusty**<br /><sub>raccoon</sub> | Sniffs out **junk files**: developer caches, the Recycle Bin, and optionally temp files and browser caches. Cleans them only the way you allow: ask first, automatically, or report only. | [Dusty's guide →](docs/pets/dusty.md) |
 | <img src="assets/pets/syncy/portrait.png" alt="Syncy" width="66" /> | **Syncy**<br /><sub>beaver</sub> | Guards **work that isn't on GitHub**: uncommitted changes, unpushed commits and forgotten stashes across all your repos. Watches them live, nudges you when work sits too long, and tidies merged branches. | [Syncy's guide →](docs/pets/syncy.md) |
+| <img src="assets/pets/mole/portrait.png" alt="Mole" width="72" /> | **Mole**<br /><sub>mole</sub> | Digs through your **ports**: shows every dev server and its port, warns you the moment a project you start finds **its port taken**, and **frees the port** (stops whatever holds it) after you confirm. Also spots servers left running after their terminal closed. | [Mole's guide →](docs/pets/mole.md) |
 
 More pets are on the way.
 
@@ -277,7 +279,8 @@ Pets are awake the whole time GitGremlin runs. Turn one off with its switch, or 
 - **Your GitHub account:** Catbot links through GitHub's own sign-in, with read-only access. The token is stored encrypted on your PC. [Details →](docs/pets/catbot.md#privacy-and-your-github-account)
 - **Your files:** Dusty only looks in a fixed list of junk locations inside your user folders. It never follows links, skips files in use, and by default deletes nothing until you confirm. [Safety rules →](docs/pets/dusty.md#safety-rules)
 - **Your repos:** Syncy only reads them with git. It never fetches or pushes, and the only change it can make is deleting merged local branches, after you confirm. [Safety →](docs/pets/syncy.md#safety)
-- **Network:** the only network access is Catbot's GitHub check. Syncy works offline.
+- **Your processes:** Mole only reads which programs listen on which ports. It stops a server only when you ask and confirm, never Windows itself or your terminal. [Safety →](docs/pets/mole.md#safety)
+- **Network:** the only network access is Catbot's GitHub check. Dusty, Syncy and Mole work offline.
 - **Your data stays local:** settings and state are in `%APPDATA%\GitGremlin\state.json`.
 
 ## Troubleshooting
@@ -299,7 +302,7 @@ Pets are awake the whole time GitGremlin runs. Turn one off with its switch, or 
 - **Full-screen games and apps cover the pets, even in on-top mode.** So do the Start menu, notification centre, Alt+Tab and Task View.
 - Window hopping uses the **focused** window only, and skips maximised and full-screen windows.
 - Dragging works only on the monitor the pet is on. To change monitors, toss it or let it walk.
-- Each pet has its own limits; see [Catbot's](docs/pets/catbot.md#limitations), [Dusty's](docs/pets/dusty.md#limitations) and [Syncy's](docs/pets/syncy.md#limitations) guides.
+- Each pet has its own limits; see [Catbot's](docs/pets/catbot.md#limitations), [Dusty's](docs/pets/dusty.md#limitations), [Syncy's](docs/pets/syncy.md#limitations) and [Mole's](docs/pets/mole.md#limitations) guides.
 
 ## Documentation
 
@@ -308,6 +311,7 @@ Pets are awake the whole time GitGremlin runs. Turn one off with its switch, or 
 | [Catbot](docs/pets/catbot.md) | Linking GitHub, how its mood works, feeding, settings, privacy |
 | [Dusty](docs/pets/dusty.md) | Cleaning modes, where it looks, safety rules, settings |
 | [Syncy](docs/pets/syncy.md) | What counts as unsaved work, where it looks, nudges, merged branches, safety |
+| [Mole](docs/pets/mole.md) | Freeing a port, port-taken warnings, running servers, servers left running, safety |
 | [Development guide](docs/development.md) | Dev mode, project structure, how it works, pet art, adding a pet, building the installer |
 
 ## License

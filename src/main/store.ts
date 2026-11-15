@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { app } from 'electron'
 import { DEFAULT_SETTINGS, PET_IDS, PET_SIZE_MAX, PET_SIZE_MIN } from '../shared/constants'
-import type { CleanResult, ContributionDay, GitHubSource, PetConfig, PetId, PetSnapshot, RepoScan, ScanResult, Settings, SyncyConfig } from '../shared/types'
+import type { CleanResult, ContributionDay, GitHubSource, MoleConfig, PetConfig, PetId, PetSnapshot, RepoScan, ScanResult, Settings, SyncyConfig } from '../shared/types'
 
 export interface AppState {
   version: 4
@@ -24,6 +24,8 @@ export interface AppState {
   pets: Record<PetId, PetSnapshot | null>
   dusty: { lastScan: ScanResult | null; lastClean: CleanResult | null }
   syncy: { lastScan: RepoScan | null }
+  /** The port each project usually runs on (learned), keyed by lower-case project folder. */
+  mole: { usual: Record<string, number> }
 }
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T
@@ -35,9 +37,10 @@ function defaults(): AppState {
     githubAuth: null,
     githubTokenEnc: null,
     github: { login: null, name: null, avatarUrl: null, days: [], source: 'none', fetchedAt: 0 },
-    pets: { catbot: null, dusty: null, syncy: null },
+    pets: { catbot: null, dusty: null, syncy: null, mole: null },
     dusty: { lastScan: null, lastClean: null },
-    syncy: { lastScan: null }
+    syncy: { lastScan: null },
+    mole: { usual: {} }
   }
 }
 
@@ -67,6 +70,16 @@ function syncyConfig(raw: Partial<SyncyConfig> | undefined, def: SyncyConfig): S
   }
 }
 
+function moleConfig(raw: Partial<MoleConfig> | undefined, def: MoleConfig): MoleConfig {
+  const r = raw ?? {}
+  const m = Number(r.leftoverMinutes)
+  return {
+    leftoverMinutes: Number.isFinite(m) && r.leftoverMinutes !== undefined ? Math.min(24 * 60, Math.max(0, m)) : def.leftoverMinutes,
+    clashAlerts: typeof r.clashAlerts === 'boolean' ? r.clashAlerts : def.clashAlerts,
+    showServices: typeof r.showServices === 'boolean' ? r.showServices : def.showServices
+  }
+}
+
 /** Fill in / clamp settings from anything (old versions, hand edits, the panel). */
 export function normalizeSettings(raw: Partial<Settings> | undefined): Settings {
   const d = DEFAULT_SETTINGS
@@ -78,7 +91,8 @@ export function normalizeSettings(raw: Partial<Settings> | undefined): Settings 
     pets: {
       catbot: petConfig(r.pets?.catbot, d.pets.catbot),
       dusty: petConfig(r.pets?.dusty, d.pets.dusty),
-      syncy: petConfig(r.pets?.syncy, d.pets.syncy)
+      syncy: petConfig(r.pets?.syncy, d.pets.syncy),
+      mole: petConfig(r.pets?.mole, d.pets.mole)
     },
     dusty: {
       mode: dusty.mode === 'auto' || dusty.mode === 'report' ? dusty.mode : 'ask',
@@ -90,8 +104,16 @@ export function normalizeSettings(raw: Partial<Settings> | undefined): Settings 
       },
       scanEveryMinutes: Math.min(24 * 60, Math.max(15, Number(dusty.scanEveryMinutes) || d.dusty.scanEveryMinutes))
     },
-    syncy: syncyConfig(r.syncy, d.syncy)
+    syncy: syncyConfig(r.syncy, d.syncy),
+    mole: moleConfig(r.mole, d.mole)
   }
+}
+
+function usualPorts(v: unknown): Record<string, number> {
+  const out: Record<string, number> = {}
+  if (v && typeof v === 'object')
+    for (const [k, n] of Object.entries(v as Record<string, unknown>)) if (typeof n === 'number' && n > 0 && n < 65536) out[k] = n
+  return out
 }
 
 /** JSON state in Electron's userData folder, written atomically and debounced. */
@@ -124,10 +146,11 @@ export class Store {
               followCursor: s.followCursor
             },
             dusty: d.settings.pets.dusty,
-            syncy: d.settings.pets.syncy
+            syncy: d.settings.pets.syncy,
+            mole: d.settings.pets.mole
           }
         })
-        pets = { catbot: raw.pet ?? null, dusty: null, syncy: null }
+        pets = { catbot: raw.pet ?? null, dusty: null, syncy: null, mole: null }
       }
       const linked = (raw.version ?? 0) >= 3 && (raw.githubAuth === 'oauth' || raw.githubAuth === 'gh')
       this.state = {
@@ -138,7 +161,8 @@ export class Store {
         github: linked ? { ...d.github, ...(raw.github ?? {}) } : d.github,
         pets,
         dusty: { lastScan: raw.dusty?.lastScan ?? null, lastClean: raw.dusty?.lastClean ?? null },
-        syncy: { lastScan: raw.syncy?.lastScan ?? null }
+        syncy: { lastScan: raw.syncy?.lastScan ?? null },
+        mole: { usual: usualPorts(raw.mole?.usual) }
       }
     } catch {
       this.state = defaults()

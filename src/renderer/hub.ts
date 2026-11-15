@@ -9,7 +9,7 @@ import '@fontsource/jetbrains-mono/latin-500.css'
 import '@fontsource/jetbrains-mono/latin-600.css'
 import { PET_IDS } from '../shared/constants'
 import { ago, formatBytes } from '../shared/format'
-import type { CleanMode, HubView, JunkTarget, PetConfig, PetId, RepoAction, RepoInfo, Settings, ThemeMode } from '../shared/types'
+import type { CleanMode, HubView, JunkTarget, MoleAction, PetConfig, PetId, PortClash, PortLookup, RepoAction, RepoInfo, ServerInfo, Settings, ThemeMode } from '../shared/types'
 
 /**
  * The GitGremlin panel ("pixel glass"): a rail of pets on the left, and for
@@ -47,6 +47,14 @@ const PET_UI: Record<PetId, { n: string; species: string; accent: string; lede: 
     accent: '#E2A812',
     lede: "Guards work you haven't pushed. Nudges you before it's lost, and eats a log every time you push.",
     art: ['sit', 0, 'idle'],
+    scale: 6
+  },
+  mole: {
+    n: '04',
+    species: 'Mole',
+    accent: '#D9577F',
+    lede: "Digs through your ports. Tells you who's sitting on the one you need, and frees it in two clicks.",
+    art: ['idle', 0, 'idle'],
     scale: 6
   }
 }
@@ -392,6 +400,17 @@ function heroInfo(id: PetId): HeroInfo {
     if (!sel) return { stats, primary: { label: 'Scan now', disabled: !enabled }, link: null }
     return { stats, primary: { label: `Clean ${formatBytes(sel)}`, disabled: !enabled }, link: { label: 'Scan again' } }
   }
+  if (id === 'mole') {
+    const m = view.mole
+    const dev = m.servers.filter((x) => x.kind === 'dev')
+    const clash = m.clashes[0]
+    const left = dev.filter((x) => x.orphan).length
+    return {
+      stats: [plural(dev.length, 'dev server'), clash ? `:${clash.port} is taken` : left ? `${left} left running` : 'no port fights', 'live'],
+      primary: clash ? { label: `Free :${clash.port}`, disabled: clash.holder.locked } : { label: 'Free a port' },
+      link: m.servers.length ? { label: 'See running servers' } : null
+    }
+  }
   const v = view.syncy
   const repos = v.scan?.repos ?? []
   const need = repos.filter(hasWork).length
@@ -412,6 +431,15 @@ async function heroAction(id: PetId, which: 'primary' | 'link'): Promise<void> {
   if (id === 'dusty') {
     if (which === 'primary' && selectedJunk().length) return cleanJunk()
     return scanJunk()
+  }
+  if (id === 'mole') {
+    const clash = view.mole.clashes[0]
+    if (which === 'primary' && clash) return stopServer(clash.holder)
+    if (which === 'primary') {
+      $('moleFree').scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return $('molePort').focus()
+    }
+    return $('moleServers').closest('.card')!.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
   if (which === 'primary') return checkRepos()
   $('syncyRepos').closest('.card')!.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -820,6 +848,188 @@ function wireSyncy(): void {
   })
 }
 
+// --- Mole: ports ----------------------------------------------------------------------------------
+const SVG_STOP = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg>'
+const QUICK_PORTS = [3000, 5173, 8000, 8080, 4200, 5000]
+let lookup: PortLookup | null = null
+
+async function moleAction(action: MoleAction): Promise<void> {
+  const r = await api.moleAction(action)
+  toast(r.message)
+  if (action.kind === 'stop') {
+    await reload()
+    if (lookup) await checkPort(lookup.port)
+  }
+}
+
+function since(t: number | null): string {
+  if (t === null) return ''
+  const m = (Date.now() - t) / 60_000
+  return m < 1 ? 'just now' : m < 60 ? `${Math.round(m)} min` : m < 48 * 60 ? `${Math.round(m / 60)} h` : `${Math.round(m / 1440)} d`
+}
+
+/** Ask first, then stop a server so its ports are free. */
+async function stopServer(sv: ServerInfo): Promise<void> {
+  const ports = sv.ports.map((p) => `:${p}`).join(', ')
+  const ok = await confirmDialog({
+    title: `Stop ${sv.name} on ${ports}?`,
+    items: [`${sv.command} · ${sv.process} (PID ${sv.pid})${sv.started ? ` · running ${since(sv.started)}` : ''}`, ...(sv.project ? [sv.project] : [])],
+    warn: sv.kind === 'db' ? "It's a database: apps using it lose their connection." : undefined,
+    hint: "It closes, along with anything it started (like npm run dev). Anything it hadn't saved is lost. Start it again any time.",
+    ok: 'Stop it'
+  })
+  if (ok) await moleAction({ kind: 'stop', pid: sv.pid })
+}
+
+function serverRow(sv: ServerInfo): HTMLElement {
+  const row = el('div', 'repo')
+  const left = el('div')
+  const name = el('div', 'repo-name', sv.name)
+  name.append(el('span', 'tag', sv.command))
+  const path = el('div', 'path', sv.project ?? `${sv.process} · PID ${sv.pid}`)
+  path.title = sv.project ?? ''
+  const badges = el('div', 'badges')
+  for (const p of sv.ports.slice(0, 6)) {
+    const chip = button(`:${p}`, `Open localhost:${p} in your browser`, () => void moleAction({ kind: 'browser', port: p }), 'portchip')
+    badges.append(chip)
+  }
+  if (sv.ports.length > 6) badges.append(el('span', 'b', `+${sv.ports.length - 6} more`))
+  if (sv.orphan) {
+    const b = el('span', 'b hot', 'left running · no terminal')
+    b.title = 'The terminal or tool that started it has closed, but it kept running in the background.'
+    badges.append(b)
+  } else if (sv.started) badges.append(el('span', 'b', `running ${since(sv.started)}`))
+  if (!sv.local) {
+    const b = el('span', 'b warn', 'on your network')
+    b.title = 'Other devices on your Wi-Fi or LAN can reach it, not just this PC.'
+    badges.append(b)
+  }
+  if (sv.kind === 'db') badges.append(el('span', 'b', 'database'))
+  if (sv.locked) badges.append(el('span', 'b', 'Windows service'))
+  left.append(name, path, badges)
+
+  const acts = el('div', 'acts')
+  if (sv.project && view.mole.vscode) acts.append(iconButton(SVG_CODE, 'VS Code', 'Open the project in Visual Studio Code', () => void moleAction({ kind: 'vscode', pid: sv.pid })))
+  if (sv.project) acts.append(iconButton(SVG_FOLDER, 'Folder', 'Open the project folder', () => void moleAction({ kind: 'folder', pid: sv.pid })))
+  const stop = iconButton(SVG_STOP, 'Stop', sv.locked ? "Windows won't let GitGremlin stop it" : 'Stop it and free its ports', () => void stopServer(sv))
+  stop.classList.add('stop')
+  stop.disabled = sv.locked
+  acts.append(stop)
+  row.append(left, acts)
+  return row
+}
+
+function clashRow(c: PortClash): HTMLElement {
+  const row = el('div', 'repo')
+  const left = el('div')
+  const same = c.holder.project && c.holder.project.toLowerCase() === c.project.toLowerCase()
+  const text = same
+    ? `${c.name} is already running on :${c.port}`
+    : c.movedTo
+      ? `${c.name} moved to :${c.movedTo} because ${c.holder.name} has :${c.port}`
+      : `${c.name} wants :${c.port}, but ${c.holder.name} has it`
+  left.append(el('div', 'clash-text', text))
+  const detail = el('div', 'path', `${c.holder.name}: ${c.holder.command} · ${c.holder.process} (PID ${c.holder.pid})${c.holder.started ? ` · running ${since(c.holder.started)}` : ''}`)
+  left.append(detail)
+  const acts = el('div', 'acts')
+  const free = iconButton(SVG_STOP, `Free :${c.port}`, `Stop ${c.holder.name} so ${c.name} can use :${c.port}`, () => void stopServer(c.holder))
+  free.classList.add('stop')
+  free.disabled = c.holder.locked
+  acts.append(free)
+  if (!c.movedTo) {
+    const next = nextFreeAfter(c.port)
+    acts.append(button(`Use :${next} instead`, `Copy ${next}, to start ${c.name} on that port`, () => void moleAction({ kind: 'copy', text: String(next) }), 'ib ghost'))
+  }
+  row.append(left, acts)
+  return row
+}
+
+function nextFreeAfter(port: number): number {
+  const used = new Set(view.mole.servers.flatMap((x) => x.ports))
+  for (let p = port + 1; p < port + 200; p++) if (!used.has(p)) return p
+  return port + 1
+}
+
+function renderLookup(): void {
+  const box = $('moleResult')
+  if (!lookup) return void box.replaceChildren()
+  const l = lookup
+  if (!l.holder) {
+    const row = el('div', 'repo')
+    const left = el('div')
+    left.append(el('div', 'clash-text', `:${l.port} is free`), el('div', 'path', 'Nothing is listening on it. Start your project.'))
+    row.append(left, el('span', 'b ok', 'free'))
+    return void box.replaceChildren(row)
+  }
+  const row = serverRow(l.holder)
+  const acts = row.querySelector('.acts')!
+  acts.prepend(button(`Use :${l.next} instead`, `Copy ${l.next} to the clipboard`, () => void moleAction({ kind: 'copy', text: String(l.next) }), 'ib ghost'))
+  if (l.holder.kind === 'system') {
+    for (const b of acts.querySelectorAll<HTMLButtonElement>('.stop')) b.disabled = true
+    row.querySelector('.badges')!.append(el('span', 'b', 'part of Windows'))
+  }
+  box.replaceChildren(row)
+}
+
+async function checkPort(port: number): Promise<void> {
+  if (!(port >= 1 && port <= 65535)) return toast('Type a port from 1 to 65535')
+  lookup = await api.moleLookup(port)
+  $<HTMLInputElement>('molePort').value = String(port)
+  renderLookup()
+}
+
+function renderMole(): void {
+  const m = view.mole
+  const cfg = draft.mole
+  const enabled = view.settings.pets.mole.enabled
+  setSeg($('moleLeftover'), 'data-m', String(cfg.leftoverMinutes))
+  setSwitch($('moleClashAlerts'), cfg.clashAlerts)
+  setSwitch($('moleServices'), cfg.showServices)
+  $('moleHiddenHint').textContent = cfg.showServices ? 'Databases and other apps are listed too' : m.hiddenServices ? `${plural(m.hiddenServices, 'app')} hidden right now` : 'Not just dev servers'
+
+  $('moleClashCard').hidden = !m.clashes.length
+  $('moleClashes').replaceChildren(...m.clashes.map(clashRow))
+  $('moleClashAge').textContent = m.clashes.length ? since(m.clashes[0].at) : ''
+
+  $('moleInfo').textContent = !enabled ? 'Mole is resting.' : 'Live · click a port to open it'
+  $('moleServers').replaceChildren(...m.servers.map(serverRow))
+  if (!m.servers.length) {
+    $('moleServers').append(el('div', 'empty', !enabled ? 'Turn Mole on to see what runs on your ports.' : 'No dev servers running. Start one (npm run dev...) and it shows up here.'))
+  }
+  if (!$('moleQuick').childElementCount) {
+    $('moleQuick').append(...QUICK_PORTS.map((p) => button(`:${p}`, `Who has :${p}?`, () => void checkPort(p), '')))
+  }
+  if (lookup) {
+    // Keep the answer fresh as servers come and go.
+    const holder = m.servers.find((x) => x.ports.includes(lookup!.port)) ?? null
+    if ((holder?.pid ?? null) !== (lookup.holder?.pid ?? null) && (holder || lookup.holder?.kind === 'dev')) void checkPort(lookup.port)
+  }
+}
+
+function wireMole(): void {
+  for (const b of $('moleLeftover').querySelectorAll<HTMLElement>('[data-m]')) {
+    b.addEventListener('click', () => {
+      draft.mole.leftoverMinutes = Number(b.dataset.m)
+      renderMole()
+      saveSoon(0)
+    })
+  }
+  $('moleClashAlerts').addEventListener('click', () => {
+    draft.mole.clashAlerts = !draft.mole.clashAlerts
+    renderMole()
+    saveSoon(0)
+  })
+  $('moleServices').addEventListener('click', () => {
+    draft.mole.showServices = !draft.mole.showServices
+    renderMole()
+    saveSoon(0)
+  })
+  $('moleCheck').addEventListener('submit', (e) => {
+    e.preventDefault()
+    void checkPort(Number($<HTMLInputElement>('molePort').value.replace(/\D/g, '')))
+  })
+}
+
 // --- General -------------------------------------------------------------------------------------
 function renderGeneral(): void {
   const on = PET_IDS.filter((id) => view.settings.pets[id].enabled).length
@@ -861,7 +1071,8 @@ function wireGeneral(): void {
   void Promise.all([
     petCanvas('catbot', 'sit', 0, 'idle', 4),
     petCanvas('syncy', 'idle', 0, 'idle', 4),
-    petCanvas('dusty', 'wash', 0, 'happy', 4)
+    petCanvas('dusty', 'wash', 0, 'happy', 4),
+    petCanvas('mole', 'sit', 0, 'idle', 4)
   ]).then((cs) => {
     lineup.replaceChildren(...cs)
     fitPets()
@@ -880,6 +1091,7 @@ function apply(v: HubView, refill = false): void {
   renderCatbot()
   renderDusty()
   renderSyncy()
+  renderMole()
   renderGeneral()
   for (const id of PET_IDS) fillPet(id)
 }
@@ -901,6 +1113,7 @@ async function start(): Promise<void> {
   wireCatbot()
   wireDusty()
   wireSyncy()
+  wireMole()
   wireGeneral()
   apply(view, true)
   show(page)

@@ -2,7 +2,7 @@ import { resolve } from 'node:path'
 import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeTheme, powerMonitor, shell, type MenuItemConstructorOptions } from 'electron'
 import { APP_ID, IPC, PET_IDS } from '../shared/constants'
 import { formatBytes } from '../shared/format'
-import type { ActionResult, FeedEvent, HubView, PetId, PetStatus, RepoAction, Settings, SignInCode, SignInResult } from '../shared/types'
+import type { ActionResult, FeedEvent, HubView, MoleAction, PetId, PetStatus, PortLookup, RepoAction, ServerInfo, Settings, SignInCode, SignInResult } from '../shared/types'
 import { clientId, DeviceFlow } from './github-auth'
 import { GitHubWatcher, moodFrom, type GitHubData } from './github'
 import { openInVSCode } from './editor'
@@ -11,6 +11,7 @@ import { installStartMenuShortcut, rebuildIfStale } from './launcher'
 import { OverlayManager } from './overlay'
 import { catbotFeedText, catbotStatus, newContributions } from './pets/catbot'
 import { DustyService } from './pets/dusty'
+import { MoleService } from './pets/mole'
 import { SyncyService } from './pets/syncy'
 import { normalizeSettings, Store } from './store'
 import { AppTray } from './tray'
@@ -49,7 +50,7 @@ if (process.argv.includes('--install-shortcut')) {
     const sayText = after('--say')
     if (argv.includes('--feed')) {
       const pet = petArg('--feed')
-      const text = pet === 'dusty' ? 'MMM, A TEST CRUMB!' : pet === 'syncy' ? 'CRUNCHY LOG!' : catbotFeedText(1)
+      const text = pet === 'dusty' ? 'MMM, A TEST CRUMB!' : pet === 'syncy' ? 'CRUNCHY LOG!' : pet === 'mole' ? 'A JUICY WORM!' : catbotFeedText(1)
       feed(pet, { text, debug: true })
     } else if (argv.includes('--scan')) void dusty.scan()
     else if (argv.includes('--check')) void syncy.check()
@@ -66,6 +67,7 @@ let tracker: WindowTracker
 let github: GitHubWatcher
 let dusty: DustyService
 let syncy: SyncyService
+let mole: MoleService
 let tray: AppTray
 let hideTimer: NodeJS.Timeout | null = null
 let hinted = false
@@ -102,6 +104,11 @@ function start(): void {
     feed: (text) => feed('syncy', { text }),
     say: (text) => overlays.sendToPet('syncy', IPC.say, text)
   })
+  mole = new MoleService(store, {
+    changed: () => pushStatus(),
+    feed: (text) => feed('mole', { text }),
+    say: (text) => overlays.sendToPet('mole', IPC.say, text)
+  })
   tray = new AppTray({
     openHub: (page) => openHub(page),
     setPetEnabled: (id, enabled) => {
@@ -115,6 +122,7 @@ function start(): void {
     dustyReview: () => openHub('dusty'),
     syncyCheck: () => void syncy.check(),
     syncyReview: () => openHub('syncy'),
+    moleReview: () => openHub('mole'),
     hideForHour: () => setHidden(true, 60 * 60_000),
     showPets: () => setHidden(false),
     toggleStartWithWindows: () => {
@@ -129,6 +137,7 @@ function start(): void {
   github.start()
   dusty.start()
   syncy.start()
+  mole.start()
   if (github.source === 'none') hintSignIn(6000)
   registerHubIpc()
 
@@ -150,6 +159,7 @@ function hintSignIn(delay: number): void {
 function status(id: PetId): PetStatus {
   const cfg = store.state.settings.pets[id]
   if (id === 'catbot') return catbotStatus(cfg, github.data, github.source !== 'none')
+  if (id === 'mole') return mole.status(cfg)
   return id === 'dusty' ? dusty.status(cfg) : syncy.status(cfg)
 }
 
@@ -258,7 +268,8 @@ async function hubView(): Promise<HubView> {
       ghAvailable: await ghAvailable()
     },
     dusty: dusty.view(),
-    syncy: syncy.view()
+    syncy: syncy.view(),
+    mole: mole.view()
   }
 }
 
@@ -287,6 +298,22 @@ function showPetMenu(id: PetId): void {
       { label: junk ? `Review ${formatBytes(junk)} of junk...` : 'Review junk...', click: () => openHub('dusty') },
       { label: 'Scan for junk now', enabled: !dusty.busy, click: () => void dusty.scan() }
     )
+  } else if (id === 'mole') {
+    const clash = mole.view().clashes[0]
+    if (clash) own.push({ label: `Free :${clash.port} (stop ${clash.holder.name})...`, enabled: !clash.holder.locked, click: () => void confirmStop(clash.holder) })
+    const dev = mole.shown()
+    own.push({
+      label: 'Free a port',
+      enabled: dev.length > 0,
+      submenu: dev.length
+        ? dev.map((sv) => ({
+            label: `${sv.ports.map((p) => `:${p}`).join(', ')}   ${sv.name}${sv.orphan ? ' (left running)' : ''}`,
+            enabled: !sv.locked && sv.kind !== 'system',
+            click: () => void confirmStop(sv)
+          }))
+        : [{ label: 'Nothing running', enabled: false }]
+    })
+    own.push({ label: 'Show running servers...', click: () => openHub('mole') })
   } else {
     own.push(
       { label: s.alert ? 'Review unsaved work...' : 'Show my repos...', click: () => openHub('syncy') },
@@ -309,6 +336,24 @@ function showPetMenu(id: PetId): void {
     }
   ])
   tray.popUp(menu)
+}
+
+/** Ask, then stop a server so its port is free (from Mole's right-click menu). */
+async function confirmStop(sv: ServerInfo): Promise<void> {
+  const ports = sv.ports.map((p) => `:${p}`).join(', ')
+  const r = await dialog.showMessageBox({
+    type: 'question',
+    buttons: ['Stop it', 'Cancel'],
+    defaultId: 0,
+    cancelId: 1,
+    noLink: true,
+    title: 'Free a port',
+    message: `Stop ${sv.name} on ${ports}?`,
+    detail: `${mole.describe(sv)}\n\nIt closes, along with anything it started. Anything it hadn't saved is lost.`
+  })
+  if (r.response !== 0) return
+  const result = await mole.stopServer(sv.pid)
+  if (!result.ok) void dialog.showMessageBox({ type: 'warning', title: 'Free a port', message: result.message })
 }
 
 function registerHubIpc(): void {
@@ -336,6 +381,7 @@ function registerHubIpc(): void {
     const where = (c: typeof a) => JSON.stringify([c.folders, c.ignored, c.trackBranches])
     if (where(a) !== where(b) || (next.pets.syncy.enabled && !before.pets.syncy.enabled)) setTimeout(() => void syncy.check(), 500)
     syncy.syncWatchers()
+    mole.refresh()
     if (sww !== startWithWindows()) setStartWithWindows(Boolean(sww))
     changed()
     return hubView()
@@ -358,6 +404,13 @@ function registerHubIpc(): void {
     const r = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts)
     if (r.canceled || !r.filePaths[0]) return { ok: false, message: '' }
     return syncy.addRepo(r.filePaths[0])
+  })
+
+  // --- Mole ----------------------------------------------------------------------------
+  ipcMain.handle(IPC.moleAction, (_e, action: MoleAction) => mole.act(action))
+  ipcMain.handle(IPC.moleLookup, (_e, port: unknown): PortLookup | null => {
+    const p = Math.round(Number(port))
+    return p >= 1 && p <= 65535 ? mole.lookup(p) : null
   })
 
   // --- Dusty ---------------------------------------------------------------------------
@@ -430,6 +483,7 @@ app.on('before-quit', () => {
   github?.stop()
   dusty?.stop()
   syncy?.stop()
+  mole?.stop()
   tracker?.stop()
   overlays?.stop()
   tray?.destroy()

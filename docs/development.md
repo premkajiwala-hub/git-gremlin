@@ -48,8 +48,9 @@ src/
     native.ts       Win32 helpers (koffi FFI)
     junk.ts         Dusty's junk scanner and cleaner
     repos.ts        Syncy's repo finder and git checks
+    ports.ts        Mole's port and process reader (Windows APIs via koffi)
     github*.ts      GitHub sign-in and contribution calendar
-    pets/           each pet's "purpose" service (catbot.ts, dusty.ts, syncy.ts)
+    pets/           each pet's "purpose" service (catbot.ts, dusty.ts, syncy.ts, mole.ts)
   preload/        the IPC bridge exposed to the renderers
   renderer/       overlay (pets) and panel (hub.*) pages
     pet/            brain (movement, behaviour), personas, sprites, particles
@@ -144,7 +145,7 @@ A second launch passes these to the running app:
 | Flag | Effect |
 |---|---|
 | `--settings` | Open the GitGremlin panel |
-| `--feed [catbot\|dusty\|syncy]` | Give a pet a debug snack |
+| `--feed [catbot\|dusty\|syncy\|mole]` | Give a pet a debug snack |
 | `--scan` | Make Dusty scan now |
 | `--check` | Make Syncy check your repos now |
 | `--say "text"` | Make Catbot say something |

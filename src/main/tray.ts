@@ -12,6 +12,7 @@ export interface TrayActions {
   dustyReview(): void
   syncyCheck(): void
   syncyReview(): void
+  moleReview(): void
   hideForHour(): void
   showPets(): void
   toggleStartWithWindows(): void
@@ -59,7 +60,8 @@ export class AppTray {
         syncy: [
           { label: 'Check my repos now', enabled: cfg.enabled, click: () => a.syncyCheck() },
           { label: 'Show unsaved work...', enabled: cfg.enabled, click: () => a.syncyReview() }
-        ]
+        ],
+        mole: [{ label: 'Show running servers...', enabled: cfg.enabled, click: () => a.moleReview() }]
       }
       const extra = extras[id]
       return {

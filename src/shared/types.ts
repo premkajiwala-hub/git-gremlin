@@ -67,7 +67,7 @@ export type GitHubSource = 'oauth' | 'gh' | 'none'
 export type HungerStage = 'fed' | 'hungry' | 'starving'
 
 /** Every pet GitGremlin can host. */
-export type PetId = 'catbot' | 'dusty' | 'syncy'
+export type PetId = 'catbot' | 'dusty' | 'syncy' | 'mole'
 
 /**
  * A pet's live state, built by its "purpose" service in the main process
@@ -137,6 +137,16 @@ export interface SyncyConfig {
   trackBranches: boolean
 }
 
+/** What Mole tells you about. */
+export interface MoleConfig {
+  /** Nudge about servers left running with no terminal after this many minutes (0 = never). */
+  leftoverMinutes: number
+  /** Warn when a project you start finds its port taken. */
+  clashAlerts: boolean
+  /** Also list databases and other apps that listen on ports (not just dev servers). */
+  showServices: boolean
+}
+
 /** The GitGremlin panel's colours: follow Windows, or always light / dark. */
 export type ThemeMode = 'system' | 'light' | 'dark'
 
@@ -147,6 +157,7 @@ export interface Settings {
   pets: Record<PetId, PetConfig>
   dusty: DustyConfig
   syncy: SyncyConfig
+  mole: MoleConfig
 }
 
 export interface PetInit {
@@ -249,6 +260,66 @@ export interface ActionResult {
   message: string
 }
 
+/** A dev server (dev), database (db), other app (app) or Windows itself (system). */
+export type ServerKind = 'dev' | 'db' | 'app' | 'system'
+
+/** One program listening on one or more TCP ports. */
+export interface ServerInfo {
+  pid: number
+  /** Image name, e.g. "node.exe". */
+  process: string
+  ports: number[]
+  /** Only reachable from this PC (localhost), not the network. */
+  local: boolean
+  kind: ServerKind
+  /** The project folder it was started from, or null. */
+  project: string | null
+  /** The project's folder name, else the program's name. */
+  name: string
+  /** What it runs: "vite", "next", "server.js"... */
+  command: string
+  started: number | null
+  /** The terminal (or tool) that started it is gone: it runs on in the background. */
+  orphan: boolean
+  orphanSince: number | null
+  /** Windows won't let GitGremlin stop it (a service, or running as admin). */
+  locked: boolean
+}
+
+/** A project you just started wants a port that another program already holds. */
+export interface PortClash {
+  /** The project that was started. */
+  project: string
+  name: string
+  port: number
+  holder: ServerInfo
+  /** It started on another port instead (e.g. Vite moves to 5174), or null. */
+  movedTo: number | null
+  at: number
+}
+
+export interface MoleView {
+  at: number
+  /** Servers to show (dev servers; databases and apps too when showServices is on). */
+  servers: ServerInfo[]
+  clashes: PortClash[]
+  /** Databases and apps not shown (showServices is off). */
+  hiddenServices: number
+  vscode: boolean
+}
+
+export type MoleAction =
+  | { kind: 'stop' | 'folder' | 'vscode'; pid: number }
+  | { kind: 'browser'; port: number }
+  | { kind: 'copy'; text: string }
+
+/** Who holds a port, and the next free one after it. */
+export interface PortLookup {
+  port: number
+  holder: ServerInfo | null
+  next: number
+}
+
 export interface GitHubView {
   /** The linked account, or null when not signed in. */
   login: string | null
@@ -279,6 +350,7 @@ export interface HubView {
   github: GitHubView
   dusty: DustyView
   syncy: SyncyView
+  mole: MoleView
 }
 
 /** Shown while signing in: enter this code at the verification URL. */

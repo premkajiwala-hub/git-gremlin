@@ -319,6 +319,46 @@
       </article>
     </template>
 
+    <!-- Mole: ports -->
+    <template id="molePurpose">
+      <article class="card wide clash" id="moleClashCard" hidden>
+        <div class="card-head"><h2 class="card-title"><i></i>Port taken</h2><span class="chip hot" id="moleClashAge"></span></div>
+        <div class="repos" id="moleClashes"></div>
+      </article>
+      <article class="card wide">
+        <div class="card-head"><h2 class="card-title"><i></i>Running servers</h2><span class="muted" id="moleInfo"></span></div>
+        <div class="repos" id="moleServers"></div>
+      </article>
+      <article class="card wide" id="moleFree">
+        <div class="card-head"><h2 class="card-title"><i></i>Free a port</h2></div>
+        <form class="port-check" id="moleCheck">
+          <label class="port-input"><span class="sr">Port</span><span class="colon" aria-hidden="true">:</span><input class="input" id="molePort" inputmode="numeric" maxlength="5" placeholder="3000" autocomplete="off" /></label>
+          <button type="submit" class="ib">Who has it?</button>
+          <div class="quick" id="moleQuick"></div>
+        </form>
+        <div class="repos" id="moleResult"></div>
+      </article>
+      <article class="card" id="moleHabits">
+        <div class="card-head"><h2 class="card-title"><i></i>Habits</h2></div>
+        <div class="field">
+          <span class="field-top">Nudge me about servers left running after</span>
+          <div class="seg" role="group" aria-label="Leftover nudge" id="moleLeftover">
+            <button type="button" data-m="15">15 min</button><button type="button" data-m="30">30 min</button><button type="button" data-m="60">1 h</button><button type="button" data-m="0">Never</button>
+          </div>
+        </div>
+        <div class="lines">
+          <div class="line-row">
+            <div><div class="t">Warn when a port is taken</div><div class="s">When a project you start finds its port in use</div></div>
+            <button type="button" class="switch" role="switch" id="moleClashAlerts" aria-label="Warn when a port is taken"><span class="knob"></span></button>
+          </div>
+          <div class="line-row">
+            <div><div class="t">Show databases and apps</div><div class="s" id="moleHiddenHint">Not just dev servers</div></div>
+            <button type="button" class="switch" role="switch" id="moleServices" aria-label="Show databases and apps"><span class="knob"></span></button>
+          </div>
+        </div>
+      </article>
+    </template>
+
     <dialog id="confirm">
       <form method="dialog">
         <h3 id="confirmTitle"></h3>
