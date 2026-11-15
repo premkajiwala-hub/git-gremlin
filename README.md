@@ -74,7 +74,7 @@ More pets are on the way.
 - **Plays with you.** Pets can follow your cursor, and you can pick them up, drag them and toss them.
 - **Crisp pixel art.** Everything is drawn in whole device pixels, so it stays sharp at any Windows scaling.
 - **A real Windows app.** Open it from the Start menu or search, pin it, and start it with Windows.
-- **Light on your PC.** Rendering slows down when nothing on screen changes, and the only network access is Catbot's read-only GitHub check.
+- **Light on your PC.** Rendering slows down when nothing on screen changes. Syncy watches your repos with file events, Mole's port check takes a few milliseconds, and the only network access is Catbot's read-only GitHub check.
 
 ## Installation
 
@@ -193,6 +193,8 @@ Copy-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\GitGremlin.lnk" ([
 3. Click the tray icon to open the **GitGremlin panel**:
    - **Catbot → Sign in with GitHub** links your contribution chart.
    - **Dusty** shows the junk it finds. Nothing is deleted until you confirm.
+   - **Syncy** lists repos with work that isn't on GitHub yet. It finds your repos by itself.
+   - **Mole** shows your running dev servers and their ports, and frees a port you need.
    - **General → Start GitGremlin with Windows** brings the pets back every time you sign in.
 
 To keep it handy, right-click **GitGremlin** in the Start menu and choose **Pin to Start** or **Pin to taskbar**. Opening GitGremlin while it's already running opens the panel. To stop it, right-click the tray icon and choose **Quit**.
@@ -229,7 +231,7 @@ Node.js and Git stay installed. If you don't need them, remove them with `winget
 ### The GitGremlin panel
 
 <p align="center">
-  <img src="docs/images/panel.png" alt="The GitGremlin panel showing Dusty's page: a sidebar with Catbot and Dusty, the junk found with Scan now and Clean buttons, and Dusty's cleaning mode options" width="720" />
+  <img src="docs/images/panel.png" alt="The GitGremlin panel showing Mole's page: a sidebar with Catbot, Dusty, Syncy and Mole, Mole drawn large, a Port taken card saying web wants port 5050 but api has it with Free and Use instead buttons, and the running servers list" width="720" />
 </p>
 
 Click the tray icon to open it. The sidebar lists every pet with a status dot:
@@ -268,7 +270,7 @@ Click the tray icon to open it. The sidebar lists every pet with a status dot:
 | Move the cursor over the desktop | Follows it (if **Follow my cursor** is on) and stops when it reaches it |
 | Hover over it | Stops, faces you and shows its message box; it closes the moment you move away |
 | Click it | Looks up at you and shows its report |
-| Right-click it | Opens its menu: its own actions (like **Review junk...** or **Check my repos now**), **Open GitGremlin** and **Put it away** |
+| Right-click it | Opens its menu: its own actions (like **Review junk...**, **Check my repos now** or **Free a port**), **Open GitGremlin** and **Put it away** |
 | Drag it | Dangles from your cursor |
 | Toss it | Flies, bounces off the screen edges and may land on a window; flick it hard for a red flash |
 
