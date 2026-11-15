@@ -255,10 +255,33 @@ export async function deleteBranches(path: string, branches: string[]): Promise<
   return { deleted, failed }
 }
 
-export async function scanRepos(roots: SearchRoot[], ignored: string[], trackBranches: boolean): Promise<RepoScan> {
+/** The repository a folder belongs to (its top-level folder), or null if it isn't inside a git repo. */
+export async function repoRoot(path: string): Promise<string | null> {
+  if (!(await findGit()) || !existsSync(path)) return null
+  try {
+    const top = (await git(path, ['rev-parse', '--show-toplevel'])).trim()
+    return top ? resolve(top) : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Check every repo: the ones found under `roots` plus the ones you added
+ * yourself (`added`, each must be a repo's top folder). Added folders that
+ * aren't git repos are reported in `invalid`.
+ */
+export async function scanRepos(roots: SearchRoot[], ignored: string[], trackBranches: boolean, added: string[] = []): Promise<RepoScan> {
   const at = Date.now()
-  if (!(await findGit())) return { at, repos: [], roots: roots.map((r) => r.path), gitMissing: true }
+  if (!(await findGit())) return { at, repos: [], roots: roots.map((r) => r.path), gitMissing: true, invalid: [] }
   const skip = new Set(ignored.map((p) => resolve(p).toLowerCase()))
-  const paths = (await findRepos(roots)).filter((p) => !skip.has(p.toLowerCase()))
-  return { at, repos: await inspectAll(paths, trackBranches), roots: roots.map((r) => r.path), gitMissing: false }
+  const found = await findRepos(roots)
+  const invalid: string[] = []
+  for (const p of added) {
+    if (existsSync(join(p, '.git'))) found.push(resolve(p))
+    else invalid.push(p)
+  }
+  const unique = new Map(found.map((p) => [p.toLowerCase(), p]))
+  const paths = [...unique.values()].filter((p) => !skip.has(p.toLowerCase()))
+  return { at, repos: await inspectAll(paths, trackBranches), roots: roots.map((r) => r.path), gitMissing: false, invalid }
 }

@@ -228,6 +228,8 @@ export interface RepoScan {
   roots: string[]
   /** Git isn't installed (or not on PATH). */
   gitMissing: boolean
+  /** Repos you added that aren't git repos (any more). */
+  invalid?: string[]
 }
 
 export interface SyncyView {

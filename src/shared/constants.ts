@@ -96,7 +96,7 @@ export const IPC = {
   dustyClean: 'hub:dusty-clean',
   syncyScan: 'hub:syncy-scan',
   syncyAction: 'hub:syncy-action',
-  pickFolder: 'hub:pick-folder',
+  addRepo: 'hub:syncy-add-repo',
   hidePets: 'hub:hide-pets',
   githubRefresh: 'settings:github-refresh',
   githubSignIn: 'settings:github-sign-in',

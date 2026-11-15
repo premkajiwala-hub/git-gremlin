@@ -302,7 +302,7 @@
             >
           </div>
           <div class="line-row">
-            <div><div class="t">Check my repos every</div></div>
+            <div><div class="t">Look for new repos every</div><div class="s">Changes in watched repos show up right away</div></div>
             <label class="chip-select"
               ><span class="sr">Check every</span
               ><select id="syncyEvery">
@@ -321,17 +321,20 @@
         </div>
       </article>
       <article class="card">
-        <div class="card-head"><h2 class="card-title"><i></i>Where Syncy looks</h2><button type="button" class="ib" id="syncyAddFolder">+ Add folder</button></div>
+        <div class="card-head"><h2 class="card-title"><i></i>Watched repos</h2><button type="button" class="ib" id="syncyAddRepo">+ Add repo</button></div>
         <div class="line-row">
           <div><div class="t">Find my repos automatically</div><div class="s" id="syncyAutoHint"></div></div>
           <button type="button" class="switch" role="switch" id="syncyAuto" aria-label="Find my repos automatically"><span class="knob"></span></button>
         </div>
-        <div class="paths" id="syncyFolders"></div>
+        <div id="syncyAddedBox">
+          <div class="sublabel">Added by you</div>
+          <div class="paths" id="syncyFolders"></div>
+        </div>
         <div id="syncyIgnoredBox" hidden>
           <div class="sublabel">Ignored repos</div>
           <div class="paths" id="syncyIgnored"></div>
         </div>
-        <p class="muted">Syncy only reads your repos and never fetches or pushes.</p>
+        <p class="muted">Syncy watches every repo live: edits, commits and pushes show up within seconds. It only reads your repos and never fetches or pushes.</p>
       </article>
     </template>
 

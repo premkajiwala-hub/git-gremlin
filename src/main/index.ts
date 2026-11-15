@@ -335,6 +335,7 @@ function registerHubIpc(): void {
     if (b.scanEveryMinutes !== a.scanEveryMinutes) syncy.reschedule()
     const where = (c: typeof a) => JSON.stringify([c.autoFind, c.folders, c.ignored, c.trackBranches])
     if (where(a) !== where(b) || (next.pets.syncy.enabled && !before.pets.syncy.enabled)) setTimeout(() => void syncy.check(), 500)
+    syncy.syncWatchers()
     if (sww !== startWithWindows()) setStartWithWindows(Boolean(sww))
     changed()
     return hubView()
@@ -351,11 +352,12 @@ function registerHubIpc(): void {
     else setHidden(false)
     return hubView()
   })
-  ipcMain.handle(IPC.pickFolder, async (e): Promise<string | null> => {
+  ipcMain.handle(IPC.addRepo, async (e): Promise<ActionResult> => {
     const win = BrowserWindow.fromWebContents(e.sender)
-    const opts = { title: 'Choose a folder with your repos', properties: ['openDirectory' as const] }
+    const opts = { title: 'Choose a git repository for Syncy to watch', properties: ['openDirectory' as const] }
     const r = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts)
-    return r.canceled ? null : (r.filePaths[0] ?? null)
+    if (r.canceled || !r.filePaths[0]) return { ok: false, message: '' }
+    return syncy.addRepo(r.filePaths[0])
   })
 
   // --- Dusty ---------------------------------------------------------------------------

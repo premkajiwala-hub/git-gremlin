@@ -57,7 +57,8 @@ const api = {
   dustyClean: (ids: string[]): Promise<HubView> => ipcRenderer.invoke(IPC.dustyClean, ids),
   syncyScan: (): Promise<HubView> => ipcRenderer.invoke(IPC.syncyScan),
   syncyAction: (action: RepoAction): Promise<ActionResult> => ipcRenderer.invoke(IPC.syncyAction, action),
-  pickFolder: (): Promise<string | null> => ipcRenderer.invoke(IPC.pickFolder),
+  /** Pick a folder and add it to Syncy's watched repos (git repos only, no duplicates). */
+  addRepo: (): Promise<ActionResult> => ipcRenderer.invoke(IPC.addRepo),
   hidePets: (hide: boolean): Promise<HubView> => ipcRenderer.invoke(IPC.hidePets, hide),
   refreshGitHub: (): Promise<HubView> => ipcRenderer.invoke(IPC.githubRefresh),
   /** Start "Sign in with GitHub"; resolves with the one-time code (already copied, github.com opened). */

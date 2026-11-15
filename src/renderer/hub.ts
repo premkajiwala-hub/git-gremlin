@@ -715,11 +715,13 @@ function repoRow(r: RepoInfo): HTMLElement {
   return row
 }
 
-function pathRow(path: string, label: string, title: string, onClick: () => void): HTMLElement {
+function pathRow(path: string, label: string, title: string, onClick: () => void, problem?: string): HTMLElement {
   const row = el('div', 'folder')
   const span = el('span', '', path)
   span.title = path
-  row.append(span, button(label, title, onClick, 'ib ghost'))
+  row.append(span)
+  if (problem) row.append(el('span', 'b hot', problem))
+  row.append(button(label, title, onClick, 'ib ghost'))
   return row
 }
 
@@ -732,14 +734,27 @@ function renderSyncy(): void {
   $<HTMLSelectElement>('syncyEvery').value = String(cfg.scanEveryMinutes)
   setSwitch($('syncyBranches'), cfg.trackBranches)
   setSwitch($('syncyAuto'), cfg.autoFind)
-  $('syncyAutoHint').textContent = v.autoRoots.length ? `Searches ${v.autoRoots.join(', ')}` : 'Your user folder, code folders and other local drives'
+  // How many repos auto-find found (the rest were added by you).
+  const added = new Set(cfg.folders.map((f) => f.toLowerCase()))
+  const auto = (scan?.repos ?? []).filter((r) => !added.has(r.path.toLowerCase())).length
+  $('syncyAutoHint').textContent = cfg.autoFind
+    ? `${plural(auto, 'repo')} found in your user folder, code folders and other drives`
+    : 'Off: Syncy only watches the repos you add'
+  const invalid = new Set((scan?.invalid ?? []).map((p) => p.toLowerCase()))
+  $('syncyAddedBox').hidden = !cfg.folders.length
   $('syncyFolders').replaceChildren(
     ...cfg.folders.map((f) =>
-      pathRow(f, 'Remove', 'Stop searching this folder', () => {
-        draft.syncy.folders = draft.syncy.folders.filter((x) => x !== f)
-        saveSoon(0)
-        renderSyncy()
-      })
+      pathRow(
+        f,
+        'Remove',
+        'Stop watching this repo',
+        () => {
+          draft.syncy.folders = draft.syncy.folders.filter((x) => x !== f)
+          saveSoon(0)
+          renderSyncy()
+        },
+        invalid.has(f.toLowerCase()) ? 'not a git repo' : undefined
+      )
     )
   )
   $('syncyIgnoredBox').hidden = !cfg.ignored.length
@@ -805,12 +820,11 @@ function wireSyncy(): void {
     renderSyncy()
     saveSoon(0)
   })
-  $('syncyAddFolder').addEventListener('click', async () => {
-    const folder = await api.pickFolder()
-    if (!folder || draft.syncy.folders.some((f) => f.toLowerCase() === folder.toLowerCase())) return
-    draft.syncy.folders.push(folder)
-    renderSyncy()
-    saveSoon(0)
+  // Main checks it's a git repo and not already watched, then adds it.
+  $('syncyAddRepo').addEventListener('click', async () => {
+    const r = await api.addRepo()
+    if (r.message) toast(r.message)
+    await reload()
   })
 }
 

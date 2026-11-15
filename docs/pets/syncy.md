@@ -27,7 +27,7 @@
 
 - [Getting started](#getting-started)
 - [What Syncy looks for](#what-syncy-looks-for)
-- [Where Syncy looks](#where-syncy-looks)
+- [Watched repos](#watched-repos)
 - [Nudges](#nudges)
 - [Merged branches](#merged-branches)
 - [Safety](#safety)
@@ -40,12 +40,12 @@
 
 Syncy needs no setup:
 
-1. About 20 seconds after GitGremlin starts, Syncy finds your git repos and checks each one. It checks again every 10 minutes.
+1. About 20 seconds after GitGremlin starts, Syncy finds your git repos and checks each one. From then on it watches every repo live: an edit, commit, stash or push shows up within a few seconds.
 2. Open the GitGremlin panel → **Syncy** to see every repo with work that isn't on GitHub, oldest first.
 3. Each repo has quick actions: **Open** (in File Explorer), **VS Code** (opens the repo in Visual Studio Code, ready to commit and push from Source Control; shown when VS Code is installed), **Delete merged** branches and **Ignore**.
-4. Push your work. On its next check Syncy notices and celebrates.
+4. Push your work. Syncy notices within seconds and celebrates.
 
-Not seeing a repo? Add its folder under **Where Syncy looks**.
+Not seeing a repo? Add it with **+ Add repo** under **Watched repos**.
 
 ## What Syncy looks for
 
@@ -59,7 +59,14 @@ Not seeing a repo? Add its folder under **Where Syncy looks**.
 
 Each item shows how old it is. Anything older than your nudge threshold (1 day by default) is marked in red.
 
-## Where Syncy looks
+## Watched repos
+
+The two cards on Syncy's page do different jobs:
+
+- **Watched repos** is *which repos* Syncy keeps an eye on.
+- **Not on GitHub** is *what it found* in them: the watched repos that have work only on this PC.
+
+### Finding repos automatically
 
 With **Find my repos automatically** on (the default), Syncy searches:
 
@@ -69,9 +76,21 @@ With **Find my repos automatically** on (the default), Syncy searches:
 
 It skips folders that never hold your projects, such as `node_modules`, `AppData`, `Windows`, `Program Files`, build output folders and hidden folders. It also stops at each repo, so nested repos and submodules don't show up twice.
 
-You can also:
-- **Add folder...** to search folders of your own, 4 levels deep;
-- **Ignore** a repo so Syncy leaves it alone, and **Watch again** to bring it back.
+It looks for new repos every 10 minutes (you can change this). Repos it already watches update live.
+
+### Adding a repo yourself
+
+**+ Add repo** lets you pick a repo Syncy didn't find:
+
+- **Git repos only.** The folder must be a git repository (it has a `.git` folder: you ran `git init` or `git clone` there). Pick any folder inside a repo and Syncy uses the repo's top folder.
+- **No duplicates.** A repo that's already in your list, already found automatically, or in your ignored repos isn't added again; Syncy tells you why.
+- A folder you added earlier that stops being a repo is marked **not a git repo**, so you can remove it.
+
+### Watching live
+
+Syncy watches the files of every watched repo. A couple of seconds after something changes (you save a file, commit, stash or push), it re-checks that repo, so the panel, its report and its nudges are always current. Changes inside `node_modules` and git's own object store are skipped, so builds and installs don't keep it busy.
+
+**Ignore** a repo so Syncy stops watching it, and **Watch again** to bring it back.
 
 ## Nudges
 
@@ -140,10 +159,10 @@ GitGremlin panel → **Syncy**:
 | **On desktop** | Shows or hides Syncy (and pauses its checks) | On |
 | **Nudge me about work older than** | 4 hours, 1 day, 3 days or 1 week | 1 day |
 | **Evening summary** | Off, or a time from 5 PM to 10 PM | 6 PM |
-| **Check my repos every** | 5, 10, 15 or 30 minutes, or every hour | 10 minutes |
+| **Look for new repos every** | 5, 10, 15 or 30 minutes, or every hour. Watched repos update live | 10 minutes |
 | **Find merged branches** | List merged local branches and offer to delete them | On |
 | **Find my repos automatically** | Search common code folders and local drives | On |
-| **Also search these folders** | Your own folders to search | None |
+| **+ Add repo** | Watch a repo it didn't find (git repos only, no duplicates) | None |
 | **Ignored repos** | Repos Syncy leaves alone | None |
 | **Name**, **Size**, **Walking speed**, **Where it wanders**, **Follow my cursor** | Look and movement, as for every pet | Syncy, 64 px, 38 px/s, anywhere, off |
 
@@ -175,7 +194,7 @@ To regenerate just Syncy's art, run `npm run textures -- syncy`. See the [develo
 
 - **"Not on GitHub" is as of your last fetch.** Syncy doesn't fetch, so commits pushed from another computer only count once you fetch or pull here.
 - Branches merged by squash or rebase on GitHub don't look merged to git, so Syncy doesn't offer to delete them.
-- Syncy only finds repos in the folders it searches. Add others under **Where Syncy looks**.
+- Syncy only finds repos in the folders it searches. Add others with **+ Add repo** under **Watched repos**.
 - Uncommitted changes count files that `.gitignore` doesn't exclude. If a repo always has local-only changes, ignore it or add those files to `.gitignore`.
 
 ---

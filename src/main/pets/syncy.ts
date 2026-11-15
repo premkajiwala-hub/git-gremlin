@@ -1,10 +1,10 @@
-import { existsSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { watch, type FSWatcher } from 'node:fs'
+import { basename, resolve } from 'node:path'
 import { ago } from '../../shared/format'
 import type { ActionResult, PetConfig, PetStatus, RepoInfo, RepoScan, SyncyView } from '../../shared/types'
 import { findVSCode } from '../editor'
 import { localDate } from '../github'
-import { autoRoots, deleteBranches, inspectRepo, scanRepos, type SearchRoot } from '../repos'
+import { autoRoots, deleteBranches, inspectRepo, repoRoot, scanRepos, type SearchRoot } from '../repos'
 import type { Store } from '../store'
 
 const RANDOM_LINES = [
@@ -43,17 +43,34 @@ export interface SyncyHooks {
   say(text: string): void
 }
 
+/** File changes that never affect what Syncy reports (dependencies, git's object store and logs). */
+const NOISE = /(^|\/)node_modules\/|^\.git\/(objects|logs)\/|\.lock$/
+/** Wait this long after the last change before re-checking a repo, but never longer than MAX_WAIT. */
+const SETTLE_MS = 2500
+const MAX_WAIT_MS = 15_000
+
+const key = (p: string) => resolve(p).toLowerCase()
+
+/** What Syncy reports about a repo, to tell whether a re-check changed anything. */
+const summary = (r: RepoInfo) =>
+  JSON.stringify([r.branch, r.hasRemote, r.changes, r.changesSince, r.unpushed, r.unpushedSince, r.stashes, r.merged, r.base, r.error])
+
 /**
- * Syncy's purpose: check your repos every few minutes for uncommitted
- * changes, commits that aren't on GitHub, forgotten stashes and merged
- * branches; nudge you when work has been sitting unsaved too long; and
- * celebrate when you push.
+ * Syncy's purpose: watch your repos for uncommitted changes, commits that
+ * aren't on GitHub, forgotten stashes and merged branches; nudge you when
+ * work has been sitting unsaved too long; and celebrate when you push.
+ *
+ * Every watched repo is watched live (a file watcher re-checks it a couple
+ * of seconds after anything in it changes); a full check every few minutes
+ * finds newly created repos.
  */
 export class SyncyService {
   busy: 'scanning' | 'cleaning' | null = null
   private timer: NodeJS.Timeout | null = null
   private firstScan: NodeJS.Timeout | null = null
   private minute: NodeJS.Timeout | null = null
+  private watchers = new Map<string, FSWatcher>()
+  private pending = new Map<string, { timer: NodeJS.Timeout; since: number }>()
 
   constructor(
     private store: Store,
@@ -74,12 +91,18 @@ export class SyncyService {
     this.reschedule()
     this.firstScan = setTimeout(() => void this.check(), 20_000)
     this.minute = setInterval(() => this.eveningSummary(), 60_000)
+    // Watch the repos from last time right away; the first full check refreshes the list.
+    this.syncWatchers()
   }
 
   stop(): void {
     if (this.timer) clearInterval(this.timer)
     if (this.firstScan) clearTimeout(this.firstScan)
     if (this.minute) clearInterval(this.minute)
+    for (const w of this.watchers.values()) w.close()
+    this.watchers.clear()
+    for (const p of this.pending.values()) clearTimeout(p.timer)
+    this.pending.clear()
   }
 
   reschedule(): void {
@@ -88,8 +111,77 @@ export class SyncyService {
   }
 
   roots(): SearchRoot[] {
-    const own = this.cfg.folders.filter((f) => existsSync(f)).map((path) => ({ path, depth: 4 }))
-    return [...(this.cfg.autoFind ? autoRoots() : []), ...own]
+    return this.cfg.autoFind ? autoRoots() : []
+  }
+
+  // --- live watching ---------------------------------------------------------------------------
+  /** Watch exactly the repos in the last check (none while Syncy is off). */
+  syncWatchers(): void {
+    const want = new Map(this.enabled ? (this.scan?.repos ?? []).map((r) => [key(r.path), r.path]) : [])
+    for (const [k, w] of this.watchers) {
+      if (want.has(k)) continue
+      w.close()
+      this.watchers.delete(k)
+    }
+    for (const [k, path] of want) {
+      if (this.watchers.has(k)) continue
+      try {
+        const w = watch(path, { recursive: true, persistent: false }, (_e, file) => this.changedOnDisk(path, file))
+        w.on('error', () => {
+          w.close()
+          this.watchers.delete(k)
+        })
+        this.watchers.set(k, w)
+      } catch {
+        // Can't watch it (removed, no access): the periodic check still covers it.
+      }
+    }
+  }
+
+  private changedOnDisk(path: string, file: string | Buffer | null): void {
+    const f = String(file ?? '').replace(/\\/g, '/')
+    if (NOISE.test(f)) return
+    const k = key(path)
+    const p = this.pending.get(k)
+    const since = p?.since ?? Date.now()
+    if (p) clearTimeout(p.timer)
+    // Settle for a moment (a commit touches many files), but don't wait forever during a long build.
+    const wait = Math.max(0, Math.min(SETTLE_MS, since + MAX_WAIT_MS - Date.now()))
+    this.pending.set(k, { since, timer: setTimeout(() => void this.recheck(path), wait) })
+  }
+
+  /** Re-check one repo after its files changed; react if what Syncy reports changed. */
+  private async recheck(path: string): Promise<void> {
+    this.pending.delete(key(path))
+    if (!this.enabled || this.busy === 'scanning' || !this.scan) return
+    const fresh = await inspectRepo(path, this.cfg.trackBranches)
+    const scan = this.scan
+    const i = scan?.repos.findIndex((r) => key(r.path) === key(path)) ?? -1
+    if (!scan || i < 0) return
+    const prev = scan.repos[i]
+    if (summary(prev) === summary(fresh)) return
+    scan.repos[i] = fresh
+    this.store.saveSoon()
+    this.hooks.changed()
+    this.react({ ...scan, repos: [prev] }, { ...scan, repos: [fresh] })
+  }
+
+  /** Add a repo you chose: it must be a git repo, and not one Syncy already watches. */
+  async addRepo(folder: string): Promise<ActionResult> {
+    const root = await repoRoot(folder)
+    const name = basename(root ?? folder)
+    if (!root) return { ok: false, message: `${name} isn't a git repository. Pick a folder where you ran git init (it has a .git folder).` }
+    const k = key(root)
+    if (this.cfg.ignored.some((p) => key(p) === k)) return { ok: false, message: `${name} is in your ignored repos. Click Watch again to bring it back.` }
+    if (this.cfg.folders.some((p) => key(p) === k)) return { ok: false, message: `${name} is already in your list.` }
+    if (this.scan?.repos.some((r) => key(r.path) === k)) return { ok: false, message: `Syncy already watches ${name} (it found it automatically).` }
+    this.cfg.folders.push(root)
+    this.store.saveSoon()
+    const info = await inspectRepo(root, this.cfg.trackBranches)
+    this.scan?.repos.push(info)
+    this.syncWatchers()
+    this.hooks.changed()
+    return { ok: true, message: `Now watching ${name}.` }
   }
 
   /** Check every repo, then react to what changed since last time. */
@@ -100,13 +192,14 @@ export class SyncyService {
     const previous = this.scan
     let next: RepoScan
     try {
-      next = await scanRepos(this.roots(), this.cfg.ignored, this.cfg.trackBranches)
+      next = await scanRepos(this.roots(), this.cfg.ignored, this.cfg.trackBranches, this.cfg.folders)
       this.store.state.syncy.lastScan = next
       this.store.saveSoon()
     } finally {
       this.busy = null
       this.hooks.changed()
     }
+    this.syncWatchers()
     if (previous) this.react(previous, next)
     return next
   }

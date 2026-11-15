@@ -1305,10 +1305,16 @@ summary:focus-visible {
   font-size: 12.5px;
 }
 
-.folder span {
+.folder > span:first-child {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.folder .b {
+  flex: none;
 }
 
 /* --- dialog & toast ------------------------------------------------------------------------ */
