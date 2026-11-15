@@ -99,7 +99,7 @@ Every pet is drawn in code:
 | `assets/pets/<pet>/portrait.png` | The panel's picture |
 | `assets/pets/<pet>/frames.json` | Animations, frame rates, the feet anchor, and where the eyes and accent sit in each frame |
 | `assets/textures/heart.png`, `zzz.png` | Shared particles |
-| `assets/icon.png`, `assets/icon.ico`, `build/icon.png` | Tray, Start menu and installer icons |
+| `assets/icon.png`, `assets/icon.ico`, `assets/tray.png` (+ `@2x`), `build/icon.png` | Panel, Start menu, tray and installer icons, drawn per size by `scripts/art/logo.ts` |
 
 You can edit any PNG in a pixel editor (Aseprite, Piskel, ...) and restart the app. Or regenerate from code. This **overwrites** your edits, and needs Node.js 23.6+, which runs TypeScript directly:
 

@@ -25,7 +25,7 @@ import { dusty } from './art/dusty.ts'
 import { syncy } from './art/syncy.ts'
 import { mole } from './art/mole.ts'
 import { rex } from './art/rex.ts'
-import { logo } from './art/logo.ts'
+import { ICO_SIZES, logoIcon } from './art/logo.ts'
 import { Img, png, scale, stamp, type PetArt } from './art/pixel.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -93,12 +93,13 @@ stamp(zzz, ['XXXXX', '...X.', '..X..', '.X...', 'XXXXX'], 1, 1, '#5ef2ff')
 zzz.outline('#0a2a33')
 writeFileSync(join(TEX, 'zzz.png'), png(zzz))
 
-// GitGremlin's logo (scripts/art/logo.ts), 16x16, scaled by whole pixels.
-const icon = logo()
-writeFileSync(join(ROOT, 'assets', 'icon.png'), png(scale(icon, 2)))
+// GitGremlin's logo (scripts/art/logo.ts), drawn natively at every size.
+writeFileSync(join(ROOT, 'assets', 'icon.png'), png(logoIcon(64)))
+writeFileSync(join(ROOT, 'assets', 'tray.png'), png(logoIcon(16)))
+writeFileSync(join(ROOT, 'assets', 'tray@2x.png'), png(logoIcon(32)))
 mkdirSync(join(ROOT, 'build'), { recursive: true })
-writeFileSync(join(ROOT, 'build', 'icon.png'), png(scale(icon, 16)))
-writeFileSync(join(ROOT, 'assets', 'icon.ico'), ico([1, 2, 3, 4, 16].map((k) => png(scale(icon, k)))))
+writeFileSync(join(ROOT, 'build', 'icon.png'), png(logoIcon(256)))
+writeFileSync(join(ROOT, 'assets', 'icon.ico'), ico(ICO_SIZES.map((s) => png(logoIcon(s)))))
 
 /** A Windows .ico holding PNG images (supported since Vista), for the Start menu shortcut. */
 function ico(images: Buffer[]): Buffer {

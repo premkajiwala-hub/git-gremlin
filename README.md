@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="build/icon.png" alt="GitGremlin logo: a white pixel gremlin with glowing green eyes and little fangs, on a dark tile above a three-commit graph in orange, teal and gold" width="112" />
+  <img src="build/icon.png" alt="GitGremlin logo: a black pixel gremlin head, with pointed ears, two empty-pixel eyes and a grin, on a white rounded tile" width="112" />
 </p>
 
 <h1 align="center">GitGremlin</h1>
@@ -42,6 +42,7 @@ GitGremlin puts little pixel-art pets on your Windows desktop, and each one does
 - **Rex, a wind-up tin toy dog:** sniffs your public GitHub repos for API keys, tokens, private keys, database passwords and `.env` files that should never have been pushed, in current files and recent commits. It barks when it finds one, and links you straight to the line on GitHub. [Meet Rex →](docs/pets/rex.md)
 - **One GitHub sign-in, in General:** sign in once under **General → GitHub account**, and every pet that uses GitHub (Catbot and Rex) shares it. Their pages offer the button until you're signed in.
 - **Syncy watches repos live:** edits, commits and pushes show up within seconds. **+ Add repo** takes git repos only and refuses duplicates, and unpushed commits name the branch they're on. **Open in VS Code** replaces the terminal button.
+- **A new logo:** a black pixel gremlin head on a white tile, minimal and crisp from the 16 px tray icon to the Start menu.
 - **A tidier panel:** cards in a row share its full width, with no empty columns.
 
 ### 0.2

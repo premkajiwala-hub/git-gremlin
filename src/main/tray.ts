@@ -39,8 +39,9 @@ export class AppTray {
   private tray: Tray
 
   constructor(private actions: TrayActions) {
-    const icon = nativeImage.createFromPath(join(app.getAppPath(), 'assets', 'icon.png'))
-    this.tray = new Tray(icon.isEmpty() ? icon : icon.resize({ width: 16, height: 16, quality: 'good' }))
+    // 16 px tray icon (Electron picks tray@2x.png on high-DPI screens).
+    const icon = nativeImage.createFromPath(join(app.getAppPath(), 'assets', 'tray.png'))
+    this.tray = new Tray(icon)
     this.tray.setToolTip(APP_NAME)
     this.tray.on('click', () => this.actions.openHub())
   }
