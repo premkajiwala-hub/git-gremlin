@@ -49,8 +49,10 @@ src/
     junk.ts         Dusty's junk scanner and cleaner
     repos.ts        Syncy's repo finder and git checks
     ports.ts        Mole's port and process reader (Windows APIs via koffi)
+    secrets.ts      Rex's secret rules, tarball reader and diff scanner (no Electron: testable in Node)
+    ghscan.ts       Rex's GitHub reads: public repos, tarballs, recent commits
     github*.ts      GitHub sign-in and contribution calendar
-    pets/           each pet's "purpose" service (catbot.ts, dusty.ts, syncy.ts, mole.ts)
+    pets/           each pet's "purpose" service (catbot.ts, dusty.ts, syncy.ts, mole.ts, rex.ts)
   preload/        the IPC bridge exposed to the renderers
   renderer/       overlay (pets) and panel (hub.*) pages
     pet/            brain (movement, behaviour), personas, sprites, particles
@@ -145,9 +147,10 @@ A second launch passes these to the running app:
 | Flag | Effect |
 |---|---|
 | `--settings` | Open the GitGremlin panel |
-| `--feed [catbot\|dusty\|syncy\|mole]` | Give a pet a debug snack |
+| `--feed [catbot\|dusty\|syncy\|mole\|rex]` | Give a pet a debug snack |
 | `--scan` | Make Dusty scan now |
 | `--check` | Make Syncy check your repos now |
+| `--sniff` | Make Rex sniff your public repos now |
 | `--say "text"` | Make Catbot say something |
 | `--install-shortcut` | Create or refresh the Start menu shortcut, then exit (used by `npm run install-app`) |
 

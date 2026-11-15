@@ -17,7 +17,7 @@ export interface Persona {
   /** Washes its paws after eating (raccoons do). */
   washAfterEat: boolean
   /** An animation to play when it nags you about something (Syncy's tail slap, Mole's digging). */
-  alertAnim?: 'slap' | 'rummage'
+  alertAnim?: 'slap' | 'rummage' | 'bark'
   bubble: BubbleTheme
 }
 
@@ -108,4 +108,25 @@ const MOLE: Persona = {
   bubble: { accent: '#D9577F' }
 }
 
-export const PERSONAS: Record<PetId, Persona> = { catbot: CATBOT, dusty: DUSTY, syncy: SYNCY, mole: MOLE }
+const REX: Persona = {
+  hungryLines: ['NOTHING TO SNIFF...'],
+  starvingLines: ['...'],
+  fedLines: [
+    [],
+    ['GRRR... A SECRET IS OUT ON GITHUB.', 'ROTATE THAT KEY, HUMAN!'],
+    ['SOMETHING SMELLS FUNNY ON GITHUB.', 'SNIFF... A DATABASE PASSWORD?'],
+    ['SNIFF SNIFF...', 'GUARDING YOUR REPOS.', 'ON PATROL.'],
+    ['NO LEAKS. GOOD HUMAN.', 'ALL YOUR REPOS SMELL CLEAN.', 'WOOF! NOTHING TO REPORT.']
+  ],
+  thrownLines: ['ARF!', 'MY SERVOS!', 'WHEEE! WOOF!'],
+  tapLines: ['*SCRATCH SCRATCH*', 'WOOF? ANYONE?'],
+  extraWeights: [
+    ['rummage', 10],
+    ['wash', 4]
+  ],
+  washAfterEat: false,
+  alertAnim: 'bark',
+  bubble: { accent: '#3D7BF2' }
+}
+
+export const PERSONAS: Record<PetId, Persona> = { catbot: CATBOT, dusty: DUSTY, syncy: SYNCY, mole: MOLE, rex: REX }

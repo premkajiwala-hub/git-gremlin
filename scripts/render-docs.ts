@@ -7,6 +7,7 @@
  *   docs/images/dusty-poses.png    a strip of Dusty's animations
  *   docs/images/syncy-poses.png    a strip of Syncy's animations
  *   docs/images/mole-poses.png     a strip of Mole's animations
+ *   docs/images/rex-poses.png      a strip of Rex's animations
  *
  * Run with:  npm run docs-images
  */
@@ -132,17 +133,19 @@ function strip(pet: string, poses: Pose[]): Img {
 
 mkdirSync(DOCS, { recursive: true })
 
-const hero = new Img(254, 66)
+const hero = new Img(308, 66)
 hero.round(0, 0, hero.w, hero.h, BG)
 hero.rect(1, 56, hero.w - 2, 1, FLOOR)
 place(hero, 'catbot', { anim: 'idle', frame: 0, eyes: 'happy' }, 46, 56)
 place(hero, 'syncy', { anim: 'sit', frame: 0, eyes: 'idle' }, 100, 56)
 place(hero, 'dusty', { anim: 'idle', frame: 0, eyes: 'idle' }, 154, 56, true)
 place(hero, 'mole', { anim: 'sit', frame: 0, eyes: 'idle' }, 208, 56, true)
+place(hero, 'rex', { anim: 'idle', frame: 0, eyes: 'happy' }, 262, 56, true)
 const heart = readPng(join(ROOT, 'assets', 'textures', 'heart.png'))
 hero.over(heart, 70, 14)
 hero.over(heart, 124, 18)
 hero.over(heart, 178, 14)
+hero.over(heart, 232, 18)
 writeFileSync(join(DOCS, 'pets-hero.png'), png(scale(hero, 5)))
 
 const catbot: Pose[] = [
@@ -192,5 +195,17 @@ const mole: Pose[] = [
   { anim: 'sleep', frame: 0, eyes: 'blink', zzz: true }
 ]
 writeFileSync(join(DOCS, 'mole-poses.png'), png(scale(strip('mole', mole), 3)))
+
+const rex: Pose[] = [
+  { anim: 'idle', frame: 0, eyes: 'idle' },
+  { anim: 'walk', frame: 1, eyes: 'idle' },
+  { anim: 'rummage', frame: 0, eyes: 'alert' },
+  { anim: 'bark', frame: 0, eyes: 'alert' },
+  { anim: 'eat', frame: 1, eyes: 'happy', food: true },
+  { anim: 'happy', frame: 0, eyes: 'happy', hearts: true },
+  { anim: 'sit', frame: 0, eyes: 'idle' },
+  { anim: 'sleep', frame: 0, eyes: 'blink', zzz: true }
+]
+writeFileSync(join(DOCS, 'rex-poses.png'), png(scale(strip('rex', rex), 3)))
 
 console.log(`Wrote README images to ${DOCS}`)

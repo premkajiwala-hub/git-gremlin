@@ -40,6 +40,8 @@ export interface SyncyHooks {
   changed(): void
   feed(text: string): void
   say(text: string): void
+  /** Repos (local paths) whose commits just reached the remote. */
+  pushed?(paths: string[]): void
 }
 
 /** File changes that never affect what Syncy reports (dependencies, git's object store and logs). */
@@ -205,6 +207,7 @@ export class SyncyService {
     const before = new Map(prev.repos.map((r) => [r.path, r]))
     let pushed = 0
     const pushedRepos: string[] = []
+    const pushedPaths: string[] = []
     let committed: string | null = null
     for (const r of next.repos) {
       const p = before.get(r.path)
@@ -212,11 +215,13 @@ export class SyncyService {
       if (p.unpushed > r.unpushed) {
         pushed += p.unpushed - r.unpushed
         pushedRepos.push(r.name)
+        pushedPaths.push(r.path)
       } else if (r.unpushed > p.unpushed && r.changes < p.changes) committed = r.name
     }
     if (pushed > 0) {
       const where = pushedRepos.length === 1 ? pushedRepos[0].toUpperCase() : `${pushedRepos.length} REPOS`
       this.hooks.feed(`${pushed} COMMIT${s(pushed)} FROM ${where} SAFE ON GITHUB!`)
+      this.hooks.pushed?.(pushedPaths)
     } else if (committed) {
       this.hooks.say(`NICE COMMIT IN ${committed.toUpperCase()}! PUSH IT TO GITHUB WHEN READY.`)
     }

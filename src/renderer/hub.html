@@ -359,6 +359,54 @@
       </article>
     </template>
 
+    <!-- Rex: leaked secrets on GitHub -->
+    <template id="rexPurpose">
+      <article class="card wide">
+        <div class="card-head"><h2 class="card-title"><i></i>Leaks on GitHub</h2><span class="muted" id="rexInfo"></span></div>
+        <div class="repos" id="rexLeaks"></div>
+        <details class="all-repos" id="rexFixBox">
+          <summary>How to fix a leak</summary>
+          <ol class="fix-steps">
+            <li><b>Revoke or rotate it first</b> where it was issued (AWS, Stripe, GitHub, your database...). It's public, so treat it as stolen.</li>
+            <li><b>Remove it from the repo</b>, move it to an environment variable, and add the file to <code>.gitignore</code>.</li>
+            <li><b>History keeps old commits.</b> Rotating is what makes you safe; rewriting history (git filter-repo) only tidies up.</li>
+          </ol>
+        </details>
+        <details class="all-repos" id="rexIgnoredBox" hidden>
+          <summary id="rexIgnoredTitle">Marked not a secret</summary>
+          <div class="repos compact" id="rexIgnored"></div>
+        </details>
+        <details class="all-repos">
+          <summary id="rexReposTitle">Public repos</summary>
+          <div class="repos compact" id="rexRepos"></div>
+        </details>
+        <p class="muted" id="rexFoot"></p>
+      </article>
+      <article class="card" id="rexHabits">
+        <div class="card-head"><h2 class="card-title"><i></i>Habits</h2></div>
+        <div class="field">
+          <span class="field-top">Recent commits to check</span>
+          <div class="seg" role="group" aria-label="Recent commits to check" id="rexHistory">
+            <button type="button" data-c="0">None</button><button type="button" data-c="30">Last 30</button><button type="button" data-c="100">Last 100</button>
+          </div>
+        </div>
+        <div class="lines">
+          <div class="line-row">
+            <div><div class="t">Sniff after I push</div><div class="s">A minute after Syncy sees the push</div></div>
+            <button type="button" class="switch" role="switch" id="rexAfterPush" aria-label="Sniff after I push"><span class="knob"></span></button>
+          </div>
+          <div class="line-row">
+            <div><div class="t">Daily sweep</div><div class="s">Every public repo, once a day</div></div>
+            <button type="button" class="switch" role="switch" id="rexDaily" aria-label="Daily sweep"><span class="knob"></span></button>
+          </div>
+          <div class="line-row">
+            <div><div class="t">Include my forks</div><div class="s">Forks mostly hold other people's code</div></div>
+            <button type="button" class="switch" role="switch" id="rexForks" aria-label="Include my forks"><span class="knob"></span></button>
+          </div>
+        </div>
+      </article>
+    </template>
+
     <dialog id="confirm">
       <form method="dialog">
         <h3 id="confirmTitle"></h3>

@@ -1,4 +1,4 @@
-<sub>[← Syncy](syncy.md) · **Mole** · [Back to GitGremlin →](../../README.md)</sub>
+<sub>[← Syncy](syncy.md) · **Mole** · [Rex →](rex.md) · [Back to GitGremlin](../../README.md)</sub>
 
 <p align="center">
   <img src="../../assets/pets/mole/portrait.png" alt="Mole's head: a slate-grey mole with a pink pointed snout and round glasses" width="96" />
@@ -171,4 +171,4 @@ To regenerate just Mole's art, run `npm run textures -- mole`. See the [developm
 
 ---
 
-<sub>[← Syncy](syncy.md) · [Back to GitGremlin](../../README.md)</sub>
+<sub>[← Syncy](syncy.md) · [Rex →](rex.md) · [Back to GitGremlin](../../README.md)</sub>

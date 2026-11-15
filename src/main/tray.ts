@@ -13,6 +13,8 @@ export interface TrayActions {
   syncyCheck(): void
   syncyReview(): void
   moleReview(): void
+  rexScan(): void
+  rexReview(): void
   hideForHour(): void
   showPets(): void
   toggleStartWithWindows(): void
@@ -61,7 +63,11 @@ export class AppTray {
           { label: 'Check my repos now', enabled: cfg.enabled, click: () => a.syncyCheck() },
           { label: 'Show unsaved work...', enabled: cfg.enabled, click: () => a.syncyReview() }
         ],
-        mole: [{ label: 'Show running servers...', enabled: cfg.enabled, click: () => a.moleReview() }]
+        mole: [{ label: 'Show running servers...', enabled: cfg.enabled, click: () => a.moleReview() }],
+        rex: [
+          { label: 'Sniff my repos now', enabled: cfg.enabled, click: () => a.rexScan() },
+          { label: 'Show leaked secrets...', enabled: cfg.enabled, click: () => a.rexReview() }
+        ]
       }
       const extra = extras[id]
       return {

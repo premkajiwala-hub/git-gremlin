@@ -24,6 +24,7 @@ export type Activity =
   | 'wash'
   | 'rummage'
   | 'slap'
+  | 'bark'
 
 /** Everything the view needs to draw one frame. */
 export interface RenderState {
@@ -292,7 +293,7 @@ export class PetBrain {
     this.stand = null
     this.following = this.crossing = this.thenHop = this.walkingOff = this.afterTap = false
     this.handedOff = false
-    const known: Activity[] = ['idle', 'walk', 'run', 'crawl', 'sit', 'curious', 'sleep', 'happy', 'hurt', 'starving', 'air', 'wash', 'rummage', 'slap']
+    const known: Activity[] = ['idle', 'walk', 'run', 'crawl', 'sit', 'curious', 'sleep', 'happy', 'hurt', 'starving', 'air', 'wash', 'rummage', 'slap', 'bark']
     this.activity = b.activity && known.includes(b.activity) ? b.activity : 'idle'
     if (this.z > 0) this.activity = 'air'
     if (!this.roam) this.y = this.world.groundY
@@ -395,6 +396,7 @@ export class PetBrain {
       case 'hurt':
       case 'wash':
       case 'slap':
+      case 'bark':
         this.slide(dt)
         if (this.t > this.dur) {
           if (this.afterTap) {
@@ -1101,6 +1103,10 @@ export class PetBrain {
         break
       case 'slap':
         anim = 'slap'
+        mood = 'alert'
+        break
+      case 'bark':
+        anim = 'bark'
         mood = 'alert'
         break
     }

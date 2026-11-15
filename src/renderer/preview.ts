@@ -70,7 +70,17 @@ const mole = (clash: boolean): PetStatus => ({
   busy: null,
   connected: true
 })
-const status: Record<PetId, PetStatus> = { catbot: catbot(2, 5), dusty: dusty(null), syncy: syncy(false), mole: mole(false) }
+const rex = (leak: boolean): PetStatus => ({
+  name: 'Rex',
+  stage: 'fed',
+  level: leak ? 1 : 4,
+  report: leak ? ['GUARDING 9 PUBLIC REPOS', 'LEAKS FOUND: 1', '- API: AWS ACCESS KEY', '', '> RIGHT-CLICK ME TO SEE THEM.'] : ['GUARDING 9 PUBLIC REPOS', 'NO LEAKS FOUND!'],
+  grid: null,
+  alert: leak ? 'WOOF! 1 SECRET ON GITHUB! RIGHT-CLICK ME.' : null,
+  busy: null,
+  connected: true
+})
+const status: Record<PetId, PetStatus> = { catbot: catbot(2, 5), dusty: dusty(null), syncy: syncy(false), mole: mole(false), rex: rex(false) }
 
 const fake = document.getElementById('fakewin')!.getBoundingClientRect()
 const ledge: WindowLedge = { hwnd: 42, x: fake.left, y: fake.top, width: fake.width, height: fake.height }
@@ -81,7 +91,7 @@ const init: OverlayInit = {
   display,
   displays: [display],
   settings,
-  pets: (['catbot', 'dusty', 'syncy', 'mole'] as PetId[]).map((id) => ({ id, isOwner: true, snapshot: null, status: status[id] })),
+  pets: (['catbot', 'dusty', 'syncy', 'mole', 'rex'] as PetId[]).map((id) => ({ id, isOwner: true, snapshot: null, status: status[id] })),
   ledge
 }
 
@@ -135,6 +145,7 @@ const actions: Record<string, () => void> = {
   'Dusty: say': () => emit('say', 'dusty', 'TRASH PANDA REPORTING FOR DUTY.'),
   'Syncy: unpushed': () => setStatus('syncy', syncy(true)),
   'Mole: port taken': () => setStatus('mole', mole(true)),
+  'Rex: leak found': () => setStatus('rex', rex(true)),
   'Mole: port freed': () => {
     setStatus('mole', mole(false))
     emit('feed', 'mole', { text: ':3000 IS FREE! SLURP.' })

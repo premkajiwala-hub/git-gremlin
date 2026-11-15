@@ -117,7 +117,8 @@ export class GitHubWatcher {
     })
   }
 
-  private async token(): Promise<string | null> {
+  /** The linked account's token (sign-in or GitHub CLI), or null. Rex uses it to read public repos. */
+  async token(): Promise<string | null> {
     const auth = this.store.state.githubAuth
     if (auth === 'gh') return this.ghToken()
     if (auth !== 'oauth' || !this.store.state.githubTokenEnc) return null

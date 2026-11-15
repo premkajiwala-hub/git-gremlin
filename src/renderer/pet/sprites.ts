@@ -22,6 +22,7 @@ export type AnimName =
   | 'wash'
   | 'rummage'
   | 'slap'
+  | 'bark'
 export type Mood = 'idle' | 'blink' | 'happy' | 'hurt' | 'alert' | 'sad'
 const MOODS: Mood[] = ['idle', 'blink', 'happy', 'hurt', 'alert', 'sad']
 

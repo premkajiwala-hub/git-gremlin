@@ -28,14 +28,15 @@ export const PET_SIZE_MIN = 48
 export const PET_SIZE_MAX = 112
 
 /** Every pet, in the order the GitGremlin panel lists them. */
-export const PET_IDS: PetId[] = ['catbot', 'dusty', 'syncy', 'mole']
+export const PET_IDS: PetId[] = ['catbot', 'dusty', 'syncy', 'mole', 'rex']
 
 /** What each pet is for (shown in the panel). */
 export const PET_PURPOSE: Record<PetId, string> = {
   catbot: 'Robot cat fed by your GitHub contributions',
   dusty: 'Raccoon that eats junk files and caches',
   syncy: "Beaver that guards work you haven't pushed to GitHub",
-  mole: 'Mole that digs through your ports and frees the one you need'
+  mole: 'Mole that digs through your ports and frees the one you need',
+  rex: 'Robot dog that sniffs your public GitHub repos for leaked secrets'
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -45,7 +46,8 @@ export const DEFAULT_SETTINGS: Settings = {
     catbot: { enabled: true, name: 'Catbot', petSize: 72, petSpeed: 45, movement: 'roam', followCursor: true },
     dusty: { enabled: true, name: 'Dusty', petSize: 64, petSpeed: 40, movement: 'roam', followCursor: false },
     syncy: { enabled: true, name: 'Syncy', petSize: 64, petSpeed: 38, movement: 'roam', followCursor: false },
-    mole: { enabled: true, name: 'Mole', petSize: 60, petSpeed: 36, movement: 'ground', followCursor: false }
+    mole: { enabled: true, name: 'Mole', petSize: 60, petSpeed: 36, movement: 'ground', followCursor: false },
+    rex: { enabled: true, name: 'Rex', petSize: 64, petSpeed: 50, movement: 'roam', followCursor: false }
   },
   dusty: {
     mode: 'ask',
@@ -63,6 +65,13 @@ export const DEFAULT_SETTINGS: Settings = {
     leftoverMinutes: 30,
     clashAlerts: true,
     showServices: false
+  },
+  rex: {
+    afterPush: true,
+    daily: true,
+    history: 30,
+    includeForks: false,
+    ignored: []
   }
 }
 
@@ -104,6 +113,8 @@ export const IPC = {
   addRepo: 'hub:syncy-add-repo',
   moleAction: 'hub:mole-action',
   moleLookup: 'hub:mole-lookup',
+  rexScan: 'hub:rex-scan',
+  rexAction: 'hub:rex-action',
   hidePets: 'hub:hide-pets',
   githubRefresh: 'settings:github-refresh',
   githubSignIn: 'settings:github-sign-in',

@@ -67,7 +67,7 @@ export type GitHubSource = 'oauth' | 'gh' | 'none'
 export type HungerStage = 'fed' | 'hungry' | 'starving'
 
 /** Every pet GitGremlin can host. */
-export type PetId = 'catbot' | 'dusty' | 'syncy' | 'mole'
+export type PetId = 'catbot' | 'dusty' | 'syncy' | 'mole' | 'rex'
 
 /**
  * A pet's live state, built by its "purpose" service in the main process
@@ -147,6 +147,20 @@ export interface MoleConfig {
   showServices: boolean
 }
 
+/** How Rex guards your public repos on GitHub. */
+export interface RexConfig {
+  /** Rescan a repo shortly after you push it (Syncy sees the push). */
+  afterPush: boolean
+  /** A full sweep once a day. */
+  daily: boolean
+  /** How many recent commits on the default branch to read (0 = current files only). */
+  history: number
+  /** Also scan your forks. */
+  includeForks: boolean
+  /** Findings you marked "Not a secret" (fingerprints). */
+  ignored: string[]
+}
+
 /** The GitGremlin panel's colours: follow Windows, or always light / dark. */
 export type ThemeMode = 'system' | 'light' | 'dark'
 
@@ -158,6 +172,7 @@ export interface Settings {
   dusty: DustyConfig
   syncy: SyncyConfig
   mole: MoleConfig
+  rex: RexConfig
 }
 
 export interface PetInit {
@@ -320,6 +335,61 @@ export interface PortLookup {
   next: number
 }
 
+/** Something Rex found in a public repo that shouldn't be on GitHub. Never holds the secret itself. */
+export interface Leak {
+  /** Fingerprint (used for "Not a secret"). */
+  fp: string
+  rule: string
+  label: string
+  severity: 'high' | 'medium'
+  /** owner/name */
+  repo: string
+  path: string
+  line: number | null
+  /** Masked, e.g. "AKIA••••••••OP". */
+  preview: string
+  /** In the current files, or only in a recent commit (deleted since, but still in history). */
+  where: 'file' | 'history'
+  commit: string | null
+  date: string | null
+  /** Where to see it on GitHub. */
+  url: string
+  ignored?: boolean
+}
+
+export interface RexRepo {
+  fullName: string
+  name: string
+  url: string
+  /** Commit that was scanned. */
+  head: string | null
+  scannedAt: number
+  leaks: number
+  /** Why it wasn't scanned (fork, too big), or null. */
+  skipped: string | null
+  error: string | null
+}
+
+export interface RexScan {
+  at: number
+  login: string
+  repos: RexRepo[]
+  leaks: Leak[]
+  /** What stopped the last scan early (rate limit, not signed in...), or null. */
+  error: string | null
+}
+
+export interface RexView {
+  scan: RexScan | null
+  busy: 'scanning' | null
+  /** "Sniffing api (3/12)" while scanning. */
+  progress: string | null
+  /** The GitHub account whose public repos Rex guards (Catbot's sign-in), or null. */
+  login: string | null
+}
+
+export type RexAction = { kind: 'ignore' | 'unignore'; fp: string }
+
 export interface GitHubView {
   /** The linked account, or null when not signed in. */
   login: string | null
@@ -351,6 +421,7 @@ export interface HubView {
   dusty: DustyView
   syncy: SyncyView
   mole: MoleView
+  rex: RexView
 }
 
 /** Shown while signing in: enter this code at the verification URL. */

@@ -9,7 +9,7 @@ import '@fontsource/jetbrains-mono/latin-500.css'
 import '@fontsource/jetbrains-mono/latin-600.css'
 import { PET_IDS } from '../shared/constants'
 import { ago, formatBytes } from '../shared/format'
-import type { CleanMode, HubView, JunkTarget, MoleAction, PetConfig, PetId, PortClash, PortLookup, RepoAction, RepoInfo, ServerInfo, Settings, ThemeMode } from '../shared/types'
+import type { CleanMode, HubView, JunkTarget, MoleAction, PetConfig, PetId, PortClash, PortLookup, RepoAction, RepoInfo, Leak, ServerInfo, Settings, ThemeMode } from '../shared/types'
 
 /**
  * The GitGremlin panel ("pixel glass"): a rail of pets on the left, and for
@@ -54,6 +54,14 @@ const PET_UI: Record<PetId, { n: string; species: string; accent: string; lede: 
     species: 'Mole',
     accent: '#D9577F',
     lede: "Digs through your ports. Tells you who's sitting on the one you need, and frees it in two clicks.",
+    art: ['idle', 0, 'idle'],
+    scale: 6
+  },
+  rex: {
+    n: '05',
+    species: 'Robot dog',
+    accent: '#3D7BF2',
+    lede: 'Sniffs your public GitHub repos for API keys, passwords and .env files that should never have been pushed. It only reads.',
     art: ['idle', 0, 'idle'],
     scale: 6
   }
@@ -400,6 +408,18 @@ function heroInfo(id: PetId): HeroInfo {
     if (!sel) return { stats, primary: { label: 'Scan now', disabled: !enabled }, link: null }
     return { stats, primary: { label: `Clean ${formatBytes(sel)}`, disabled: !enabled }, link: { label: 'Scan again' } }
   }
+  if (id === 'rex') {
+    const r = view.rex
+    const scan = r.scan
+    if (!r.login && !scan?.login) return { stats: ['GitHub not linked', 'public repos only'], primary: { label: "Sign in on Catbot's page" }, link: null }
+    const leaks = activeLeaks()
+    const repos = (scan?.repos ?? []).filter((x) => !x.skipped)
+    return {
+      stats: [plural(repos.length, 'public repo'), leaks.length ? `${plural(leaks.length, 'leak')} found` : 'no leaks', scan ? `sniffed ${ago(scan.at)}` : 'not sniffed yet'],
+      primary: { label: r.busy ? 'Sniffing...' : 'Sniff now', disabled: Boolean(r.busy) || !enabled },
+      link: leaks.length ? { label: 'See the leaks' } : null
+    }
+  }
   if (id === 'mole') {
     const m = view.mole
     const dev = m.servers.filter((x) => x.kind === 'dev')
@@ -431,6 +451,12 @@ async function heroAction(id: PetId, which: 'primary' | 'link'): Promise<void> {
   if (id === 'dusty') {
     if (which === 'primary' && selectedJunk().length) return cleanJunk()
     return scanJunk()
+  }
+  if (id === 'rex') {
+    const linked = Boolean(view.rex.login || view.rex.scan?.login)
+    if (which === 'primary' && !linked) return show('catbot')
+    if (which === 'primary') return sniff()
+    return $('rexLeaks').closest('.card')!.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
   if (id === 'mole') {
     const clash = view.mole.clashes[0]
@@ -1030,6 +1056,129 @@ function wireMole(): void {
   })
 }
 
+// --- Rex: leaked secrets ---------------------------------------------------------------------------
+const SVG_GITHUB = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>'
+
+const activeLeaks = () => (view.rex.scan?.leaks ?? []).filter((l) => !l.ignored)
+
+function leakRow(l: Leak): HTMLElement {
+  const row = el('div', 'repo')
+  const left = el('div')
+  const name = el('div', 'repo-name', l.label)
+  name.append(el('span', l.severity === 'high' ? 'tag hot' : 'tag', l.severity === 'high' ? 'high' : 'check'))
+  const where = `${l.repo.split('/')[1]} / ${l.path}${l.line ? `:${l.line}` : ''}`
+  const path = el('div', 'path', where)
+  path.title = `${l.repo}/${l.path}`
+  const badges = el('div', 'badges')
+  badges.append(el('span', 'secret', l.preview))
+  if (l.where === 'history') {
+    const b = el('span', 'b warn', `deleted, still in history · ${l.commit?.slice(0, 7)}${l.date ? ` · ${short(Date.parse(l.date))}` : ''}`)
+    b.title = 'It was removed later, but the commit that added it is still public on GitHub.'
+    badges.append(b)
+  } else badges.append(el('span', 'b hot', 'in current files'))
+  if (/(^|\/)(tests?|__tests__|specs?|e2e|fixtures?|mocks?)\/|\.(test|spec)\.[a-z]+$/i.test(l.path)) {
+    const b = el('span', 'b', 'in test code')
+    b.title = 'Tests often use made-up values. If this one is fake, mark it Not a secret.'
+    badges.append(b)
+  }
+  if (l.rule === 'google-key') {
+    const b = el('span', 'b', 'maybe a Firebase web key')
+    b.title = "Firebase web keys are meant to ship in apps; they're fine if restricted in Google Cloud. Any other Google key should be rotated."
+    badges.append(b)
+  }
+  left.append(name, path, badges)
+  const acts = el('div', 'acts')
+  acts.append(iconButton(SVG_GITHUB, 'Open on GitHub', 'See it on github.com', () => void api.openGitHub(l.url)))
+  acts.append(button('Not a secret', "Rex won't bark about this one again", () => void rexAction(l.fp, 'ignore'), 'ib ghost'))
+  row.append(left, acts)
+  return row
+}
+
+async function rexAction(fp: string, kind: 'ignore' | 'unignore'): Promise<void> {
+  const r = await api.rexAction({ kind, fp })
+  toast(r.message)
+  await reload()
+}
+
+async function sniff(): Promise<void> {
+  const p = api.rexScan()
+  await reload() // show "Sniffing..." right away
+  apply(await p)
+}
+
+function renderRex(): void {
+  const r = view.rex
+  const scan = r.scan
+  const cfg = draft.rex
+  const enabled = view.settings.pets.rex.enabled
+  setSeg($('rexHistory'), 'data-c', String(cfg.history))
+  setSwitch($('rexAfterPush'), cfg.afterPush)
+  setSwitch($('rexDaily'), cfg.daily)
+  setSwitch($('rexForks'), cfg.includeForks)
+
+  const leaks = activeLeaks().sort((a, b) => Number(b.severity === 'high') - Number(a.severity === 'high') || Number(a.where === 'history') - Number(b.where === 'history'))
+  $('rexInfo').textContent = !enabled ? 'Rex is resting.' : r.busy ? (r.progress ?? 'Sniffing...') : scan?.error ? scan.error : scan ? `Sniffed ${ago(scan.at)}` : ''
+  $('rexLeaks').replaceChildren(...leaks.map(leakRow))
+  if (!leaks.length) {
+    const linked = Boolean(r.login || scan?.login)
+    $('rexLeaks').append(
+      el('div', 'empty', !linked ? "Sign in with GitHub on Catbot's page, and Rex will guard your public repos." : !scan ? 'Click Sniff now to check your public repos.' : 'No leaks in your public repos. Good human!')
+    )
+  }
+  $<HTMLDetailsElement>('rexFixBox').hidden = !leaks.length
+
+  const ignored = (scan?.leaks ?? []).filter((l) => l.ignored)
+  $('rexIgnoredBox').hidden = !ignored.length
+  $('rexIgnoredTitle').textContent = `Marked not a secret (${ignored.length})`
+  $('rexIgnored').replaceChildren(
+    ...ignored.map((l) => {
+      const row = el('div', 'repo')
+      const left = el('div')
+      left.append(el('div', 'repo-name', l.label), el('div', 'path', `${l.repo.split('/')[1]} / ${l.path}${l.line ? `:${l.line}` : ''}`))
+      row.append(left, button('Watch again', 'Bark about this one again', () => void rexAction(l.fp, 'unignore'), 'ib ghost'))
+      return row
+    })
+  )
+
+  const repos = scan?.repos ?? []
+  $('rexReposTitle').textContent = `Public repos (${repos.filter((x) => !x.skipped).length})`
+  $('rexRepos').replaceChildren(
+    ...repos.map((x) => {
+      const row = el('div', 'repo')
+      const left = el('div')
+      left.append(el('div', 'repo-name', x.name))
+      const n = leaks.filter((l) => l.repo === x.fullName).length
+      const badge = x.error ? el('span', 'b hot', 'error') : x.skipped ? el('span', 'b', `skipped: ${x.skipped}`) : n ? el('span', 'b hot', plural(n, 'leak')) : el('span', 'b ok', 'clean')
+      if (x.error) badge.title = x.error
+      row.append(left, badge)
+      return row
+    })
+  )
+  const login = r.login ?? scan?.login
+  $('rexFoot').textContent = login ? `@${login} · public repos only · read-only` : 'Public repos only · read-only'
+}
+
+function wireRex(): void {
+  for (const b of $('rexHistory').querySelectorAll<HTMLElement>('[data-c]')) {
+    b.addEventListener('click', () => {
+      draft.rex.history = Number(b.dataset.c)
+      renderRex()
+      saveSoon(0)
+    })
+  }
+  for (const [id, key] of [
+    ['rexAfterPush', 'afterPush'],
+    ['rexDaily', 'daily'],
+    ['rexForks', 'includeForks']
+  ] as const) {
+    $(id).addEventListener('click', () => {
+      draft.rex[key] = !draft.rex[key]
+      renderRex()
+      saveSoon(0)
+    })
+  }
+}
+
 // --- General -------------------------------------------------------------------------------------
 function renderGeneral(): void {
   const on = PET_IDS.filter((id) => view.settings.pets[id].enabled).length
@@ -1072,7 +1221,8 @@ function wireGeneral(): void {
     petCanvas('catbot', 'sit', 0, 'idle', 4),
     petCanvas('syncy', 'idle', 0, 'idle', 4),
     petCanvas('dusty', 'wash', 0, 'happy', 4),
-    petCanvas('mole', 'sit', 0, 'idle', 4)
+    petCanvas('mole', 'sit', 0, 'idle', 4),
+    petCanvas('rex', 'sit', 0, 'idle', 4)
   ]).then((cs) => {
     lineup.replaceChildren(...cs)
     fitPets()
@@ -1092,6 +1242,7 @@ function apply(v: HubView, refill = false): void {
   renderDusty()
   renderSyncy()
   renderMole()
+  renderRex()
   renderGeneral()
   for (const id of PET_IDS) fillPet(id)
 }
@@ -1114,6 +1265,7 @@ async function start(): Promise<void> {
   wireDusty()
   wireSyncy()
   wireMole()
+  wireRex()
   wireGeneral()
   apply(view, true)
   show(page)
