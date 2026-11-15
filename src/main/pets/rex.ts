@@ -19,6 +19,8 @@ export interface RexHooks {
   say(text: string): void
   /** The linked GitHub account (Catbot's sign-in) and its token. */
   account(): Promise<{ login: string | null; token: string | null }>
+  /** The account signed in right now (null when signed out). */
+  login(): string | null
 }
 
 /** owner/repo from a git remote URL on github.com, or null. */
@@ -51,7 +53,6 @@ export class RexService {
   private first: NodeJS.Timeout | null = null
   private pending = new Set<string>()
   private pendingTimer: NodeJS.Timeout | null = null
-  private login: string | null = null
 
   constructor(
     private store: Store,
@@ -64,15 +65,34 @@ export class RexService {
   private get enabled(): boolean {
     return this.store.state.settings.pets.rex.enabled
   }
+  /** The last scan, but only if it belongs to the account signed in now. */
   private get scanState(): RexScan | null {
-    return this.store.state.rex.scan
+    const scan = this.store.state.rex.scan
+    const login = this.hooks.login()
+    if (!scan || !login || !scan.login) return null
+    return scan.login.toLowerCase() === login.toLowerCase() ? scan : null
+  }
+
+  /** Signed out: forget what Rex found for that account. */
+  forget(): void {
+    if (this.pendingTimer) clearTimeout(this.pendingTimer)
+    this.pending.clear()
+    this.store.state.rex.scan = null
+    this.store.state.rex.cache = {}
+    this.store.saveSoon()
+    this.hooks.changed()
   }
 
   start(): void {
+    // Nobody signed in: don't keep results from an account that signed out.
+    if (!this.hooks.login() && (this.store.state.rex.scan || Object.keys(this.store.state.rex.cache).length)) {
+      this.store.state.rex.scan = null
+      this.store.state.rex.cache = {}
+      this.store.saveSoon()
+    }
     // Catch up on the daily sweep shortly after start, then check every hour.
     this.first = setTimeout(() => void this.dailyCheck(), 45_000)
     this.timer = setInterval(() => void this.dailyCheck(), 3_600_000)
-    void this.hooks.account().then((a) => (this.login = a.login))
   }
 
   stop(): void {
@@ -109,13 +129,9 @@ export class RexService {
   async scan(only?: string[]): Promise<RexScan | null> {
     if (this.busy || !this.enabled) return this.scanState
     const { login, token } = await this.hooks.account()
-    this.login = login
     const prev = this.scanState
-    if (!login) {
-      this.store.state.rex.scan = { at: Date.now(), login: '', repos: [], leaks: [], error: 'Sign in with GitHub (in General), so Rex knows whose repos to guard.' }
-      this.hooks.changed()
-      return this.scanState
-    }
+    // Not signed in: nothing to guard (the panel and Rex ask you to sign in).
+    if (!login) return null
     this.busy = 'scanning'
     this.progress = 'Fetching your public repos...'
     this.hooks.changed()
@@ -272,15 +288,16 @@ export class RexService {
       scan: scan ? { ...scan, leaks: scan.leaks.map((l) => ({ ...l, ignored: ignored.has(l.fp) })) } : null,
       busy: this.busy,
       progress: this.progress,
-      login: this.login
+      login: this.hooks.login()
     }
   }
 
   status(cfg: PetConfig): PetStatus {
-    const base = { name: cfg.name, grid: null, busy: this.busy, connected: Boolean(this.login) }
+    const login = this.hooks.login()
+    const base = { name: cfg.name, grid: null, busy: this.busy, connected: Boolean(login) }
     const scan = this.scanState
     if (this.busy) return { ...base, stage: 'fed', level: 3, alert: null, report: [this.progress?.toUpperCase() ?? 'SNIFFING...', '', '> ON THE TRAIL.'] }
-    if (!this.login && (!scan || !scan.login)) {
+    if (!login) {
       return { ...base, stage: 'fed', level: 3, alert: null, report: ['NOT LINKED TO GITHUB YET.', '', "> SIGN IN WITH GITHUB AND I'LL GUARD YOUR PUBLIC REPOS."] }
     }
     if (!scan) return { ...base, stage: 'fed', level: 3, alert: null, report: ['FIRST SNIFF COMING SOON...', '', '> I GUARD YOUR PUBLIC REPOS.'] }

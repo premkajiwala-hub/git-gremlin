@@ -213,7 +213,7 @@ function sentence(text: string): string {
   const lower = text.toLowerCase().replace(/\b(\d+(?:\.\d+)?) (b|kb|mb|gb|tb)\b/g, (_m, n: string, u: string) => `${n} ${u.toUpperCase()}`)
   return (lower.charAt(0).toUpperCase() + lower.slice(1))
     .replace(/\bi\b/g, 'I')
-    .replace(/github/g, 'GitHub')
+    .replace(/github/gi, 'GitHub')
     .replace(/(right-)?click me/g, 'right-click the pet')
     .replace(/([.!?]\s+)([a-z])/g, (_m, gap: string, c: string) => gap + c.toUpperCase())
 }
@@ -424,7 +424,7 @@ function heroInfo(id: PetId): HeroInfo {
   if (id === 'rex') {
     const r = view.rex
     const scan = r.scan
-    if (!r.login && !scan?.login) return { stats: ['GitHub not linked', 'public repos only'], primary: { label: 'Sign in with GitHub', disabled: !view.github.signInAvailable }, link: null }
+    if (!r.login) return { stats: ['GitHub not linked', 'public repos only'], primary: { label: 'Sign in with GitHub', disabled: !view.github.signInAvailable }, link: null }
     const leaks = activeLeaks()
     const repos = (scan?.repos ?? []).filter((x) => !x.skipped)
     return {
@@ -466,7 +466,7 @@ async function heroAction(id: PetId, which: 'primary' | 'link'): Promise<void> {
     return scanJunk()
   }
   if (id === 'rex') {
-    const linked = Boolean(view.rex.login || view.rex.scan?.login)
+    const linked = Boolean(view.rex.login)
     if (which === 'primary' && !linked) return startSignIn()
     if (which === 'primary') return sniff()
     return $('rexLeaks').closest('.card')!.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -1140,7 +1140,7 @@ function renderRex(): void {
   $('rexInfo').textContent = !enabled ? 'Rex is resting.' : r.busy ? (r.progress ?? 'Sniffing...') : scan?.error ? scan.error : scan ? `Sniffed ${ago(scan.at)}` : ''
   $('rexLeaks').replaceChildren(...leaks.map(leakRow))
   if (!leaks.length) {
-    const linked = Boolean(r.login || scan?.login)
+    const linked = Boolean(r.login)
     $('rexLeaks').append(
       el('div', 'empty', !linked ? 'Sign in with GitHub, and Rex will guard your public repos.' : !scan ? 'Click Sniff now to check your public repos.' : 'No leaks in your public repos. Good human!')
     )
@@ -1174,7 +1174,7 @@ function renderRex(): void {
       return row
     })
   )
-  const login = r.login ?? scan?.login
+  const login = r.login
   $('rexFoot').textContent = login ? `@${login} · public repos only · read-only` : 'Public repos only · read-only'
 }
 

@@ -117,7 +117,8 @@ function start(): void {
     changed: () => pushStatus(),
     feed: (text) => feed('rex', { text }),
     say: (text) => overlays.sendToPet('rex', IPC.say, text),
-    account: async () => (github.source === 'none' ? { login: null, token: null } : { login: github.data.login, token: await github.token() })
+    account: async () => (github.source === 'none' ? { login: null, token: null } : { login: github.data.login, token: await github.token() }),
+    login: () => (github.source === 'none' ? null : github.data.login)
   })
   tray = new AppTray({
     openHub: (page) => openHub(page),
@@ -296,6 +297,8 @@ function signInResult(win: BrowserWindow | null, result: SignInResult): void {
 }
 
 function linkedHello(): void {
+  // Rex guards this account's public repos: sniff them right away.
+  setTimeout(() => void rex.scan(), 1500)
   overlays.sendToPet('catbot', IPC.say, `LINKED TO @${github.data.login}! LET'S SEE YOUR SQUARES.`)
 }
 
@@ -495,6 +498,7 @@ function registerHubIpc(): void {
   ipcMain.handle(IPC.githubSignOut, async () => {
     deviceFlow.cancel()
     github.signOut()
+    rex.forget()
     changed()
     return hubView()
   })
