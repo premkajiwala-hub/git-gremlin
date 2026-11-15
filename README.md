@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white" alt="Windows 10 | 11" />
   <img src="https://img.shields.io/badge/Electron-45-47848F?logo=electron&logoColor=white" alt="Electron 45" />
   <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/version-0.2.0-121315" alt="Version 0.2.0" />
+  <img src="https://img.shields.io/badge/version-0.3.0-121315" alt="Version 0.3.0" />
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license" />
 </p>
 
@@ -22,7 +22,7 @@ GitGremlin puts little pixel-art pets on your Windows desktop, and each one does
 
 ## Contents
 
-- [What's new in 0.2](#whats-new-in-02)
+- [What's new](#whats-new)
 - [About](#about)
 - [Meet the pets](#meet-the-pets)
 - [Features](#features)
@@ -34,14 +34,22 @@ GitGremlin puts little pixel-art pets on your Windows desktop, and each one does
 - [Documentation](#documentation)
 - [License](#license)
 
-## What's new in 0.2
+## What's new
+
+### 0.3
+
+- **Mole:** port 3000 already taken? Mole tells you which program has it and frees it in two clicks. It warns you the moment a project you start finds its port taken, and spots dev servers left running after their terminal closed. [Meet Mole →](docs/pets/mole.md)
+- **Rex, a wind-up tin toy dog:** sniffs your public GitHub repos for API keys, tokens, private keys, database passwords and `.env` files that should never have been pushed, in current files and recent commits. It barks when it finds one, and links you straight to the line on GitHub. [Meet Rex →](docs/pets/rex.md)
+- **One GitHub sign-in, in General:** sign in once under **General → GitHub account**, and every pet that uses GitHub (Catbot and Rex) shares it. Their pages offer the button until you're signed in.
+- **Syncy watches repos live:** edits, commits and pushes show up within seconds. **+ Add repo** takes git repos only and refuses duplicates, and unpushed commits name the branch they're on. **Open in VS Code** replaces the terminal button.
+- **A tidier panel:** cards in a row share its full width, with no empty columns.
+
+### 0.2
 
 - **A new logo:** a little pixel gremlin with glowing GitHub-green eyes, on a three-commit graph in the pets' colours.
 - **A redesigned panel, "pixel glass":** frosted-glass cards, pixel headings, and each pet drawn large in scanlines. It fills the whole window, and follows your Windows theme (or pick **Light** or **Dark** under General).
 - **A new message box on the desktop:** in the same style, sized to its words, with all the text there at once. It opens when you hover a pet and closes the moment you move away.
 - **Syncy the beaver:** guards work you haven't pushed to GitHub. [Meet Syncy →](docs/pets/syncy.md)
-- **Rex the robot dog:** sniffs your public GitHub repos for API keys, passwords, private keys and `.env` files that should never have been pushed, in current files and recent history. [Meet Rex →](docs/pets/rex.md)
-- **Mole:** port 3000 already taken? Mole tells you who has it and frees it in two clicks, and spots dev servers left running after their terminal closed. [Meet Mole →](docs/pets/mole.md)
 - **A real Windows app:** open GitGremlin from the Start menu or search ([Installation](#installation), step 5).
 - **More in General:** **Hide all pets** for an hour, and the app version.
 - **Right-click a pet** for its menu (review, run its job now, open GitGremlin). A plain click just shows its report.
@@ -63,14 +71,15 @@ GitGremlin is a home for **pets with a purpose**:
 | <img src="assets/pets/dusty/portrait.png" alt="Dusty" width="66" /> | **Dusty**<br /><sub>raccoon</sub> | Sniffs out **junk files**: developer caches, the Recycle Bin, and optionally temp files and browser caches. Cleans them only the way you allow: ask first, automatically, or report only. | [Dusty's guide →](docs/pets/dusty.md) |
 | <img src="assets/pets/syncy/portrait.png" alt="Syncy" width="66" /> | **Syncy**<br /><sub>beaver</sub> | Guards **work that isn't on GitHub**: uncommitted changes, unpushed commits and forgotten stashes across all your repos. Watches them live, nudges you when work sits too long, and tidies merged branches. | [Syncy's guide →](docs/pets/syncy.md) |
 | <img src="assets/pets/mole/portrait.png" alt="Mole" width="72" /> | **Mole**<br /><sub>mole</sub> | Digs through your **ports**: shows every dev server and its port, warns you the moment a project you start finds **its port taken**, and **frees the port** (stops whatever holds it) after you confirm. Also spots servers left running after their terminal closed. | [Mole's guide →](docs/pets/mole.md) |
-| <img src="assets/pets/rex/portrait.png" alt="Rex" width="72" /> | **Rex**<br /><sub>robot dog</sub> | Sniffs your **public GitHub repos** for **leaked secrets**: API keys and tokens, private keys, database passwords and URLs, `.env` and credential files. Checks current files and recent commits, after you push and once a day, and barks when it finds one. Read-only. | [Rex's guide →](docs/pets/rex.md) |
+| <img src="assets/pets/rex/portrait.png" alt="Rex" width="72" /> | **Rex**<br /><sub>wind-up tin dog</sub> | Sniffs your **public GitHub repos** for **leaked secrets**: API keys and tokens, private keys, database passwords and URLs, `.env` and credential files. Checks current files and recent commits, after you push and once a day, and barks when it finds one. Read-only. | [Rex's guide →](docs/pets/rex.md) |
 
 More pets are on the way.
 
 ## Features
 
 - **One panel for every pet.** Click the tray icon to open the GitGremlin panel. It lists your pets with what each is up to, and gives each pet a page for its job and its look. Changes save as you make them. Light and dark themes follow Windows.
-- **Lives on your desktop.** Pets sit just above the wallpaper, so your app windows cover them. Or turn on **Show pets on top of apps** to keep them above everything.
+- **Lives on your desktop.** Pets sit just above the wallpaper, so your app windows cover them. Or choose **General → Where pets live → On top of apps** to keep them above everything.
+- **One GitHub sign-in.** Sign in once in General; Catbot and Rex share it. It's read-only, approved on github.com, and stored encrypted on your PC.
 - **Hover to read their minds.** Hover over a pet and its message box shows its status report. It closes as soon as you move away. Right-click a pet for its menu: review what it found, run its job now, or open GitGremlin.
 - **Roams freely.** Pets walk, run, crawl and hop anywhere on the screen. They sit, get curious, walk between monitors and jump onto the window you're working in. Or keep a pet along the bottom of the screen.
 - **Plays with you.** Pets can follow your cursor, and you can pick them up, drag them and toss them.
@@ -197,7 +206,7 @@ Copy-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\GitGremlin.lnk" ([
    - **Dusty** shows the junk it finds. Nothing is deleted until you confirm.
    - **Syncy** lists repos with work that isn't on GitHub yet. It finds your repos by itself.
    - **Mole** shows your running dev servers and their ports, and frees a port you need.
-   - **Rex** sniffs your public GitHub repos for leaked secrets, using Catbot's GitHub sign-in.
+   - **Rex** sniffs your public GitHub repos for leaked secrets, using the same GitHub sign-in.
    - **General → Start GitGremlin with Windows** brings the pets back every time you sign in.
 
 To keep it handy, right-click **GitGremlin** in the Start menu and choose **Pin to Start** or **Pin to taskbar**. Opening GitGremlin while it's already running opens the panel. To stop it, right-click the tray icon and choose **Quit**.
@@ -234,7 +243,7 @@ Node.js and Git stay installed. If you don't need them, remove them with `winget
 ### The GitGremlin panel
 
 <p align="center">
-  <img src="docs/images/panel.png" alt="The GitGremlin panel showing Mole's page: a sidebar with Catbot, Dusty, Syncy and Mole, Mole drawn large, a Port taken card saying web wants port 5050 but api has it with Free and Use instead buttons, and the running servers list" width="720" />
+  <img src="docs/images/panel.png" alt="The GitGremlin panel showing Dusty's page: a sidebar with Catbot, Dusty, Syncy, Mole and Rex, Dusty drawn large with Clean and Scan again buttons, and the junk it found ready to clean" width="720" />
 </p>
 
 Click the tray icon to open it. The sidebar lists every pet with a status dot:
@@ -281,7 +290,7 @@ Pets are awake the whole time GitGremlin runs. Turn one off with its switch, or 
 
 ## Privacy and safety
 
-- **Your GitHub account:** Catbot links through GitHub's own sign-in, with read-only access. The token is stored encrypted on your PC. [Details →](docs/pets/catbot.md#privacy-and-your-github-account)
+- **Your GitHub account:** you sign in once (General → GitHub account) through GitHub's own sign-in, with read-only access, and Catbot and Rex share it. The token is stored encrypted on your PC, and Sign out forgets it and what Rex found. [Details →](docs/pets/catbot.md#privacy-and-your-github-account)
 - **Your files:** Dusty only looks in a fixed list of junk locations inside your user folders. It never follows links, skips files in use, and by default deletes nothing until you confirm. [Safety rules →](docs/pets/dusty.md#safety-rules)
 - **Your repos:** Syncy only reads them with git. It never fetches or pushes, and the only change it can make is deleting merged local branches, after you confirm. [Safety →](docs/pets/syncy.md#safety)
 - **Your processes:** Mole only reads which programs listen on which ports. It stops a server only when you ask and confirm, never Windows itself or your terminal. [Safety →](docs/pets/mole.md#safety)
@@ -300,7 +309,7 @@ Pets are awake the whole time GitGremlin runs. Turn one off with its switch, or 
 | `Failed to load URL: ... hub.html ... ERR_FILE_NOT_FOUND` | The built copy is out of date. Quit GitGremlin from the tray and run `npm run install-app` again. |
 | Nothing happens when you open GitGremlin | It's probably already running: look for its tray icon. If it's stuck, end **Electron** in Task Manager and open GitGremlin again. |
 | `Unable to move the cache: Access is denied` | Two copies were running at once. Quit GitGremlin, end any leftover **Electron** processes, and open it again. |
-| The pets don't show | App windows hide them in desktop mode: press **Win+D**, or turn on **Show pets on top of apps**. Also check each pet's **On desktop** switch. |
+| The pets don't show | App windows hide them in desktop mode: press **Win+D**, or choose **General → Where pets live → On top of apps**. Also check each pet's **On desktop** switch. |
 
 ## Known limitations
 
