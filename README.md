@@ -22,6 +22,7 @@ GitGremlin puts little pixel-art pets on your Windows desktop, and each one does
 
 ## Contents
 
+- [Coming next](#coming-next)
 - [What's new](#whats-new)
 - [About](#about)
 - [Meet the pets](#meet-the-pets)
@@ -33,6 +34,14 @@ GitGremlin puts little pixel-art pets on your Windows desktop, and each one does
 - [Known limitations](#known-limitations)
 - [Documentation](#documentation)
 - [License](#license)
+
+## Coming next
+
+The next GitGremlin update is in the works:
+
+- **5 new pets:** five more pets with a purpose, each taking on a real developer chore. They ship together in one update.
+- **An Update button:** update GitGremlin from the panel in one click. It downloads the new pets, features and packages for you, with no more `git pull` and `npm install` by hand.
+- **Pets that work in the background:** keep a pet on duty without it showing on your screen. It keeps watching and still warns you when something needs you.
 
 ## What's new
 
@@ -223,7 +232,7 @@ git pull
 npm install
 ```
 
-Then open GitGremlin as usual. If the code changed, it rebuilds itself on start, which takes a few seconds, and then launches. If GitGremlin was running during the update, quit it from the tray first.
+Then open GitGremlin as usual (the next update adds an **Update** button that does all of this for you). If the code changed, it rebuilds itself on start, which takes a few seconds, and then launches. If GitGremlin was running during the update, quit it from the tray first.
 
 ### Uninstalling
 
