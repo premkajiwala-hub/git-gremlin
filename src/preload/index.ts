@@ -6,6 +6,7 @@ import type {
   PortLookup,
   RepoAction,
   RexAction,
+  SquirrelAction,
   DisplayInfo,
   FeedEvent,
   HubView,
@@ -67,6 +68,9 @@ const api = {
   moleLookup: (port: number): Promise<PortLookup | null> => ipcRenderer.invoke(IPC.moleLookup, port),
   rexScan: (): Promise<HubView> => ipcRenderer.invoke(IPC.rexScan),
   rexAction: (action: RexAction): Promise<ActionResult> => ipcRenderer.invoke(IPC.rexAction, action),
+  squirrelCheck: (): Promise<HubView> => ipcRenderer.invoke(IPC.squirrelCheck),
+  /** Connect / disconnect a read-only platform key, or open a platform's own page. */
+  squirrelAction: (action: SquirrelAction): Promise<ActionResult> => ipcRenderer.invoke(IPC.squirrelAction, action),
   updateCheck: (): Promise<HubView> => ipcRenderer.invoke(IPC.updateCheck),
   /** Download and install the newest release (GitGremlin restarts). */
   updateApply: (): Promise<ActionResult> => ipcRenderer.invoke(IPC.updateApply),

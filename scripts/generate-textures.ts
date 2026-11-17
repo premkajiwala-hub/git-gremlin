@@ -25,6 +25,7 @@ import { dusty } from './art/dusty.ts'
 import { syncy } from './art/syncy.ts'
 import { mole } from './art/mole.ts'
 import { rex } from './art/rex.ts'
+import { squirrel } from './art/squirrel.ts'
 import { ICO_SIZES, logoIcon } from './art/logo.ts'
 import { Img, png, scale, stamp, type PetArt } from './art/pixel.ts'
 
@@ -79,7 +80,7 @@ mkdirSync(TEX, { recursive: true })
 const args = process.argv.slice(2)
 const only = args.filter((a) => a !== 'icons')
 const iconsOnly = args.includes('icons') && !only.length
-const pets = iconsOnly ? [] : [catbot, dusty, syncy, mole, rex].filter((f) => !only.length || only.includes(f.name)).map((f) => f())
+const pets = iconsOnly ? [] : [catbot, dusty, syncy, mole, rex, squirrel].filter((f) => !only.length || only.includes(f.name)).map((f) => f())
 if (only.length && pets.length !== only.length) throw new Error(`Unknown pet in: ${only.join(', ')}`)
 for (const art of pets) console.log(`${art.id}: ${writePet(art)} frames`)
 

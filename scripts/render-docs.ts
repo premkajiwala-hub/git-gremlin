@@ -8,6 +8,7 @@
  *   docs/images/syncy-poses.png    a strip of Syncy's animations
  *   docs/images/mole-poses.png     a strip of Mole's animations
  *   docs/images/rex-poses.png      a strip of Rex's animations
+ *   docs/images/squirrel-poses.png a strip of Squirrel's animations
  *
  * Run with:  npm run docs-images
  */
@@ -207,5 +208,17 @@ const rex: Pose[] = [
   { anim: 'sleep', frame: 0, eyes: 'blink', zzz: true }
 ]
 writeFileSync(join(DOCS, 'rex-poses.png'), png(scale(strip('rex', rex), 3)))
+
+const squirrel: Pose[] = [
+  { anim: 'idle', frame: 0, eyes: 'idle' },
+  { anim: 'walk', frame: 1, eyes: 'idle' },
+  { anim: 'rummage', frame: 1, eyes: 'alert' },
+  { anim: 'eat', frame: 1, eyes: 'happy', food: true },
+  { anim: 'happy', frame: 0, eyes: 'happy', hearts: true },
+  { anim: 'sit', frame: 0, eyes: 'idle' },
+  { anim: 'wash', frame: 0, eyes: 'happy' },
+  { anim: 'sleep', frame: 0, eyes: 'blink', zzz: true }
+]
+writeFileSync(join(DOCS, 'squirrel-poses.png'), png(scale(strip('squirrel', squirrel), 3)))
 
 console.log(`Wrote README images to ${DOCS}`)

@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path'
 import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeTheme, powerMonitor, shell, type MenuItemConstructorOptions } from 'electron'
 import { APP_ID, IPC, PET_IDS } from '../shared/constants'
 import { formatBytes } from '../shared/format'
-import type { ActionResult, FeedEvent, HubView, MoleAction, PetId, PetStatus, PortLookup, RepoAction, RexAction, ServerInfo, Settings, SignInCode, SignInResult } from '../shared/types'
+import type { ActionResult, FeedEvent, HubView, MoleAction, PetId, PetStatus, PortLookup, RepoAction, RexAction, SquirrelAction, ServerInfo, Settings, SignInCode, SignInResult } from '../shared/types'
 import { clientId, DeviceFlow } from './github-auth'
 import { GitHubWatcher, moodFrom, type GitHubData } from './github'
 import { openInVSCode } from './editor'
@@ -14,6 +14,7 @@ import { catbotFeedText, catbotStatus, newContributions } from './pets/catbot'
 import { DustyService } from './pets/dusty'
 import { MoleService } from './pets/mole'
 import { RexService } from './pets/rex'
+import { SquirrelService } from './pets/squirrel'
 import { SyncyService } from './pets/syncy'
 import { normalizeSettings, Store } from './store'
 import { Updater } from './updater'
@@ -53,15 +54,17 @@ if (process.argv.includes('--install-shortcut')) {
       const at = argv.indexOf(flag)
       return at >= 0 ? argv.slice(at + 1).find((a) => !a.startsWith('--')) : undefined
     }
-    const petArg = (flag: string): PetId => (PET_IDS.includes(after(flag) as PetId) ? (after(flag) as PetId) : 'catbot')
+    const petArg = (flag: string): PetId =>
+      (argv.slice(argv.indexOf(flag) + 1).find((a) => PET_IDS.includes(a as PetId)) as PetId | undefined) ?? 'catbot'
     const sayText = after('--say')
     if (argv.includes('--feed')) {
       const pet = petArg('--feed')
-      const text = pet === 'dusty' ? 'MMM, A TEST CRUMB!' : pet === 'syncy' ? 'CRUNCHY LOG!' : pet === 'mole' ? 'A JUICY WORM!' : pet === 'rex' ? 'A TASTY TIN BONE!' : catbotFeedText(1)
+      const text = pet === 'dusty' ? 'MMM, A TEST CRUMB!' : pet === 'syncy' ? 'CRUNCHY LOG!' : pet === 'mole' ? 'A JUICY WORM!' : pet === 'rex' ? 'A TASTY TIN BONE!' : pet === 'squirrel' ? 'A CRUNCHY ACORN!' : catbotFeedText(1)
       feed(pet, { text, debug: true })
     } else if (argv.includes('--scan')) void dusty.scan()
     else if (argv.includes('--check')) void syncy.check()
     else if (argv.includes('--sniff')) void rex.scan()
+    else if (argv.includes('--tiers')) void squirrel.check()
     else if (sayText) overlays.sendToPet('catbot', IPC.say, sayText.toUpperCase())
     else if (argv.includes('--settings')) openHub()
     else if (overlays.isHidden) setHidden(false)
@@ -77,6 +80,7 @@ let dusty: DustyService
 let syncy: SyncyService
 let mole: MoleService
 let rex: RexService
+let squirrel: SquirrelService
 let updater: Updater
 let tray: AppTray
 let hideTimer: NodeJS.Timeout | null = null
@@ -127,6 +131,12 @@ function start(): void {
     account: async () => (github.source === 'none' ? { login: null, token: null } : { login: github.data.login, token: await github.token() }),
     login: () => (github.source === 'none' ? null : github.data.login)
   })
+  squirrel = new SquirrelService(store, {
+    changed: () => pushStatus(),
+    feed: (text) => feed('squirrel', { text }),
+    say: (text) => overlays.sendToPet('squirrel', IPC.say, text),
+    repos: () => (store.state.syncy.lastScan?.repos ?? []).map((r) => r.path)
+  })
   updater = new Updater({
     changed: () => pushStatus(),
     quit: (relaunch) => {
@@ -150,6 +160,8 @@ function start(): void {
     moleReview: () => openHub('mole'),
     rexScan: () => void rex.scan(),
     rexReview: () => openHub('rex'),
+    squirrelCheck: () => void squirrel.check(),
+    squirrelReview: () => openHub('squirrel'),
     hideForHour: () => setHidden(true, 60 * 60_000),
     showPets: () => setHidden(false),
     toggleStartWithWindows: () => {
@@ -166,6 +178,7 @@ function start(): void {
   syncy.start()
   mole.start()
   rex.start()
+  squirrel.start()
   updater.start()
   if (github.source === 'none') hintSignIn(6000)
   registerHubIpc()
@@ -190,6 +203,7 @@ function status(id: PetId): PetStatus {
   if (id === 'catbot') return catbotStatus(cfg, github.data, github.source !== 'none')
   if (id === 'mole') return mole.status(cfg)
   if (id === 'rex') return rex.status(cfg)
+  if (id === 'squirrel') return squirrel.status(cfg)
   return id === 'dusty' ? dusty.status(cfg) : syncy.status(cfg)
 }
 
@@ -301,7 +315,8 @@ async function hubView(): Promise<HubView> {
     dusty: dusty.view(),
     syncy: syncy.view(),
     mole: mole.view(),
-    rex: rex.view()
+    rex: rex.view(),
+    squirrel: squirrel.view()
   }
 }
 
@@ -348,6 +363,11 @@ function showPetMenu(id: PetId): void {
         : [{ label: 'Nothing running', enabled: false }]
     })
     own.push({ label: 'Show running servers...', click: () => openHub('mole') })
+  } else if (id === 'squirrel') {
+    own.push(
+      { label: s.alert ? 'Show the free tier running low...' : 'Show my free tiers...', click: () => openHub('squirrel') },
+      { label: 'Check usage now', enabled: !squirrel.busy, click: () => void squirrel.check() }
+    )
   } else if (id === 'rex') {
     if (github.source === 'none') own.push({ label: 'Sign in with GitHub...', click: () => openHub('rex') })
     own.push(
@@ -433,6 +453,8 @@ function registerHubIpc(): void {
     if (where(a) !== where(b) || (next.pets.syncy.enabled && !before.pets.syncy.enabled)) setTimeout(() => void syncy.check(), 500)
     syncy.syncWatchers()
     mole.refresh()
+    if (next.squirrel.checkEveryMinutes !== before.squirrel.checkEveryMinutes) squirrel.reschedule()
+    if (next.pets.squirrel.enabled && !before.pets.squirrel.enabled) setTimeout(() => void squirrel.check(), 500)
     // Rex switched on, or forks / history depth changed: sniff again.
     const rexWhere = (c: typeof before.rex) => JSON.stringify([c.history, c.includeForks])
     if ((next.pets.rex.enabled && !before.pets.rex.enabled) || rexWhere(next.rex) !== rexWhere(before.rex)) setTimeout(() => void rex.scan(), 500)
@@ -481,6 +503,13 @@ function registerHubIpc(): void {
     updater.seen()
     return hubView()
   })
+
+  // --- Squirrel ------------------------------------------------------------------------
+  ipcMain.handle(IPC.squirrelCheck, async () => {
+    await squirrel.check()
+    return hubView()
+  })
+  ipcMain.handle(IPC.squirrelAction, (_e, action: SquirrelAction) => squirrel.act(action))
 
   // --- Rex -----------------------------------------------------------------------------
   ipcMain.handle(IPC.rexScan, async () => {
@@ -581,6 +610,7 @@ app.on('before-quit', () => {
   syncy?.stop()
   mole?.stop()
   rex?.stop()
+  squirrel?.stop()
   updater?.stop()
   tracker?.stop()
   overlays?.stop()

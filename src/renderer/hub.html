@@ -383,6 +383,45 @@
       </article>
     </template>
 
+    <!-- Squirrel: free tiers -->
+    <template id="squirrelPurpose">
+      <article class="card wide">
+        <div class="card-head"><h2 class="card-title"><i></i>Free tiers</h2><span class="muted" id="sqInfo"></span></div>
+        <div class="repos" id="sqMeters"></div>
+      </article>
+      <article class="card wide">
+        <div class="card-head"><h2 class="card-title"><i></i>Your projects</h2><span class="muted">Found from files in your repos</span></div>
+        <div class="repos" id="sqProjects"></div>
+      </article>
+      <article class="card wide">
+        <div class="card-head"><h2 class="card-title"><i></i>Platforms</h2><span class="muted">Keys are read-only and stored encrypted</span></div>
+        <div class="repos" id="sqPlatforms"></div>
+      </article>
+      <article class="card" id="sqHabits">
+        <div class="card-head"><h2 class="card-title"><i></i>Habits</h2></div>
+        <div class="field">
+          <span class="field-top">Warn me when a free tier is</span>
+          <div class="seg" role="group" aria-label="Warn at" id="sqWarn">
+            <button type="button" data-w="70">70% used</button><button type="button" data-w="80">80% used</button><button type="button" data-w="90">90% used</button>
+          </div>
+        </div>
+        <div class="lines">
+          <div class="line-row">
+            <div><div class="t">Check usage every</div><div class="s">Only platforms you connected</div></div>
+            <label class="chip-select"
+              ><span class="sr">Check every</span
+              ><select id="sqEvery">
+                <option value="30">30 min</option>
+                <option value="60">1 h</option>
+                <option value="180">3 h</option>
+                <option value="360">6 h</option>
+              </select></label
+            >
+          </div>
+        </div>
+      </article>
+    </template>
+
     <!-- Rex: leaked secrets on GitHub -->
     <template id="rexPurpose">
       <article class="card wide">
