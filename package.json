@@ -12,6 +12,7 @@
     "dev": "electron-vite dev",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "postinstall": "node node_modules/electron/install.js",
     "textures": "node scripts/generate-textures.ts",
     "compile": "electron-vite build",
     "build": "npm run typecheck && electron-vite build && electron-builder --win nsis --x64 --publish never",
