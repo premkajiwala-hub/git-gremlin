@@ -39,7 +39,7 @@ GitGremlin puts little pixel-art pets on your Windows desktop, and each one does
 
 The next GitGremlin update is in the works:
 
-- **5 new pets:** five more pets with a purpose, each taking on a real developer chore. They ship together in one update.
+- **3 new pets:** three more pets with a purpose, each taking on a real chore on your PC. They ship together in one update.
 - **An Update button:** update GitGremlin from the panel in one click. It downloads the new pets, features and packages for you, with no more `git pull` and `npm install` by hand.
 - **Pets that work in the background:** keep a pet on duty without it showing on your screen. It keeps watching and still warns you when something needs you.
 
