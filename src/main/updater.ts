@@ -7,9 +7,10 @@
 import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { app, net, Notification } from 'electron'
+import { app, net } from 'electron'
 import { UPDATE_REPO } from '../shared/constants'
 import type { InstallKind, PackageChange, UpdateRelease, UpdateView } from '../shared/types'
+import { toast } from './toast'
 import {
   copyRelease,
   depsFingerprint,
@@ -111,8 +112,6 @@ interface Outcome {
 
 export interface UpdaterHooks {
   changed(): void
-  /** Open the panel on the updates card. */
-  show(): void
   /** Quit the app normally (saves state); `relaunch` starts it again afterwards. */
   quit(relaunch: boolean): void
 }
@@ -242,14 +241,9 @@ export class Updater {
   private notify(next: UpdateRelease): void {
     this.saved.notified = next.version
     this.save()
-    if (!Notification.isSupported()) return
     const pets = this.releases.flatMap((r) => r.pets.map((p) => p.name))
-    const body = pets.length
-      ? `${pets.length === 1 ? 'A new pet' : `${pets.length} new pets`}: ${list(pets)}. Click to see what's new.`
-      : `${next.title || 'New features and fixes'}. Click to see what's new.`
-    const n = new Notification({ title: `GitGremlin ${next.version} is ready`, body, icon: join(this.root, 'assets', 'icon.png') })
-    n.on('click', () => this.hooks.show())
-    n.show()
+    const what = pets.length ? `${pets.length === 1 ? 'A new pet' : `${pets.length} new pets`}: ${list(pets)}.` : `${next.title || 'New features and fixes'}.`
+    toast(`GitGremlin ${next.version} is ready`, `${what} Open GitGremlin from the tray to update.`)
   }
 
   // --- installing ---------------------------------------------------------------------------------
@@ -352,15 +346,8 @@ export class Updater {
   }
 
   private notifyDone(to: string, releases: UpdateRelease[]): void {
-    if (!Notification.isSupported()) return
     const pets = releases.flatMap((r) => r.pets.map((p) => p.name))
-    const n = new Notification({
-      title: `GitGremlin is now ${to}`,
-      body: pets.length ? `Say hi to ${list(pets)}! Turn them on in the panel.` : 'Click to see what changed.',
-      icon: join(this.root, 'assets', 'icon.png')
-    })
-    n.on('click', () => this.hooks.show())
-    n.show()
+    toast(`GitGremlin is now ${to}`, pets.length ? `Say hi to ${list(pets)}! See what's new in the panel, under General.` : "See what's new in the panel, under General.")
   }
 
   // --- small helpers --------------------------------------------------------------------------------

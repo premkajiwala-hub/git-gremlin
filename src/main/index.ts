@@ -1,4 +1,5 @@
-import { resolve } from 'node:path'
+import { appendFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeTheme, powerMonitor, shell, type MenuItemConstructorOptions } from 'electron'
 import { APP_ID, IPC, PET_IDS } from '../shared/constants'
 import { formatBytes } from '../shared/format'
@@ -41,6 +42,7 @@ if (process.argv.includes('--install-shortcut')) {
   // Relaunching with the fresh build.
 } else {
   app.setAppUserModelId(APP_ID)
+  watchExits()
   app.whenReady().then(start)
   // A second launch forwards its arguments here: `GitGremlin --feed [pet]`
   // (debug snack), `--say "text"` (Catbot speaks), `--settings`; otherwise open the panel.
@@ -127,7 +129,6 @@ function start(): void {
   })
   updater = new Updater({
     changed: () => pushStatus(),
-    show: () => openHub('updates'),
     quit: (relaunch) => {
       if (relaunch) app.relaunch()
       app.quit()
@@ -552,6 +553,25 @@ function registerHubIpc(): void {
 app.on('window-all-closed', () => {
   // Stay alive in the tray.
 })
+
+/** A short log of why GitGremlin stopped (%APPDATA%\GitGremlin\exits.log), for "it just disappeared". */
+function logExit(what: string): void {
+  try {
+    appendFileSync(join(app.getPath('userData'), 'exits.log'), `${new Date().toISOString()} pid ${process.pid} ${what}\n`)
+  } catch {
+    /* nothing to do */
+  }
+}
+
+function watchExits(): void {
+  logExit('started')
+  process.on('uncaughtException', (err) => logExit(`uncaught error: ${err.stack ?? err}`))
+  app.on('render-process-gone', (_e, wc, d) => logExit(`window gone (${wc.getURL().split('/').pop()}): ${d.reason} ${d.exitCode}`))
+  app.on('child-process-gone', (_e, d) => logExit(`helper process gone (${d.type}): ${d.reason} ${d.exitCode}`))
+  for (const sig of ['SIGTERM', 'SIGINT', 'SIGBREAK'] as const) process.on(sig, () => logExit(`signal ${sig}`))
+  powerMonitor.on('shutdown', () => logExit('Windows is shutting down'))
+  app.on('will-quit', () => logExit('quitting'))
+}
 
 app.on('before-quit', () => {
   if (overlays) for (const id of PET_IDS) store.state.pets[id] = overlays.snapshot(id) ?? store.state.pets[id]
