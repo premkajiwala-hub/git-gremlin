@@ -410,8 +410,52 @@ export interface GitHubView {
 }
 
 /** Everything the GitGremlin panel shows. */
+/** One published release, from updates.json. */
+export interface UpdateRelease {
+  version: string
+  date: string
+  title: string
+  pets: { name: string; summary: string }[]
+  features: string[]
+  fixes: string[]
+}
+
+/** A package added (from null), removed (to null) or upgraded by an update. */
+export interface PackageChange {
+  name: string
+  from: string | null
+  to: string | null
+}
+
+/**
+ * How this copy of GitGremlin was installed: a git clone, a ZIP download,
+ * the Windows installer, or `npm start` (development).
+ */
+export type InstallKind = 'git' | 'zip' | 'installer' | 'dev'
+
+export interface UpdateView {
+  current: string
+  kind: InstallKind
+  state: 'idle' | 'checking' | 'downloading' | 'installing'
+  checkedAt: number | null
+  /** Releases newer than this copy, newest first (empty = up to date). */
+  releases: UpdateRelease[]
+  packages: PackageChange[]
+  /** This copy can't update itself (local changes, own commits...): why. */
+  blocked: string | null
+  error: string | null
+  autoCheck: boolean
+  /** Shown once after an update: what came in. */
+  updated: { from: string; to: string; releases: UpdateRelease[] } | null
+  /** The last update attempt failed and was rolled back. */
+  failed: string | null
+  /** Packages will be installed: GitGremlin closes for a minute. */
+  needsRestart: boolean
+}
+
 export interface HubView {
   version: string
+  update: UpdateView
   /** Pets are hidden for a while (tray or panel). */
   hidden: boolean
   settings: Settings

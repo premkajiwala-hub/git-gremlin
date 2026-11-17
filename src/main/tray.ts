@@ -26,6 +26,8 @@ export interface TrayState {
   status: Record<PetId, PetStatus>
   hidden: boolean
   startWithWindows: boolean
+  /** A newer GitGremlin version is ready to install. */
+  update: string | null
 }
 
 /** One line about a pet for the tray, e.g. "Fed, level 2" or "1.2 GB of junk found". */
@@ -88,6 +90,7 @@ export class AppTray {
     this.tray.setContextMenu(
       Menu.buildFromTemplate([
         { label: `Open ${APP_NAME}`, click: () => a.openHub() },
+        ...(s.update ? ([{ label: `Update to ${s.update}...`, click: () => a.openHub('updates') }] as MenuItemConstructorOptions[]) : []),
         { type: 'separator' },
         ...pets,
         { type: 'separator' },

@@ -15,8 +15,12 @@ import { MoleService } from './pets/mole'
 import { RexService } from './pets/rex'
 import { SyncyService } from './pets/syncy'
 import { normalizeSettings, Store } from './store'
+import { Updater } from './updater'
 import { AppTray } from './tray'
 import { WindowTracker } from './windows'
+
+// Tests run a second copy with its own data folder.
+if (process.env['GITGREMLIN_USER_DATA']) app.setPath('userData', process.env['GITGREMLIN_USER_DATA'])
 
 if (process.argv.includes('--install-shortcut')) {
   // `npm run install-app`: add GitGremlin to the Start menu, then exit.
@@ -71,6 +75,7 @@ let dusty: DustyService
 let syncy: SyncyService
 let mole: MoleService
 let rex: RexService
+let updater: Updater
 let tray: AppTray
 let hideTimer: NodeJS.Timeout | null = null
 let hinted = false
@@ -120,6 +125,14 @@ function start(): void {
     account: async () => (github.source === 'none' ? { login: null, token: null } : { login: github.data.login, token: await github.token() }),
     login: () => (github.source === 'none' ? null : github.data.login)
   })
+  updater = new Updater({
+    changed: () => pushStatus(),
+    show: () => openHub('updates'),
+    quit: (relaunch) => {
+      if (relaunch) app.relaunch()
+      app.quit()
+    }
+  })
   tray = new AppTray({
     openHub: (page) => openHub(page),
     setPetEnabled: (id, enabled) => {
@@ -152,6 +165,7 @@ function start(): void {
   syncy.start()
   mole.start()
   rex.start()
+  updater.start()
   if (github.source === 'none') hintSignIn(6000)
   registerHubIpc()
 
@@ -186,7 +200,7 @@ function allStatus(): Record<PetId, PetStatus> {
 function pushStatus(): void {
   const all = allStatus()
   for (const id of PET_IDS) overlays.sendToPet(id, IPC.status, all[id])
-  tray.update({ settings: store.state.settings, status: all, hidden: overlays.isHidden, startWithWindows: startWithWindows() })
+  tray.update({ settings: store.state.settings, status: all, hidden: overlays.isHidden, startWithWindows: startWithWindows(), update: updater.available?.version ?? null })
   notifyHub()
 }
 
@@ -264,6 +278,7 @@ async function hubView(): Promise<HubView> {
   const mood = moodFrom(data.days)
   return {
     version: app.getVersion(),
+    update: updater.view(),
     hidden: overlays.isHidden,
     settings: store.state.settings,
     startWithWindows: startWithWindows(),
@@ -451,6 +466,21 @@ function registerHubIpc(): void {
     return p >= 1 && p <= 65535 ? mole.lookup(p) : null
   })
 
+  // --- Updates -------------------------------------------------------------------------
+  ipcMain.handle(IPC.updateCheck, async () => {
+    await updater.check()
+    return hubView()
+  })
+  ipcMain.handle(IPC.updateApply, () => updater.apply())
+  ipcMain.handle(IPC.updateAuto, (_e, on: unknown) => {
+    updater.setAuto(on === true)
+    return hubView()
+  })
+  ipcMain.handle(IPC.updateSeen, () => {
+    updater.seen()
+    return hubView()
+  })
+
   // --- Rex -----------------------------------------------------------------------------
   ipcMain.handle(IPC.rexScan, async () => {
     await rex.scan()
@@ -531,6 +561,7 @@ app.on('before-quit', () => {
   syncy?.stop()
   mole?.stop()
   rex?.stop()
+  updater?.stop()
   tracker?.stop()
   overlays?.stop()
   tray?.destroy()

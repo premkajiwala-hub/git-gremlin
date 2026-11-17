@@ -2,6 +2,8 @@ import type { PetId, Settings } from './types'
 
 export const APP_NAME = 'GitGremlin'
 export const APP_ID = 'com.premkajiwala.gitgremlin'
+/** Where updates come from: updates.json on main, and a `v<version>` tag per release. */
+export const UPDATE_REPO = 'premkajiwala-hub/git-gremlin'
 
 /** Target render rate for the overlay. */
 export const FPS = 30
@@ -115,6 +117,10 @@ export const IPC = {
   moleLookup: 'hub:mole-lookup',
   rexScan: 'hub:rex-scan',
   rexAction: 'hub:rex-action',
+  updateCheck: 'hub:update-check',
+  updateApply: 'hub:update-apply',
+  updateAuto: 'hub:update-auto',
+  updateSeen: 'hub:update-seen',
   hidePets: 'hub:hide-pets',
   githubRefresh: 'settings:github-refresh',
   githubSignIn: 'settings:github-sign-in',

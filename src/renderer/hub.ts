@@ -9,7 +9,7 @@ import '@fontsource/jetbrains-mono/latin-500.css'
 import '@fontsource/jetbrains-mono/latin-600.css'
 import { PET_IDS } from '../shared/constants'
 import { ago, formatBytes } from '../shared/format'
-import type { CleanMode, HubView, JunkTarget, MoleAction, PetConfig, PetId, PortClash, PortLookup, RepoAction, RepoInfo, Leak, ServerInfo, Settings, ThemeMode } from '../shared/types'
+import type { CleanMode, HubView, JunkTarget, MoleAction, PetConfig, PetId, PortClash, PortLookup, RepoAction, RepoInfo, Leak, ServerInfo, Settings, ThemeMode, UpdateRelease } from '../shared/types'
 
 /**
  * The GitGremlin panel ("pixel glass"): a rail of pets on the left, and for
@@ -242,6 +242,8 @@ function fitPets(): void {
 }
 
 function show(p: string): void {
+  const toUpdates = p === 'updates'
+  if (toUpdates) p = 'general'
   if (p !== 'general' && !PET_IDS.includes(p as PetId)) p = 'catbot'
   page = p
   for (const [id, e] of pages) e.hidden = id !== p
@@ -249,6 +251,7 @@ function show(p: string): void {
   for (const b of document.querySelectorAll<HTMLElement>('.nav[data-page]')) b.classList.toggle('active', b.dataset.page === p)
   $('content').scrollTop = 0
   fitPets()
+  if (toUpdates) requestAnimationFrame(() => $('updateCard').scrollIntoView({ block: 'start' }))
 }
 
 function renderNav(): void {
@@ -1199,6 +1202,105 @@ function wireRex(): void {
   }
 }
 
+// --- Updates -------------------------------------------------------------------------------------
+function releaseBlock(r: UpdateRelease): HTMLElement {
+  const box = el('div', 'upd-release')
+  box.append(el('h3', '', [`Version ${r.version}`, r.date, r.title].filter(Boolean).join(' · ')))
+  const section = (label: string, items: string[]) => {
+    if (!items.length) return
+    box.append(el('div', 't', label))
+    const ul = el('ul', 'upd-list')
+    for (const i of items) ul.append(el('li', '', i))
+    box.append(ul)
+  }
+  section(
+    r.pets.length === 1 ? 'New pet' : 'New pets',
+    r.pets.map((p) => (p.summary ? `${p.name}: ${p.summary}` : p.name))
+  )
+  section('New features', r.features)
+  section('Fixes', r.fixes)
+  return box
+}
+
+function renderUpdates(): void {
+  const u = view.update
+  setSwitch($('updAuto'), u.autoCheck)
+  $('updInfo').textContent = u.state === 'checking' ? 'Checking...' : u.checkedAt ? `You have ${u.current} · checked ${ago(u.checkedAt)}` : `You have ${u.current}`
+  const next = u.releases[0]
+  const sub = $('generalSub')
+  sub.hidden = !next
+  sub.textContent = next ? `Update ready: ${next.version}` : ''
+  const body: HTMLElement[] = []
+
+  if (u.updated) {
+    const note = el('div', 'upd-note')
+    const head = el('div', 'upd-head')
+    head.append(el('p', 'upd-title', `GitGremlin is now ${u.updated.to}`), button('Got it', 'Hide this note', () => void api.updateSeen().then((v) => apply(v)), 'btn glass sm'))
+    note.append(head, el('p', 'muted', `Updated from ${u.updated.from}. New pets start turned on; switch any of them off on their page.`))
+    for (const r of u.updated.releases) note.append(releaseBlock(r))
+    body.push(note)
+  }
+  if (u.failed) {
+    const note = el('div', 'upd-note')
+    const head = el('div', 'upd-head')
+    head.append(el('p', 'err', u.failed), button('OK', 'Hide this note', () => void api.updateSeen().then((v) => apply(v)), 'btn glass sm'))
+    note.append(head)
+    body.push(note)
+  }
+
+  if (next) {
+    const head = el('div', 'upd-head')
+    const title = el('p', 'upd-title', `GitGremlin ${next.version} is ready`)
+    const busy = u.state === 'downloading' ? 'Downloading...' : u.state === 'installing' ? 'Installing...' : null
+    const acts = el('div', 'row')
+    if (u.kind === 'installer') acts.append(button('Get the new installer', 'Open GitGremlin on GitHub', () => void api.openGitHub('https://github.com/premkajiwala-hub/git-gremlin'), 'btn sm'))
+    else if (!u.blocked) {
+      const go = button(busy ?? 'Update now', 'Download and install this version', () => void updateNow(), 'btn sm')
+      go.disabled = Boolean(busy) || u.state === 'checking'
+      acts.append(go)
+    }
+    head.append(title, acts)
+    body.push(head)
+    body.push(
+      el(
+        'p',
+        'muted',
+        u.blocked ??
+          (u.needsRestart
+            ? 'This update brings new packages. GitGremlin closes for about a minute while it installs them, then opens again by itself.'
+            : 'GitGremlin restarts to finish. It takes a few seconds.')
+      )
+    )
+    for (const r of u.releases) body.push(releaseBlock(r))
+    if (u.packages.length) {
+      const box = el('div', 'upd-release')
+      box.append(el('h3', '', 'Packages'))
+      const badges = el('div', 'badges')
+      for (const p of u.packages) badges.append(el('span', 'b', p.from && p.to ? `${p.name} ${p.from} → ${p.to}` : p.to ? `+ ${p.name} ${p.to}` : `− ${p.name}`))
+      box.append(badges)
+      body.push(box)
+    }
+  } else if (!u.updated) {
+    const head = el('div', 'upd-head')
+    const check = button(u.state === 'checking' ? 'Checking...' : 'Check now', 'Look for a new version on GitHub', () => void api.updateCheck().then((v) => apply(v)), 'btn glass sm')
+    check.disabled = u.state !== 'idle'
+    head.append(el('p', 'body', u.checkedAt ? `You're on the latest version, ${u.current}.` : `You have version ${u.current}.`), check)
+    body.push(head)
+  }
+  if (u.error) body.push(el('p', 'err', u.error))
+  $('updBody').replaceChildren(...body)
+}
+
+async function updateNow(): Promise<void> {
+  const r = await api.updateApply()
+  if (!r.ok && r.message) toast(r.message)
+  await reload()
+}
+
+function wireUpdates(): void {
+  $('updAuto').addEventListener('click', () => void api.updateAuto(!view.update.autoCheck).then((v) => apply(v)))
+}
+
 // --- General -------------------------------------------------------------------------------------
 function renderGeneral(): void {
   const on = PET_IDS.filter((id) => view.settings.pets[id].enabled).length
@@ -1264,6 +1366,7 @@ function apply(v: HubView, refill = false): void {
   renderMole()
   renderRex()
   renderGeneral()
+  renderUpdates()
   for (const id of PET_IDS) fillPet(id)
 }
 
@@ -1287,6 +1390,7 @@ async function start(): Promise<void> {
   wireMole()
   wireRex()
   wireGeneral()
+  wireUpdates()
   apply(view, true)
   show(page)
   api.onShowPage((p) => show(p))

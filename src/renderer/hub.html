@@ -30,7 +30,7 @@
                   d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"
                 /></svg
             ></span>
-            <span class="nav-text"><span class="nav-name">General</span></span>
+            <span class="nav-text"><span class="nav-name">General</span><span class="nav-sub" id="generalSub" hidden></span></span>
           </button>
           <div class="awake"><span class="px" id="awakeDot"></span><span id="awakeText"></span></div>
         </div>
@@ -57,6 +57,16 @@
             </div>
           </section>
           <section class="cards">
+            <article class="card wide" id="updateCard">
+              <div class="card-head"><h2 class="card-title"><i></i>Updates</h2><span class="muted" id="updInfo"></span></div>
+              <div id="updBody"></div>
+              <div class="lines">
+                <div class="line-row">
+                  <div><div class="t">Check for updates automatically</div><div class="s">Every 6 hours. A Windows notification tells you when a new version is ready.</div></div>
+                  <button type="button" class="switch" role="switch" id="updAuto" aria-label="Check for updates automatically"><span class="knob"></span></button>
+                </div>
+              </div>
+            </article>
             <article class="card">
               <div class="card-head"><h2 class="card-title"><i></i>GitHub account</h2><span class="chip">read-only</span></div>
               <div id="ghSignedOut" hidden>

@@ -1,0 +1,20 @@
+{
+  "releases": [
+    {
+      "version": "0.3.0",
+      "date": "2026-11-15",
+      "title": "Mole, Rex and one GitHub sign-in",
+      "pets": [
+        { "name": "Mole", "summary": "tells you which program holds a port and frees it in two clicks" },
+        { "name": "Rex", "summary": "sniffs your public GitHub repos for leaked keys and passwords" }
+      ],
+      "features": [
+        "One GitHub sign-in in General, shared by Catbot and Rex",
+        "Syncy watches repos live",
+        "A new logo",
+        "Right-click a pet: Stay along the bottom"
+      ],
+      "fixes": []
+    }
+  ]
+}

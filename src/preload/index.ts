@@ -67,6 +67,12 @@ const api = {
   moleLookup: (port: number): Promise<PortLookup | null> => ipcRenderer.invoke(IPC.moleLookup, port),
   rexScan: (): Promise<HubView> => ipcRenderer.invoke(IPC.rexScan),
   rexAction: (action: RexAction): Promise<ActionResult> => ipcRenderer.invoke(IPC.rexAction, action),
+  updateCheck: (): Promise<HubView> => ipcRenderer.invoke(IPC.updateCheck),
+  /** Download and install the newest release (GitGremlin restarts). */
+  updateApply: (): Promise<ActionResult> => ipcRenderer.invoke(IPC.updateApply),
+  updateAuto: (on: boolean): Promise<HubView> => ipcRenderer.invoke(IPC.updateAuto, on),
+  /** Hide the "just updated" / "update failed" note. */
+  updateSeen: (): Promise<HubView> => ipcRenderer.invoke(IPC.updateSeen),
   hidePets: (hide: boolean): Promise<HubView> => ipcRenderer.invoke(IPC.hidePets, hide),
   refreshGitHub: (): Promise<HubView> => ipcRenderer.invoke(IPC.githubRefresh),
   /** Start "Sign in with GitHub"; resolves with the one-time code (already copied, github.com opened). */

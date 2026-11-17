@@ -1290,6 +1290,48 @@ summary:focus-visible {
   gap: 12px;
 }
 
+/* Updates */
+.upd-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.upd-title {
+  font-size: 19px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.upd-release {
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+  padding-top: 12px;
+}
+
+.upd-release h3 {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  margin: 0 0 8px;
+}
+
+.upd-list {
+  margin: 4px 0 8px;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  line-height: 1.45;
+}
+
+.upd-note {
+  margin-top: 12px;
+}
+
 /* Rex */
 .fix-steps {
   margin: 10px 0 0;
