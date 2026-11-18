@@ -495,7 +495,8 @@ export interface UpdateRelease {
   version: string
   date: string
   title: string
-  pets: { name: string; summary: string }[]
+  /** `image`: a data URL of the pet's poses, filled in by the app. */
+  pets: { name: string; summary: string; id: string | null; image: string | null }[]
   features: string[]
   fixes: string[]
 }
@@ -521,12 +522,14 @@ export interface UpdateView {
   /** Releases newer than this copy, newest first (empty = up to date). */
   releases: UpdateRelease[]
   packages: PackageChange[]
-  /** This copy can't update itself (local changes, own commits...): why. */
+  /** This copy can't update itself (installer copies): why. */
   blocked: string | null
+  /** Something the user should know before updating, e.g. their own changes are kept. */
+  note: string | null
   error: string | null
   autoCheck: boolean
   /** Shown once after an update: what came in. */
-  updated: { from: string; to: string; releases: UpdateRelease[] } | null
+  updated: { from: string; to: string; releases: UpdateRelease[]; note: string | null } | null
   /** The last update attempt failed and was rolled back. */
   failed: string | null
   /** Packages will be installed: GitGremlin closes for a minute. */

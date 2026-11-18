@@ -77,8 +77,8 @@ const PET_UI: Record<PetId, { n: string; species: string; accent: string; lede: 
 
 /** Pets that need GitHub: what their sign-in prompt says. */
 const GH_PROMPT: Partial<Record<PetId, string>> = {
-  catbot: 'Catbot runs on your GitHub contribution chart. Sign in so it knows when you have coded today.',
-  rex: 'Rex sniffs your public GitHub repos for leaked secrets. Sign in so it knows which repos are yours.'
+  catbot: 'Sign in so Catbot can see if you coded today.',
+  rex: 'Sign in so Rex can find your public repos.'
 }
 
 // --- pet artwork, drawn from the real sprites -----------------------------------------------------
@@ -1406,88 +1406,81 @@ function wireRex(): void {
 }
 
 // --- Updates -------------------------------------------------------------------------------------
-function releaseBlock(r: UpdateRelease): HTMLElement {
+/** New pets (with a picture), then one short line each for what else is new. */
+function releaseBlock(r: UpdateRelease, withVersion: boolean): HTMLElement {
   const box = el('div', 'upd-release')
-  box.append(el('h3', '', [`Version ${r.version}`, r.date, r.title].filter(Boolean).join(' · ')))
-  const section = (label: string, items: string[]) => {
-    if (!items.length) return
-    box.append(el('div', 't', label))
+  if (withVersion) box.append(el('h3', '', `Version ${r.version}`))
+  for (const p of r.pets) {
+    const pet = el('div', 'upd-pet')
+    if (p.image) {
+      const img = el('img', 'upd-pet-img')
+      img.src = p.image
+      img.alt = `${p.name}'s poses`
+      pet.append(img)
+    }
+    const text = el('div', 'upd-pet-text')
+    text.append(el('b', '', p.name), el('span', 'muted', p.summary))
+    pet.append(text)
+    box.append(pet)
+  }
+  const more = [...r.features, ...r.fixes.map((f) => `Fixed: ${f}`)]
+  if (more.length) {
     const ul = el('ul', 'upd-list')
-    for (const i of items) ul.append(el('li', '', i))
+    for (const i of more) ul.append(el('li', '', i))
     box.append(ul)
   }
-  section(
-    r.pets.length === 1 ? 'New pet' : 'New pets',
-    r.pets.map((p) => (p.summary ? `${p.name}: ${p.summary}` : p.name))
-  )
-  section('New features', r.features)
-  section('Fixes', r.fixes)
   return box
 }
 
 function renderUpdates(): void {
   const u = view.update
   setSwitch($('updAuto'), u.autoCheck)
-  $('updInfo').textContent = u.state === 'checking' ? 'Checking...' : u.checkedAt ? `You have ${u.current} · checked ${ago(u.checkedAt)}` : `You have ${u.current}`
+  $('updInfo').textContent = u.state === 'checking' ? 'Checking...' : `Version ${u.current}`
   const next = u.releases[0]
   const sub = $('generalSub')
   sub.hidden = !next
   sub.textContent = next ? `Update ready: ${next.version}` : ''
   const body: HTMLElement[] = []
+  const seen = () => void api.updateSeen().then((v) => apply(v))
 
   if (u.updated) {
-    const note = el('div', 'upd-note')
     const head = el('div', 'upd-head')
-    head.append(el('p', 'upd-title', `GitGremlin is now ${u.updated.to}`), button('Got it', 'Hide this note', () => void api.updateSeen().then((v) => apply(v)), 'btn glass sm'))
-    note.append(head, el('p', 'muted', `Updated from ${u.updated.from}. New pets start turned on; switch any of them off on their page.`))
-    for (const r of u.updated.releases) note.append(releaseBlock(r))
-    body.push(note)
+    head.append(el('p', 'upd-title', `Updated to ${u.updated.to}`), button('Got it', 'Hide this', seen, 'btn glass sm'))
+    body.push(head)
+    if (u.updated.note) body.push(el('p', 'muted', u.updated.note))
+    for (const r of u.updated.releases) body.push(releaseBlock(r, u.updated.releases.length > 1))
   }
   if (u.failed) {
-    const note = el('div', 'upd-note')
     const head = el('div', 'upd-head')
-    head.append(el('p', 'err', u.failed), button('OK', 'Hide this note', () => void api.updateSeen().then((v) => apply(v)), 'btn glass sm'))
-    note.append(head)
-    body.push(note)
+    head.append(el('p', 'err', u.failed), button('OK', 'Hide this', seen, 'btn glass sm'))
+    body.push(head)
   }
 
   if (next) {
     const head = el('div', 'upd-head')
-    const title = el('p', 'upd-title', `GitGremlin ${next.version} is ready`)
     const busy = u.state === 'downloading' ? 'Downloading...' : u.state === 'installing' ? 'Installing...' : null
     const acts = el('div', 'row')
-    if (u.kind === 'installer') acts.append(button('Get the new installer', 'Open GitGremlin on GitHub', () => void api.openGitHub('https://github.com/premkajiwala-hub/git-gremlin'), 'btn sm'))
-    else if (!u.blocked) {
-      const go = button(busy ?? 'Update now', 'Download and install this version', () => void updateNow(), 'btn sm')
+    if (u.kind === 'installer') acts.append(button('Download', 'Get the new installer from GitHub', () => void api.openGitHub('https://github.com/premkajiwala-hub/git-gremlin'), 'btn sm'))
+    else {
+      const go = button(busy ?? `Update to ${next.version}`, u.needsRestart ? 'Downloads it, installs new packages and reopens (about a minute)' : 'Downloads it and restarts (a few seconds)', () => void updateNow(), 'btn sm')
       go.disabled = Boolean(busy) || u.state === 'checking'
       acts.append(go)
     }
-    head.append(title, acts)
+    head.append(el('p', 'upd-title', `New: version ${next.version}`), acts)
     body.push(head)
-    body.push(
-      el(
-        'p',
-        'muted',
-        u.blocked ??
-          (u.needsRestart
-            ? 'This update brings new packages. GitGremlin closes for about a minute while it installs them, then opens again by itself.'
-            : 'GitGremlin restarts to finish. It takes a few seconds.')
-      )
-    )
-    for (const r of u.releases) body.push(releaseBlock(r))
+    const hint = u.blocked ?? [u.note, u.needsRestart ? 'Closes for about a minute to install packages.' : null].filter(Boolean).join(' ')
+    if (hint) body.push(el('p', 'muted', hint))
+    for (const r of u.releases) body.push(releaseBlock(r, u.releases.length > 1))
     if (u.packages.length) {
-      const box = el('div', 'upd-release')
-      box.append(el('h3', '', 'Packages'))
-      const badges = el('div', 'badges')
+      const badges = el('div', 'badges upd-release')
       for (const p of u.packages) badges.append(el('span', 'b', p.from && p.to ? `${p.name} ${p.from} → ${p.to}` : p.to ? `+ ${p.name} ${p.to}` : `− ${p.name}`))
-      box.append(badges)
-      body.push(box)
+      body.push(badges)
     }
   } else if (!u.updated) {
     const head = el('div', 'upd-head')
-    const check = button(u.state === 'checking' ? 'Checking...' : 'Check now', 'Look for a new version on GitHub', () => void api.updateCheck().then((v) => apply(v)), 'btn glass sm')
+    const check = button(u.state === 'checking' ? 'Checking...' : 'Check now', 'Look for a new version', () => void api.updateCheck().then((v) => apply(v)), 'btn glass sm')
     check.disabled = u.state !== 'idle'
-    head.append(el('p', 'body', u.checkedAt ? `You're on the latest version, ${u.current}.` : `You have version ${u.current}.`), check)
+    head.append(el('p', 'body', u.checkedAt ? `Up to date · checked ${ago(u.checkedAt)}` : 'Up to date'), check)
     body.push(head)
   }
   if (u.error) body.push(el('p', 'err', u.error))

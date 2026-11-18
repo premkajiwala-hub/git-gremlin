@@ -44,7 +44,11 @@ export function parseManifest(raw: unknown): UpdateRelease[] {
       title: str(o.title, 120),
       pets: Array.isArray(o.pets)
         ? o.pets
-            .map((p) => ({ name: str((p as Record<string, unknown>).name, 40), summary: str((p as Record<string, unknown>).summary) }))
+            .map((p) => {
+              const o = p as Record<string, unknown>
+              const id = str(o.id, 30).toLowerCase()
+              return { name: str(o.name, 40), summary: str(o.summary, 120), id: /^[a-z0-9-]+$/.test(id) ? id : null, image: null }
+            })
             .filter((p) => p.name)
             .slice(0, 20)
         : [],
@@ -128,45 +132,91 @@ export const lastLine = (r: RunResult) =>
     .pop() ?? `exit code ${r.code}`
 
 // --- git installs ----------------------------------------------------------------------------------
+/** Rewritten by npm install, so a local change to it is noise, not work. */
+const GENERATED = new Set(['package-lock.json'])
+
 export interface GitCheck {
-  /** Why this copy can't update itself, or null. */
+  /** Git can't work with this folder at all: why. */
   blocked: string | null
   /** The download failed (try again later). */
   error: string | null
   head: string | null
+  /** Files the user changed (besides generated ones): set aside, then put back after the update. */
+  changed: string[]
+  /** The copy has commits of its own: the release is merged in instead of fast-forwarded. */
+  ownCommits: boolean
 }
 
-/** Fetch the release tag and make sure a fast-forward is possible without touching local work. */
+/** Fetch the release tag and find out how this copy can move to it. */
 export function gitPrepare(run: Runner, root: string, gitUrl: string, tag: string): GitCheck {
+  const none = { changed: [], ownCommits: false }
   const head = run('git', ['rev-parse', 'HEAD'], root)
-  if (head.code !== 0) return { blocked: `Git couldn't read this folder (${lastLine(head)}).`, error: null, head: null }
+  if (head.code !== 0) return { blocked: `Git couldn't read this folder (${lastLine(head)}).`, error: null, head: null, ...none }
   const at = head.out.trim()
+  run('git', ['update-index', '-q', '--refresh'], root)
   const dirty = run('git', ['status', '--porcelain', '--untracked-files=no'], root)
-  if (dirty.code !== 0) return { blocked: `Git couldn't check this folder (${lastLine(dirty)}).`, error: null, head: at }
-  if (dirty.out.trim())
-    return {
-      blocked: "You've changed files in the GitGremlin folder. To keep your changes safe, GitGremlin won't update itself: run git pull and npm install there instead.",
-      error: null,
-      head: at
-    }
+  if (dirty.code !== 0) return { blocked: `Git couldn't check this folder (${lastLine(dirty)}).`, error: null, head: at, ...none }
+  const changed = dirty.out
+    .split(/\r?\n/)
+    .map((l) => l.slice(3).trim().replace(/^"|"$/g, ''))
+    .filter((f) => f && !GENERATED.has(f))
   const fetch = run('git', ['fetch', '--no-tags', gitUrl, `+refs/tags/${tag}:refs/tags/${tag}`], root, 120_000)
-  if (fetch.code !== 0) return { blocked: null, error: `Couldn't download the update (${lastLine(fetch)}).`, head: at }
+  if (fetch.code !== 0) return { blocked: null, error: `Couldn't download the update (${lastLine(fetch)}).`, head: at, changed, ownCommits: false }
   const ff = run('git', ['merge-base', '--is-ancestor', 'HEAD', tag], root)
-  if (ff.code !== 0)
-    return {
-      blocked: "This copy has its own commits that the release doesn't have, so GitGremlin won't update it automatically. Update it with git yourself.",
-      error: null,
-      head: at
-    }
-  return { blocked: null, error: null, head: at }
+  return { blocked: null, error: null, head: at, changed, ownCommits: ff.code !== 0 }
 }
 
-/** Move to the release (fast-forward only). */
-export function gitApply(run: Runner, root: string, tag: string): void {
+/** git needs a name to stash or merge; use the user's, or a stand-in when none is set. */
+function identity(run: Runner, root: string): string[] {
+  const named = run('git', ['config', 'user.name'], root).out.trim() && run('git', ['config', 'user.email'], root).out.trim()
+  return named ? [] : ['-c', 'user.name=GitGremlin', '-c', 'user.email=gitgremlin@users.noreply.github.com']
+}
+
+/**
+ * Move to the release, keeping the user's work:
+ * - package-lock.json changes are dropped (npm install rewrites it);
+ * - other changed files are stashed, then put back on top of the release;
+ * - own commits are kept: the release is merged in.
+ * Returns a note for the user, or null.
+ */
+export function gitApply(run: Runner, root: string, tag: string, check: GitCheck): string | null {
+  const id = identity(run, root)
   // A past update bumped package.json's time: let git see its content is unchanged.
   run('git', ['update-index', '-q', '--refresh'], root)
-  const r = run('git', ['merge', '--ff-only', tag], root, 120_000)
-  if (r.code !== 0) throw new Error(`Git couldn't update the files (${lastLine(r)}).`)
+  for (const f of GENERATED) run('git', ['checkout', '--', f], root)
+  const message = `GitGremlin: your changes from before updating to ${tag}`
+  let stashed = false
+  if (check.changed.length) {
+    const s = run('git', [...id, 'stash', 'push', '-m', message], root)
+    if (s.code !== 0) throw new Error(`Git couldn't set your changes aside (${lastLine(s)}).`)
+    stashed = true
+  }
+  const putBack = () => {
+    if (stashed) run('git', ['stash', 'pop'], root)
+  }
+  if (check.ownCommits) {
+    const m = run('git', [...id, 'merge', '--no-edit', '-m', `Update GitGremlin to ${tag}`, tag], root, 120_000)
+    if (m.code !== 0) {
+      run('git', ['merge', '--abort'], root)
+      putBack()
+      throw new Error("Your own commits clash with this update, so nothing was changed. Merge it with git yourself.")
+    }
+  } else {
+    const r = run('git', ['merge', '--ff-only', tag], root, 120_000)
+    if (r.code !== 0) {
+      putBack()
+      throw new Error(`Git couldn't update the files (${lastLine(r)}).`)
+    }
+  }
+  if (!stashed) return null
+  const a = run('git', ['stash', 'apply'], root)
+  if (a.code === 0) {
+    run('git', ['stash', 'drop'], root)
+    return null
+  }
+  // Clashes with the release: keep the release clean; the changes stay safe in the stash.
+  run('git', ['reset', '--hard', 'HEAD'], root)
+  return `Your own changes clashed with the update, so they're saved in git stash ("${message}").`
 }
 
 export function gitShow(run: Runner, root: string, tag: string, file: string): string | null {

@@ -37,6 +37,8 @@ interface Source {
   manifest(): Promise<unknown>
   file(tag: string, name: string): Promise<string | null>
   tarball(tag: string, dest: string): Promise<void>
+  /** A binary file at the tag (pet pictures), or null. */
+  binary(tag: string, name: string): Promise<Buffer | null>
   gitUrl: string
 }
 
@@ -64,6 +66,13 @@ function githubSource(repo: string): Source {
       }
     },
     tarball: async (tag, dest) => writeFileSync(dest, Buffer.from(await (await download(`https://codeload.github.com/${repo}/tar.gz/refs/tags/${tag}`)).arrayBuffer())),
+    binary: async (tag, name) => {
+      try {
+        return Buffer.from(await (await download(`https://raw.githubusercontent.com/${repo}/${tag}/${name}`)).arrayBuffer())
+      } catch {
+        return null
+      }
+    },
     gitUrl: `https://github.com/${repo}.git`
   }
 }
@@ -74,6 +83,7 @@ function folderSource(dir: string): Source {
     manifest: async () => JSON.parse(read(join(dir, 'updates.json')) ?? 'null'),
     file: async (tag, name) => read(join(dir, 'raw', tag, name)),
     tarball: async (tag, dest) => writeFileSync(dest, readFileSync(join(dir, `${tag}.tar.gz`))),
+    binary: async (tag, name) => (existsSync(join(dir, 'raw', tag, name)) ? readFileSync(join(dir, 'raw', tag, name)) : null),
     gitUrl: join(dir, 'repo.git')
   }
 }
@@ -106,6 +116,7 @@ interface Saved {
 interface Outcome {
   ok: boolean
   error?: string
+  note?: string | null
   from: string
   to: string
 }
@@ -121,6 +132,9 @@ export class Updater {
   private readonly dir = join(app.getPath('userData'), 'update')
   private readonly source: Source = process.env['GITGREMLIN_UPDATE_SOURCE'] ? folderSource(process.env['GITGREMLIN_UPDATE_SOURCE']) : githubSource(UPDATE_REPO)
   private readonly kind: InstallKind
+  /** Started with `npm start`: after updating, reopen as the normal app (the dev server is gone). */
+  private readonly dev = Boolean(process.env['ELECTRON_RENDERER_URL'])
+  private note: string | null = null
   private saved: Saved
   private timer: NodeJS.Timeout | null = null
   private state: UpdateView['state'] = 'idle'
@@ -136,7 +150,7 @@ export class Updater {
 
   constructor(private hooks: UpdaterHooks) {
     mkdirSync(this.dir, { recursive: true })
-    this.kind = app.isPackaged ? 'installer' : process.env['ELECTRON_RENDERER_URL'] ? 'dev' : existsSync(join(this.root, '.git')) && which('git.exe') ? 'git' : 'zip'
+    this.kind = app.isPackaged ? 'installer' : existsSync(join(this.root, '.git')) && which('git.exe') ? 'git' : 'zip'
     this.saved = { autoCheck: true, notified: null, checkedAt: null, ...this.readJson<Saved>('state.json') }
     this.finishPrevious()
   }
@@ -182,6 +196,7 @@ export class Updater {
       releases: this.releases,
       packages: this.packages,
       blocked: this.blocked,
+      note: this.note,
       error: this.error,
       autoCheck: this.saved.autoCheck,
       updated: this.updated,
@@ -200,6 +215,7 @@ export class Updater {
       this.all = parseManifest(await this.source.manifest())
       this.releases = newerThan(this.all, app.getVersion())
       this.blocked = null
+      this.note = null
       this.packages = []
       this.needsRestart = false
       const next = this.available
@@ -221,11 +237,16 @@ export class Updater {
     const localPkg = this.readText('package.json')
     let newPkg: string | null
     let newLock: string | null
+    await this.loadPictures()
     if (this.kind === 'git') {
       const prep = gitPrepare(run, this.root, this.source.gitUrl, tag)
       this.blocked = prep.blocked
       if (prep.error) throw new Error(prep.error)
       if (prep.blocked) return
+      const kept = [prep.changed.length ? `your changes to ${prep.changed.length === 1 ? '1 file' : `${prep.changed.length} files`}` : '', prep.ownCommits ? 'your own commits' : '']
+        .filter(Boolean)
+        .join(' and ')
+      this.note = kept ? `Keeps ${kept}.` : null
       newPkg = gitShow(run, this.root, tag, 'package.json')
       newLock = gitShow(run, this.root, tag, 'package-lock.json')
     } else {
@@ -233,9 +254,18 @@ export class Updater {
       newLock = await this.source.file(tag, 'package-lock.json')
     }
     if (newPkg && localPkg) this.packages = packageChanges(JSON.parse(localPkg), JSON.parse(newPkg))
-    this.needsRestart = fingerprintOf(newPkg, newLock) !== depsFingerprint(this.root)
-    if (this.kind === 'installer') this.blocked = 'This copy came from the Windows installer. Download the new installer from GitHub to update it.'
-    else if (this.kind === 'dev') this.blocked = 'GitGremlin is running with npm start (development). Update it with git.'
+    this.needsRestart = fingerprintOf(newPkg, newLock) !== this.installedDeps()
+    if (this.kind === 'installer') this.blocked = 'Installed with the Windows installer: get the new installer from GitHub.'
+  }
+
+  /** A picture of each new pet (its poses), so you see it before updating. */
+  private async loadPictures(): Promise<void> {
+    for (const r of this.releases)
+      for (const p of r.pets) {
+        if (!p.id || p.image) continue
+        const png = await this.source.binary(tagOf(r.version), `docs/images/${p.id}-poses.png`)
+        if (png && png.length < 2_000_000 && png.subarray(1, 4).toString() === 'PNG') p.image = `data:image/png;base64,${png.toString('base64')}`
+      }
   }
 
   private notify(next: UpdateRelease): void {
@@ -261,10 +291,11 @@ export class Updater {
       // 1. Get the release without touching the install yet.
       let head: string | null = null
       let staged: string | null = null
+      let prep: ReturnType<typeof gitPrepare> | null = null
       let newPkg: string | null
       let newLock: string | null
       if (this.kind === 'git') {
-        const prep = gitPrepare(run, this.root, this.source.gitUrl, tag)
+        prep = gitPrepare(run, this.root, this.source.gitUrl, tag)
         if (prep.blocked || prep.error) throw new Error(prep.blocked ?? prep.error ?? '')
         head = prep.head
         newPkg = gitShow(run, this.root, tag, 'package.json')
@@ -283,7 +314,7 @@ export class Updater {
         newPkg = read('package.json')
         newLock = read('package-lock.json')
       }
-      const needsNpm = fingerprintOf(newPkg, newLock) !== depsFingerprint(this.root)
+      const needsNpm = fingerprintOf(newPkg, newLock) !== this.installedDeps()
       const node = needsNpm ? which('node.exe') : null
       const npm = needsNpm ? which('npm.cmd') : null
       if (needsNpm && (!node || !npm))
@@ -293,16 +324,24 @@ export class Updater {
       this.state = 'installing'
       this.hooks.changed()
       const backup = join(this.dir, 'backup')
-      if (this.kind === 'git') gitApply(run, this.root, tag)
+      let note: string | null = null
+      if (this.kind === 'git') note = gitApply(run, this.root, tag, prep!)
       else copyRelease(staged!, this.root, backup)
 
       // 3. Restart. The launcher rebuilds out/ because package.json is now newer than the build.
       const now = new Date()
       utimesSync(join(this.root, 'package.json'), now, now)
       this.writeJson('last-releases.json', { releases: this.releases })
+      const env = { ...process.env }
+      delete env['ELECTRON_RUN_AS_NODE']
+      delete env['ELECTRON_RENDERER_URL']
       if (!needsNpm) {
-        this.writeJson('status.json', { ok: true, from, to: next.version, at: Date.now() })
-        this.hooks.quit(true)
+        this.writeJson('status.json', { ok: true, from, to: next.version, note, at: Date.now() })
+        if (this.dev) {
+          // From npm start: reopen as the normal app, which rebuilds itself on launch.
+          spawn(process.execPath, [this.root], { cwd: this.root, detached: true, stdio: 'ignore', env }).unref()
+          this.hooks.quit(false)
+        } else this.hooks.quit(true)
         return { ok: true }
       }
       // New packages: Electron's own files may change, so npm install runs after GitGremlin quits.
@@ -320,8 +359,7 @@ export class Updater {
       writeFileSync(join(this.dir, 'helper.cjs'), HELPER_SOURCE)
       writeFileSync(join(this.dir, 'job.json'), JSON.stringify(job))
       writeFileSync(job.logFile, '')
-      const env = { ...process.env }
-      delete env['ELECTRON_RUN_AS_NODE']
+      writeFileSync(join(this.dir, 'note.json'), JSON.stringify({ note }))
       spawn(node!, [join(this.dir, 'helper.cjs'), join(this.dir, 'job.json')], { cwd: this.root, detached: true, stdio: 'ignore', windowsHide: true, env }).unref()
       this.hooks.quit(false)
       return { ok: true }
@@ -340,7 +378,9 @@ export class Updater {
     rmSync(join(this.dir, 'status.json'), { force: true })
     if (s.ok && app.getVersion() === s.to) {
       const releases = this.readJson<{ releases: UpdateRelease[] }>('last-releases.json')?.releases ?? []
-      this.updated = { from: s.from, to: s.to, releases }
+      const note = s.note ?? this.readJson<{ note: string | null }>('note.json')?.note ?? null
+      rmSync(join(this.dir, 'note.json'), { force: true })
+      this.updated = { from: s.from, to: s.to, releases, note }
       setTimeout(() => this.notifyDone(s.to, releases), 4000)
     } else this.failed = s.error ?? `The update to ${s.to} didn't finish. GitGremlin is still on ${app.getVersion()}.`
   }
@@ -351,6 +391,16 @@ export class Updater {
   }
 
   // --- small helpers --------------------------------------------------------------------------------
+  /**
+   * What this copy's packages are. For a git copy, the committed files: npm install
+   * often rewrites package-lock.json without changing what's installed.
+   */
+  private installedDeps(): string {
+    if (this.kind !== 'git') return depsFingerprint(this.root)
+    const pkg = gitShow(run, this.root, 'HEAD', 'package.json')
+    return pkg ? fingerprintOf(pkg, gitShow(run, this.root, 'HEAD', 'package-lock.json')) : depsFingerprint(this.root)
+  }
+
   private readText(name: string): string | null {
     try {
       return readFileSync(join(this.root, name), 'utf8')

@@ -1,22 +1,35 @@
 {
   "releases": [
     {
+      "version": "0.3.2",
+      "date": "2026-11-18",
+      "title": "One-click updates for every copy",
+      "pets": [],
+      "features": [
+        "One click updates every copy, even with your own changes or npm start",
+        "New pets show a picture before you update"
+      ],
+      "fixes": [
+        "Shorter GitHub sign-in text"
+      ]
+    },
+    {
       "version": "0.3.1",
       "date": "2026-11-18",
       "title": "Squirrel keeps your free tiers in check",
       "pets": [
         {
+          "id": "squirrel",
           "name": "Squirrel",
-          "summary": "shows which free tiers your projects use and warns before one runs out"
+          "summary": "Shows which free tiers your projects use and warns before one runs out."
         }
       ],
       "features": [
-        "Update GitGremlin from General > Updates, with a Windows notification when a new version is ready",
-        "Pet page titles shrink to fit longer names"
+        "Update button in General"
       ],
       "fixes": [
-        "Notifications show as GitGremlin instead of Electron",
-        "npm install now downloads Electron, so npm start works on a fresh clone"
+        "Notifications show as GitGremlin",
+        "npm start works on a fresh clone"
       ]
     },
     {
@@ -25,19 +38,19 @@
       "title": "Mole, Rex and one GitHub sign-in",
       "pets": [
         {
+          "id": "mole",
           "name": "Mole",
-          "summary": "tells you which program holds a port and frees it in two clicks"
+          "summary": "Frees the port you need in two clicks."
         },
         {
+          "id": "rex",
           "name": "Rex",
-          "summary": "sniffs your public GitHub repos for leaked keys and passwords"
+          "summary": "Finds leaked keys and passwords in your public repos."
         }
       ],
       "features": [
-        "One GitHub sign-in in General, shared by Catbot and Rex",
-        "Syncy watches repos live",
-        "A new logo",
-        "Right-click a pet: Stay along the bottom"
+        "One GitHub sign-in for all pets",
+        "A new logo"
       ],
       "fixes": []
     }

@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white" alt="Windows 10 | 11" />
   <img src="https://img.shields.io/badge/Electron-45-47848F?logo=electron&logoColor=white" alt="Electron 45" />
   <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/version-0.3.1-121315" alt="Version 0.3.1" />
+  <img src="https://img.shields.io/badge/version-0.3.2-121315" alt="Version 0.3.2" />
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license" />
 </p>
 
@@ -43,6 +43,12 @@ The next GitGremlin update is in the works:
 - **Pets that work in the background:** keep a pet on duty without it showing on your screen. It keeps watching and still warns you when something needs you.
 
 ## What's new
+
+### 0.3.2
+
+- **One-click updates for every copy:** **Update** works even if you changed files, have commits of your own, or run GitGremlin with `npm start`. Your changes are kept.
+- **See new pets first:** each new pet in an update shows a picture and one line about it.
+- **Shorter texts** in the Updates card and the GitHub sign-in.
 
 ### 0.3.1
 
@@ -235,8 +241,9 @@ To keep it handy, right-click **GitGremlin** in the Start menu and choose **Pin 
 
 From 0.3.1 on, **GitGremlin updates itself**. When a new version is out, a Windows notification tells you, the tray menu shows **Update to ...**, and **General → Updates** lists what's new. Click **Update now**: GitGremlin downloads the new version and restarts. If the update brings new packages, it closes for about a minute while it installs them, then opens again by itself. If anything goes wrong, it puts the old version back.
 
-- **Cloned with git:** it won't update over files you've changed or commits of your own. It tells you, and you update with git yourself.
+- **Cloned with git:** files you changed and commits of your own are kept. If one of your changes clashes with the update, the update wins and your change is saved in `git stash`.
 - **Downloaded as a ZIP:** it downloads the new version and copies it over your folder. Your settings are kept.
+- **Run with `npm start`:** it updates the same way, then reopens as the normal app.
 
 **On an older copy** (no **Updates** card under General)? Update by hand once, and from then on it updates itself:
 

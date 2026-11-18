@@ -1328,8 +1328,26 @@ summary:focus-visible {
   line-height: 1.45;
 }
 
-.upd-note {
-  margin-top: 12px;
+.upd-pet {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin: 6px 0 10px;
+}
+
+.upd-pet-img {
+  height: 64px;
+  max-width: min(100%, 460px);
+  object-fit: contain;
+  image-rendering: pixelated;
+  border-radius: 10px;
+  flex: none;
+}
+
+.upd-pet-text {
+  display: grid;
+  gap: 2px;
 }
 
 /* Squirrel */
