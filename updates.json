@@ -1,31 +1,12 @@
 {
   "releases": [
     {
-      "version": "0.3.2",
-      "date": "2026-11-18",
-      "title": "One-click updates for every copy",
-      "pets": [],
-      "features": [
-        "One click updates every copy, even with your own changes or npm start",
-        "New pets show a picture before you update"
-      ],
-      "fixes": [
-        "Shorter GitHub sign-in text"
-      ]
-    },
-    {
       "version": "0.3.1",
       "date": "2026-11-18",
-      "title": "Squirrel keeps your free tiers in check",
-      "pets": [
-        {
-          "id": "squirrel",
-          "name": "Squirrel",
-          "summary": "Shows which free tiers your projects use and warns before one runs out."
-        }
-      ],
+      "title": "GitGremlin updates itself",
+      "pets": [],
       "features": [
-        "Update button in General"
+        "Update GitGremlin in one click from General > Updates"
       ],
       "fixes": [
         "Notifications show as GitGremlin",

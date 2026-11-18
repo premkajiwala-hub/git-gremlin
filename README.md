@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white" alt="Windows 10 | 11" />
   <img src="https://img.shields.io/badge/Electron-45-47848F?logo=electron&logoColor=white" alt="Electron 45" />
   <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/version-0.3.2-121315" alt="Version 0.3.2" />
+  <img src="https://img.shields.io/badge/version-0.3.1-121315" alt="Version 0.3.1" />
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license" />
 </p>
 
@@ -18,7 +18,7 @@
   <img src="docs/images/pets-hero.png" alt="Catbot, a white robot cat, Syncy, a brown beaver in a yellow hard hat, Dusty, a grey raccoon with a teal bandana, Mole, a grey mole in round glasses, and Rex, a cream wind-up tin toy dog with floppy red ears and a brass key on its back, with hearts between them" width="720" />
 </p>
 
-GitGremlin puts little pixel-art pets on your Windows desktop, and each one does a job for you. Catbot keeps an eye on your GitHub contributions. Dusty cleans junk files off your PC. Syncy makes sure your work actually reaches GitHub. Mole tells you who's sitting on the port you need, and frees it. Rex sniffs your public GitHub repos for leaked secrets. Squirrel keeps your projects inside their free tiers. They roam, play and talk to you, and you manage them all from one app.
+GitGremlin puts little pixel-art pets on your Windows desktop, and each one does a job for you. Catbot keeps an eye on your GitHub contributions. Dusty cleans junk files off your PC. Syncy makes sure your work actually reaches GitHub. Mole tells you who's sitting on the port you need, and frees it. Rex sniffs your public GitHub repos for leaked secrets. They roam, play and talk to you, and you manage them all from one app.
 
 ## Contents
 
@@ -44,17 +44,9 @@ The next GitGremlin update is in the works:
 
 ## What's new
 
-### 0.3.2
-
-- **One-click updates for every copy:** **Update** works even if you changed files, have commits of your own, or run GitGremlin with `npm start`. Your changes are kept.
-- **See new pets first:** each new pet in an update shows a picture and one line about it.
-- **Shorter texts** in the Updates card and the GitHub sign-in.
-
 ### 0.3.1
 
-- **Squirrel:** knows which hosting and cloud platforms each of your projects uses (Cloudflare, Supabase, Firebase, Cloudinary, GitHub Actions, Vercel and more) and shows their free-tier limits. Connect a platform with a read-only key and it tracks live usage, and warns you before an allowance runs out or a free Supabase project goes to sleep. [Meet Squirrel →](docs/pets/squirrel.md)
-- **GitGremlin updates itself:** a Windows notification tells you when a new version is ready, and **General → Updates** shows what's new (pets, features, fixes, packages) with an **Update now** button. No more `git pull` and `npm install` by hand. See [Updating](#updating).
-- **Fixes:** notifications show as GitGremlin, not Electron. `npm install` now downloads Electron, so `npm start` works straight after a fresh clone. Long pet names fit their page title.
+- **GitGremlin updates itself:** a Windows notification tells you when a new version is ready. Open **General → Updates** to see what's new, then click **Update**. No `git pull` or `npm install` by hand, and your own changes are kept. See [Updating](#updating).
 
 ### 0.3
 
@@ -93,7 +85,6 @@ GitGremlin is a home for **pets with a purpose**:
 | <img src="assets/pets/dusty/portrait.png" alt="Dusty" width="66" /> | **Dusty**<br /><sub>raccoon</sub> | Sniffs out **junk files**: developer caches, the Recycle Bin, and optionally temp files and browser caches. Cleans them only the way you allow: ask first, automatically, or report only. | [Dusty's guide →](docs/pets/dusty.md) |
 | <img src="assets/pets/syncy/portrait.png" alt="Syncy" width="66" /> | **Syncy**<br /><sub>beaver</sub> | Guards **work that isn't on GitHub**: uncommitted changes, unpushed commits and forgotten stashes across all your repos. Watches them live, nudges you when work sits too long, and tidies merged branches. | [Syncy's guide →](docs/pets/syncy.md) |
 | <img src="assets/pets/mole/portrait.png" alt="Mole" width="72" /> | **Mole**<br /><sub>mole</sub> | Digs through your **ports**: shows every dev server and its port, warns you the moment a project you start finds **its port taken**, and **frees the port** (stops whatever holds it) after you confirm. Also spots servers left running after their terminal closed. | [Mole's guide →](docs/pets/mole.md) |
-| <img src="assets/pets/squirrel/portrait.png" alt="Squirrel" width="66" /> | **Squirrel**<br /><sub>red squirrel</sub> | Keeps your projects inside their **free tiers**: finds which platforms each project uses (Cloudflare Workers, Supabase, Firebase, Cloudinary, GitHub Actions...), shows their limits and, with a **read-only key**, tracks live usage. Warns before an allowance runs out or a free database pauses. | [Squirrel's guide →](docs/pets/squirrel.md) |
 | <img src="assets/pets/rex/portrait.png" alt="Rex" width="72" /> | **Rex**<br /><sub>wind-up tin dog</sub> | Sniffs your **public GitHub repos** for **leaked secrets**: API keys and tokens, private keys, database passwords and URLs, `.env` and credential files. Checks current files and recent commits, after you push and once a day, and barks when it finds one. Read-only. | [Rex's guide →](docs/pets/rex.md) |
 
 More pets are on the way.
@@ -230,7 +221,6 @@ Copy-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\GitGremlin.lnk" ([
    - **Syncy** lists repos with work that isn't on GitHub yet. It finds your repos by itself.
    - **Mole** shows your running dev servers and their ports, and frees a port you need.
    - **Rex** sniffs your public GitHub repos for leaked secrets, using the same GitHub sign-in.
-   - **Squirrel** shows which free tiers your projects use. Connect a platform with a read-only key for live usage.
    - **General → System → Start with Windows** brings the pets back every time you sign in.
 
 To keep it handy, right-click **GitGremlin** in the Start menu and choose **Pin to Start** or **Pin to taskbar**. Opening GitGremlin while it's already running opens the panel. To stop it, right-click the tray icon and choose **Quit**.
@@ -361,7 +351,6 @@ Pets are awake the whole time GitGremlin runs. Turn one off with its switch, or 
 | [Syncy](docs/pets/syncy.md) | What counts as unsaved work, where it looks, nudges, merged branches, safety |
 | [Mole](docs/pets/mole.md) | Freeing a port, port-taken warnings, running servers, servers left running, safety |
 | [Rex](docs/pets/rex.md) | What it sniffs out, files and history, when it sniffs, fixing a leak, privacy |
-| [Squirrel](docs/pets/squirrel.md) | Which project runs where, free-tier limits, live usage with read-only keys, warnings, privacy |
 | [Publishing an update](docs/releasing.md) | How updates reach everyone, releasing a version, testing an update |
 | [Development guide](docs/development.md) | Dev mode, project structure, how it works, pet art, adding a pet, building the installer |
 
