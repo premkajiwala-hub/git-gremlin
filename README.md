@@ -48,7 +48,10 @@ The next GitGremlin update is in the works:
 
 - **GitGremlin updates itself:** a Windows notification tells you when a new version is ready. Open **General → Updates** to see what's new, then click **Update**. No `git pull` or `npm install` by hand, and your own changes are kept. See [Updating](#updating).
 
-### 0.3
+<details>
+<summary>Earlier versions</summary>
+
+#### 0.3
 
 - **Mole:** port 3000 already taken? Mole tells you which program has it and frees it in two clicks. It warns you the moment a project you start finds its port taken, and spots dev servers left running after their terminal closed. [Meet Mole →](docs/pets/mole.md)
 - **Rex, a wind-up tin toy dog:** sniffs your public GitHub repos for API keys, tokens, private keys, database passwords and `.env` files that should never have been pushed, in current files and recent commits. It barks when it finds one, and links you straight to the line on GitHub. [Meet Rex →](docs/pets/rex.md)
@@ -58,7 +61,7 @@ The next GitGremlin update is in the works:
 - **Stay along the bottom:** right-click any pet and tick it to keep that pet walking along the bottom of the screen.
 - **A tidier panel:** cards in a row share its full width, with no empty columns.
 
-### 0.2
+#### 0.2
 
 - **A new logo:** a little pixel gremlin with glowing GitHub-green eyes, on a three-commit graph in the pets' colours (replaced by the black-and-white logo in 0.3).
 - **A redesigned panel, "pixel glass":** frosted-glass cards, pixel headings, and each pet drawn large in scanlines. It fills the whole window, and follows your Windows theme (or pick **Light** or **Dark** under General).
@@ -67,6 +70,8 @@ The next GitGremlin update is in the works:
 - **A real Windows app:** open GitGremlin from the Start menu or search ([Installation](#installation), step 5).
 - **More in General:** **Hide all pets** for an hour, and the app version.
 - **Right-click a pet** for its menu (review, run its job now, open GitGremlin). A plain click just shows its report.
+
+</details>
 
 ## About
 
@@ -99,7 +104,8 @@ More pets are on the way.
 - **Plays with you.** Pets can follow your cursor, and you can pick them up, drag them and toss them.
 - **Crisp pixel art.** Everything is drawn in whole device pixels, so it stays sharp at any Windows scaling.
 - **A real Windows app.** Open it from the Start menu or search, pin it, and start it with Windows.
-- **Light on your PC.** Rendering slows down when nothing on screen changes. Syncy watches your repos with file events, Mole's port check takes a few milliseconds, and the only network access is reading GitHub (Catbot's chart, and Rex's public repos).
+- **Updates itself.** A Windows notification tells you when a new version is out, and one click in **General → Updates** installs it.
+- **Light on your PC.** Rendering slows down when nothing on screen changes. Syncy watches your repos with file events, Mole's port check takes a few milliseconds, and the only network access is GitHub (Catbot's chart, Rex's public repos, and the update check).
 
 ## Installation
 
@@ -118,7 +124,15 @@ You don't install **Electron** yourself: it's one of the project's packages, and
 
 ### 1. Check what's already installed
 
-Paste this into PowerShell. It lists each tool and its version, or says it's missing:
+```powershell
+node -v
+git --version
+```
+
+If both print a version, and Node.js is **22.12 or newer**, skip to step 3.
+
+<details>
+<summary>A fuller check (also winget and npm, and tests the Node.js version)</summary>
 
 ```powershell
 foreach ($t in 'winget', 'node', 'npm', 'git') {
@@ -134,7 +148,7 @@ if (Get-Command node -ErrorAction SilentlyContinue) {
 }
 ```
 
-If everything is installed and the Node.js version is OK, skip to step 3.
+</details>
 
 ### 2. Install what's missing
 
@@ -183,15 +197,9 @@ Without Git: on the GitHub page, click **Code → Download ZIP** and extract it 
 npm install
 ```
 
-This installs everything the project needs into `node_modules`: Electron, electron-vite (the build tool), TypeScript and koffi (a small Windows helper). It takes a minute or two.
+This installs everything the project needs into `node_modules`, including the Electron runtime (about 100 MB, downloaded once). It takes a minute or two.
 
-Check that Electron works. The first run downloads the Electron runtime (about 100 MB), then prints its version:
-
-```powershell
-npx electron --version
-```
-
-> **If npm says install scripts were blocked** (npm 11+ asks first): run `npm install-scripts approve koffi electron-winstaller`, then `npm rebuild`.
+> npm may list packages whose install scripts haven't been reviewed. That's only a notice: nothing to do.
 
 ### 5. Install GitGremlin as a Windows app
 
@@ -229,7 +237,7 @@ To keep it handy, right-click **GitGremlin** in the Start menu and choose **Pin 
 
 ### Updating
 
-From 0.3.1 on, **GitGremlin updates itself**. When a new version is out, a Windows notification tells you, the tray menu shows **Update to ...**, and **General → Updates** lists what's new. Click **Update now**: GitGremlin downloads the new version and restarts. If the update brings new packages, it closes for about a minute while it installs them, then opens again by itself. If anything goes wrong, it puts the old version back.
+From 0.3.1 on, **GitGremlin updates itself**. When a new version is out, a Windows notification tells you, the tray menu shows **Update to ...**, and **General → Updates** lists what's new. Click **Update to ...**: GitGremlin downloads the new version and restarts. If the update brings new packages, it closes for about a minute while it installs them, then opens again by itself. If anything goes wrong, it puts the old version back.
 
 - **Cloned with git:** files you changed and commits of your own are kept. If one of your changes clashes with the update, the update wins and your change is saved in `git stash`.
 - **Downloaded as a ZIP:** it downloads the new version and copies it over your folder. Your settings are kept.
@@ -276,7 +284,7 @@ Click the tray icon to open it. The sidebar lists every pet with a status dot:
 | Page | What's there |
 |---|---|
 | **A pet's page** | An **On desktop** switch, the pet's own job settings (see its guide), and **Look and movement** |
-| **General** | **GitHub account** (one sign-in for Catbot and Rex), **Where pets live** (on the desktop, or on top of apps), **Start with Windows**, **Hide all pets** for an hour, **Theme** (Auto, Light or Dark) and the app version |
+| **General** | **Updates** (what's new, and one-click updates), **GitHub account** (one sign-in for Catbot and Rex), **Where pets live** (on the desktop, or on top of apps), **Start with Windows**, **Hide all pets** for an hour, **Theme** (Auto, Light or Dark) and the app version |
 
 **Look and movement** is the same for every pet:
 
@@ -292,6 +300,7 @@ Click the tray icon to open it. The sidebar lists every pet with a status dot:
 
 - **Click** to open the panel.
 - **Right-click** for quick actions:
+  - **Update to ...** when a new version is ready;
   - one submenu per pet, with its status, **Show on desktop** and its own actions;
   - **Hide all pets for 1 hour** / **Show pets**;
   - **Start with Windows**;
@@ -317,7 +326,7 @@ Pets are awake the whole time GitGremlin runs. Turn one off with its switch, or 
 - **Your repos:** Syncy only reads them with git. It never fetches or pushes, and the only change it can make is deleting merged local branches, after you confirm. [Safety →](docs/pets/syncy.md#safety)
 - **Your processes:** Mole only reads which programs listen on which ports. It stops a server only when you ask and confirm, never Windows itself or your terminal. [Safety →](docs/pets/mole.md#safety)
 - **Your public repos:** Rex only reads public repos you own, with GET requests and your one GitHub sign-in (General → GitHub account). It never changes a repo, and keeps only masked previews of what it finds, never the secrets themselves. [Safety →](docs/pets/rex.md#safety-and-privacy)
-- **Network:** the only network access is GitHub: Catbot's contribution check and Rex's reads of your public repos. Dusty, Syncy and Mole work offline.
+- **Network:** the only network access is GitHub: Catbot's contribution check, Rex's reads of your public repos, and the update check. Every 6 hours GitGremlin reads its list of releases on GitHub, and it downloads an update only when you click **Update**. Turn the check off under **General → Updates**. Dusty, Syncy and Mole work offline.
 - **Your data stays local:** settings and state are in `%APPDATA%\GitGremlin\state.json`.
 
 ## Troubleshooting
@@ -332,6 +341,8 @@ Pets are awake the whole time GitGremlin runs. Turn one off with its switch, or 
 | The taskbar, Start menu or tray still shows the old logo | Windows caches icons. Run `ie4uinit.exe -show` in PowerShell, or unpin GitGremlin and pin it again. Signing out of Windows and back in also clears it. |
 | Nothing happens when you open GitGremlin | It's probably already running: look for its tray icon. If it's stuck, end **Electron** in Task Manager and open GitGremlin again. |
 | `Unable to move the cache: Access is denied` | Two copies were running at once. Quit GitGremlin, end any leftover **Electron** processes, and open it again. |
+| An update failed | GitGremlin puts the old version back and says so under **General → Updates**. The details are in `%APPDATA%\GitGremlin\update\update.log`. |
+| GitGremlin closed by itself | `%APPDATA%\GitGremlin\exits.log` records when it starts and stops, and why. Open it again from the Start menu. |
 | The pets don't show | App windows hide them in desktop mode: press **Win+D**, or choose **General → Where pets live → On top of apps**. Also check each pet's **On desktop** switch. |
 
 ## Known limitations
