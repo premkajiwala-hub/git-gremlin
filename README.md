@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white" alt="Windows 10 | 11" />
   <img src="https://img.shields.io/badge/Electron-45-47848F?logo=electron&logoColor=white" alt="Electron 45" />
   <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/version-0.3.3-121315" alt="Version 0.3.3" />
+  <img src="https://img.shields.io/badge/version-0.3.2-121315" alt="Version 0.3.2" />
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license" />
 </p>
 
@@ -43,10 +43,6 @@ The next GitGremlin update is in the works:
 - **Pets that work in the background:** keep a pet on duty without it showing on your screen. It keeps watching and still warns you when something needs you.
 
 ## What's new
-
-### 0.3.3
-
-- **Check every:** choose how often GitGremlin looks for updates (every hour, 6 hours or day) in **General → Updates**.
 
 ### 0.3.2
 
