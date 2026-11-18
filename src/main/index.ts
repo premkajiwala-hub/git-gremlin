@@ -499,6 +499,10 @@ function registerHubIpc(): void {
     updater.setAuto(on === true)
     return hubView()
   })
+  ipcMain.handle(IPC.updateEvery, (_e, hours: unknown) => {
+    updater.setEvery(Number(hours))
+    return hubView()
+  })
   ipcMain.handle(IPC.updateSeen, () => {
     updater.seen()
     return hubView()

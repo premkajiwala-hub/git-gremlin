@@ -75,6 +75,8 @@ const api = {
   /** Download and install the newest release (GitGremlin restarts). */
   updateApply: (): Promise<ActionResult> => ipcRenderer.invoke(IPC.updateApply),
   updateAuto: (on: boolean): Promise<HubView> => ipcRenderer.invoke(IPC.updateAuto, on),
+  /** Hours between automatic update checks: 1, 6 or 24. */
+  updateEvery: (hours: number): Promise<HubView> => ipcRenderer.invoke(IPC.updateEvery, hours),
   /** Hide the "just updated" / "update failed" note. */
   updateSeen: (): Promise<HubView> => ipcRenderer.invoke(IPC.updateSeen),
   hidePets: (hide: boolean): Promise<HubView> => ipcRenderer.invoke(IPC.hidePets, hide),

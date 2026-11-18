@@ -1435,6 +1435,9 @@ function releaseBlock(r: UpdateRelease, withVersion: boolean): HTMLElement {
 function renderUpdates(): void {
   const u = view.update
   setSwitch($('updAuto'), u.autoCheck)
+  const every = $<HTMLSelectElement>('updEvery')
+  every.value = String(u.everyHours)
+  every.disabled = !u.autoCheck
   $('updInfo').textContent = u.state === 'checking' ? 'Checking...' : `Version ${u.current}`
   const next = u.releases[0]
   const sub = $('generalSub')
@@ -1495,6 +1498,7 @@ async function updateNow(): Promise<void> {
 
 function wireUpdates(): void {
   $('updAuto').addEventListener('click', () => void api.updateAuto(!view.update.autoCheck).then((v) => apply(v)))
+  $('updEvery').addEventListener('change', (e) => void api.updateEvery(Number((e.target as HTMLSelectElement).value)).then((v) => apply(v)))
 }
 
 // --- General -------------------------------------------------------------------------------------

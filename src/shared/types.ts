@@ -528,6 +528,8 @@ export interface UpdateView {
   note: string | null
   error: string | null
   autoCheck: boolean
+  /** Hours between automatic checks (1, 6 or 24). */
+  everyHours: number
   /** Shown once after an update: what came in. */
   updated: { from: string; to: string; releases: UpdateRelease[]; note: string | null } | null
   /** The last update attempt failed and was rolled back. */

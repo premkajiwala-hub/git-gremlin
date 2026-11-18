@@ -128,6 +128,7 @@ export const IPC = {
   updateCheck: 'hub:update-check',
   updateApply: 'hub:update-apply',
   updateAuto: 'hub:update-auto',
+  updateEvery: 'hub:update-every',
   updateSeen: 'hub:update-seen',
   hidePets: 'hub:hide-pets',
   githubRefresh: 'settings:github-refresh',

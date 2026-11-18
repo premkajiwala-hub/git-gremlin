@@ -1,6 +1,16 @@
 {
   "releases": [
     {
+      "version": "0.3.3",
+      "date": "2026-11-18",
+      "title": "Choose how often to check for updates",
+      "pets": [],
+      "features": [
+        "Choose how often GitGremlin checks for updates: every hour, 6 hours or day"
+      ],
+      "fixes": []
+    },
+    {
       "version": "0.3.2",
       "date": "2026-11-18",
       "title": "One-click updates for every copy",

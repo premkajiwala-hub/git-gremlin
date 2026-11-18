@@ -30,7 +30,8 @@ import {
 } from './update-core'
 
 const FIRST_CHECK_MS = 20_000
-const CHECK_EVERY_MS = 6 * 60 * 60 * 1000
+/** How often to look for a new version: the choices in General > Updates. */
+export const CHECK_EVERY_HOURS = [1, 6, 24]
 
 /** Where releases come from. GITGREMLIN_UPDATE_SOURCE (a folder) replaces GitHub, for testing. */
 interface Source {
@@ -108,6 +109,8 @@ function which(exe: string): string | null {
 
 interface Saved {
   autoCheck: boolean
+  /** Hours between checks: one of CHECK_EVERY_HOURS. */
+  everyHours: number
   /** The newest version we already showed a notification for. */
   notified: string | null
   checkedAt: number | null
@@ -151,7 +154,8 @@ export class Updater {
   constructor(private hooks: UpdaterHooks) {
     mkdirSync(this.dir, { recursive: true })
     this.kind = app.isPackaged ? 'installer' : existsSync(join(this.root, '.git')) && which('git.exe') ? 'git' : 'zip'
-    this.saved = { autoCheck: true, notified: null, checkedAt: null, ...this.readJson<Saved>('state.json') }
+    this.saved = { autoCheck: true, everyHours: 6, notified: null, checkedAt: null, ...this.readJson<Saved>('state.json') }
+    if (!CHECK_EVERY_HOURS.includes(this.saved.everyHours)) this.saved.everyHours = 6
     this.finishPrevious()
   }
 
@@ -160,7 +164,7 @@ export class Updater {
     if (!this.saved.autoCheck) return
     this.timer = setTimeout(() => {
       void this.check(true)
-      this.timer = setInterval(() => void this.check(true), CHECK_EVERY_MS)
+      this.timer = setInterval(() => void this.check(true), this.saved.everyHours * 60 * 60 * 1000)
     }, FIRST_CHECK_MS)
   }
 
@@ -171,6 +175,14 @@ export class Updater {
 
   setAuto(on: boolean): void {
     this.saved.autoCheck = on
+    this.save()
+    this.start()
+    this.hooks.changed()
+  }
+
+  setEvery(hours: number): void {
+    if (!CHECK_EVERY_HOURS.includes(hours)) return
+    this.saved.everyHours = hours
     this.save()
     this.start()
     this.hooks.changed()
@@ -199,6 +211,7 @@ export class Updater {
       note: this.note,
       error: this.error,
       autoCheck: this.saved.autoCheck,
+      everyHours: this.saved.everyHours,
       updated: this.updated,
       failed: this.failed,
       needsRestart: this.needsRestart
