@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { app } from 'electron'
 import { DEFAULT_SETTINGS, PET_IDS, PET_SIZE_MAX, PET_SIZE_MIN } from '../shared/constants'
-import type { CleanResult, ContributionDay, GitHubSource, MoleConfig, PetConfig, PetId, PetSnapshot, RepoScan, LivePlatform, RexConfig, RexScan, ScanResult, Settings, SquirrelConfig, SquirrelNotice, SyncyConfig, UsageMeter } from '../shared/types'
+import type { CleanResult, ContributionDay, GitHubSource, MoleConfig, PetConfig, PetId, PetSnapshot, RepoScan, RexConfig, RexScan, ScanResult, Settings, SyncyConfig } from '../shared/types'
 import type { Hit } from './secrets'
 
 export interface AppState {
@@ -29,12 +29,6 @@ export interface AppState {
   mole: { usual: Record<string, number> }
   /** Rex's last scan, and what it already read (by commit), so unchanged repos aren't downloaded again. */
   rex: { scan: RexScan | null; cache: Record<string, RexCache>; rules?: number }
-  /** Squirrel: read-only platform keys (encrypted), and the last reading from each. */
-  squirrel: {
-    keys: Partial<Record<LivePlatform, string>>
-    readings: Partial<Record<LivePlatform, { at: number; label: string; error: string | null; meters: UsageMeter[]; notices: SquirrelNotice[] }>>
-    checkedAt: number | null
-  }
 }
 
 /** Per repo: the file findings at one commit, and findings per commit already read (masked previews only). */
@@ -53,12 +47,11 @@ function defaults(): AppState {
     githubAuth: null,
     githubTokenEnc: null,
     github: { login: null, name: null, avatarUrl: null, days: [], source: 'none', fetchedAt: 0 },
-    pets: { catbot: null, dusty: null, syncy: null, mole: null, rex: null, squirrel: null },
+    pets: { catbot: null, dusty: null, syncy: null, mole: null, rex: null },
     dusty: { lastScan: null, lastClean: null },
     syncy: { lastScan: null },
     mole: { usual: {} },
-    rex: { scan: null, cache: {} },
-    squirrel: { keys: {}, readings: {}, checkedAt: null }
+    rex: { scan: null, cache: {} }
   }
 }
 
@@ -110,14 +103,6 @@ function rexConfig(raw: Partial<RexConfig> | undefined, def: RexConfig): RexConf
   }
 }
 
-function squirrelConfig(raw: Partial<SquirrelConfig> | undefined, def: SquirrelConfig): SquirrelConfig {
-  const r = raw ?? {}
-  return {
-    warnAt: Math.min(99, Math.max(50, Number(r.warnAt) || def.warnAt)),
-    checkEveryMinutes: Math.min(24 * 60, Math.max(15, Number(r.checkEveryMinutes) || def.checkEveryMinutes))
-  }
-}
-
 /** Fill in / clamp settings from anything (old versions, hand edits, the panel). */
 export function normalizeSettings(raw: Partial<Settings> | undefined): Settings {
   const d = DEFAULT_SETTINGS
@@ -131,8 +116,7 @@ export function normalizeSettings(raw: Partial<Settings> | undefined): Settings 
       dusty: petConfig(r.pets?.dusty, d.pets.dusty),
       syncy: petConfig(r.pets?.syncy, d.pets.syncy),
       mole: petConfig(r.pets?.mole, d.pets.mole),
-      rex: petConfig(r.pets?.rex, d.pets.rex),
-      squirrel: petConfig(r.pets?.squirrel, d.pets.squirrel)
+      rex: petConfig(r.pets?.rex, d.pets.rex)
     },
     dusty: {
       mode: dusty.mode === 'auto' || dusty.mode === 'report' ? dusty.mode : 'ask',
@@ -146,8 +130,7 @@ export function normalizeSettings(raw: Partial<Settings> | undefined): Settings 
     },
     syncy: syncyConfig(r.syncy, d.syncy),
     mole: moleConfig(r.mole, d.mole),
-    rex: rexConfig(r.rex, d.rex),
-    squirrel: squirrelConfig(r.squirrel, d.squirrel)
+    rex: rexConfig(r.rex, d.rex)
   }
 }
 
@@ -190,11 +173,10 @@ export class Store {
             dusty: d.settings.pets.dusty,
             syncy: d.settings.pets.syncy,
             mole: d.settings.pets.mole,
-            rex: d.settings.pets.rex,
-            squirrel: d.settings.pets.squirrel
+            rex: d.settings.pets.rex
           }
         })
-        pets = { catbot: raw.pet ?? null, dusty: null, syncy: null, mole: null, rex: null, squirrel: null }
+        pets = { catbot: raw.pet ?? null, dusty: null, syncy: null, mole: null, rex: null }
       }
       const linked = (raw.version ?? 0) >= 3 && (raw.githubAuth === 'oauth' || raw.githubAuth === 'gh')
       this.state = {
@@ -207,12 +189,7 @@ export class Store {
         dusty: { lastScan: raw.dusty?.lastScan ?? null, lastClean: raw.dusty?.lastClean ?? null },
         syncy: { lastScan: raw.syncy?.lastScan ?? null },
         mole: { usual: usualPorts(raw.mole?.usual) },
-        rex: { scan: raw.rex?.scan ?? null, cache: raw.rex?.cache && typeof raw.rex.cache === 'object' ? raw.rex.cache : {}, rules: Number(raw.rex?.rules) || 0 },
-        squirrel: {
-          keys: raw.squirrel?.keys && typeof raw.squirrel.keys === 'object' ? raw.squirrel.keys : {},
-          readings: raw.squirrel?.readings && typeof raw.squirrel.readings === 'object' ? raw.squirrel.readings : {},
-          checkedAt: Number(raw.squirrel?.checkedAt) || null
-        }
+        rex: { scan: raw.rex?.scan ?? null, cache: raw.rex?.cache && typeof raw.rex.cache === 'object' ? raw.rex.cache : {}, rules: Number(raw.rex?.rules) || 0 }
       }
     } catch {
       this.state = defaults()

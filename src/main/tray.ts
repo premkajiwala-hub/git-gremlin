@@ -15,8 +15,6 @@ export interface TrayActions {
   moleReview(): void
   rexScan(): void
   rexReview(): void
-  squirrelCheck(): void
-  squirrelReview(): void
   hideForHour(): void
   showPets(): void
   toggleStartWithWindows(): void
@@ -72,10 +70,6 @@ export class AppTray {
         rex: [
           { label: 'Sniff my repos now', enabled: cfg.enabled, click: () => a.rexScan() },
           { label: 'Show leaked secrets...', enabled: cfg.enabled, click: () => a.rexReview() }
-        ],
-        squirrel: [
-          { label: 'Check usage now', enabled: cfg.enabled, click: () => a.squirrelCheck() },
-          { label: 'Show my free tiers...', enabled: cfg.enabled, click: () => a.squirrelReview() }
         ]
       }
       const extra = extras[id]

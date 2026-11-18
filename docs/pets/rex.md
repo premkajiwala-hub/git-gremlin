@@ -1,4 +1,4 @@
-<sub>[← Mole](mole.md) · **Rex** · [Squirrel →](squirrel.md) · [Back to GitGremlin](../../README.md)</sub>
+<sub>[← Mole](mole.md) · **Rex** · [Back to GitGremlin →](../../README.md)</sub>
 
 <p align="center">
   <img src="../../assets/pets/rex/portrait.png" alt="Rex's head: a cream tin toy dog with round headlamp eyes, a black nose and a long floppy red ear" width="96" />
@@ -165,4 +165,4 @@ To regenerate just Rex's art, run `npm run textures -- rex`.
 
 ---
 
-<sub>[← Mole](mole.md) · [Squirrel →](squirrel.md) · [Back to GitGremlin](../../README.md)</sub>
+<sub>[← Mole](mole.md) · [Back to GitGremlin](../../README.md)</sub>

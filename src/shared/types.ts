@@ -67,7 +67,7 @@ export type GitHubSource = 'oauth' | 'gh' | 'none'
 export type HungerStage = 'fed' | 'hungry' | 'starving'
 
 /** Every pet GitGremlin can host. */
-export type PetId = 'catbot' | 'dusty' | 'syncy' | 'mole' | 'rex' | 'squirrel'
+export type PetId = 'catbot' | 'dusty' | 'syncy' | 'mole' | 'rex'
 
 /**
  * A pet's live state, built by its "purpose" service in the main process
@@ -161,14 +161,6 @@ export interface RexConfig {
   ignored: string[]
 }
 
-/** How Squirrel watches your free tiers. */
-export interface SquirrelConfig {
-  /** Warn when a free allowance is this % used. */
-  warnAt: number
-  /** Minutes between usage checks. */
-  checkEveryMinutes: number
-}
-
 /** The GitGremlin panel's colours: follow Windows, or always light / dark. */
 export type ThemeMode = 'system' | 'light' | 'dark'
 
@@ -181,7 +173,6 @@ export interface Settings {
   syncy: SyncyConfig
   mole: MoleConfig
   rex: RexConfig
-  squirrel: SquirrelConfig
 }
 
 export interface PetInit {
@@ -399,77 +390,6 @@ export interface RexView {
 
 export type RexAction = { kind: 'ignore' | 'unignore'; fp: string }
 
-/** Platforms whose usage Squirrel can read live, with a read-only key. */
-export type LivePlatform = 'supabase' | 'cloudinary' | 'cloudflare'
-
-/** One free allowance being used up. */
-export interface UsageMeter {
-  key: string
-  platform: LivePlatform
-  label: string
-  used: number
-  limit: number
-  unit: string
-  resets: 'daily' | 'monthly' | null
-  /** When it resets (ms), if known. */
-  resetAt: number | null
-}
-
-export interface SquirrelMeter extends UsageMeter {
-  percent: number
-  /** When it runs out at today's pace (ms), or null if it lasts until the reset. */
-  runsOutAt: number | null
-}
-
-/** A project state worth knowing (a free Supabase project paused, or about to be). */
-export interface SquirrelNotice {
-  key: string
-  platform: LivePlatform
-  project: string
-  state: 'active' | 'paused' | 'quiet' | 'unhealthy'
-  text: string
-  link: string | null
-}
-
-export interface SquirrelPlatform {
-  id: string
-  name: string
-  rules: { what: string; limit: string; resets: 'daily' | 'monthly' | null }[]
-  /** The catch worth knowing on the free tier. */
-  watch: string | null
-  usageUrl: string
-  /** Squirrel can read live usage for it. */
-  live: boolean
-  connected: boolean
-  /** e.g. "my-cloud · Free plan", "3 projects". */
-  label: string | null
-  error: string | null
-  checkedAt: number | null
-  /** Your projects that use it. */
-  projects: string[]
-}
-
-export interface SquirrelProject {
-  path: string
-  name: string
-  platforms: { id: string; name: string; evidence: string; link: string }[]
-}
-
-export interface SquirrelView {
-  projects: SquirrelProject[]
-  platforms: SquirrelPlatform[]
-  meters: SquirrelMeter[]
-  notices: SquirrelNotice[]
-  busy: 'checking' | null
-  at: number | null
-  warnAt: number
-}
-
-export type SquirrelAction =
-  | { kind: 'connect'; platform: LivePlatform; secret: string }
-  | { kind: 'disconnect'; platform: LivePlatform }
-  | { kind: 'open'; url: string }
-
 export interface GitHubView {
   /** The linked account, or null when not signed in. */
   login: string | null
@@ -549,7 +469,6 @@ export interface HubView {
   syncy: SyncyView
   mole: MoleView
   rex: RexView
-  squirrel: SquirrelView
 }
 
 /** Shown while signing in: enter this code at the verification URL. */

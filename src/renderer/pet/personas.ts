@@ -129,25 +129,4 @@ const REX: Persona = {
   bubble: { accent: '#D8433A' }
 }
 
-const SQUIRREL: Persona = {
-  hungryLines: ['RUNNING LOW ON ACORNS...'],
-  starvingLines: ['...'],
-  fedLines: [
-    [],
-    ['A FREE TIER IS ALMOST EMPTY!', 'SAVE SOME ACORNS FOR LATER!'],
-    ['SOMETHING IS GOING QUIET OUT THERE.', 'KEEP AN EYE ON THOSE LIMITS.'],
-    ['COUNTING YOUR ACORNS...', 'WHICH PROJECT LIVES WHERE? I KNOW.', 'STASHING FOR WINTER.'],
-    ['PLENTY OF ACORNS LEFT!', 'EVERY TIER IS HEALTHY.', 'NUTS ABOUT FREE TIERS.']
-  ],
-  thrownLines: ['MY ACORNS!', 'WHOA, MY BACKPACK!', 'CHITTER CHITTER!'],
-  tapLines: ['*TAP TAP* ANY ACORNS?', '*SCRATCH SCRATCH*'],
-  extraWeights: [
-    ['rummage', 9],
-    ['wash', 5]
-  ],
-  washAfterEat: true,
-  alertAnim: 'rummage',
-  bubble: { accent: '#C4612B' }
-}
-
-export const PERSONAS: Record<PetId, Persona> = { catbot: CATBOT, dusty: DUSTY, syncy: SYNCY, mole: MOLE, rex: REX, squirrel: SQUIRREL }
+export const PERSONAS: Record<PetId, Persona> = { catbot: CATBOT, dusty: DUSTY, syncy: SYNCY, mole: MOLE, rex: REX }

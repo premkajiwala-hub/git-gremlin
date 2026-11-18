@@ -80,17 +80,7 @@ const rex = (leak: boolean): PetStatus => ({
   busy: null,
   connected: true
 })
-const squirrel = (low: boolean): PetStatus => ({
-  name: 'Squirrel',
-  stage: 'fed',
-  level: low ? 1 : 4,
-  report: low ? ['4 PLATFORMS IN 3 PROJECTS', '- CLOUDINARY: 86% USED', '', '> RIGHT-CLICK ME TO SEE IT.'] : ['4 PLATFORMS IN 3 PROJECTS', '- CLOUDINARY: 40% USED'],
-  grid: null,
-  alert: low ? 'CLOUDINARY: 86% OF THE FREE TIER USED! RIGHT-CLICK ME.' : null,
-  busy: null,
-  connected: true
-})
-const status: Record<PetId, PetStatus> = { catbot: catbot(2, 5), dusty: dusty(null), syncy: syncy(false), mole: mole(false), rex: rex(false), squirrel: squirrel(false) }
+const status: Record<PetId, PetStatus> = { catbot: catbot(2, 5), dusty: dusty(null), syncy: syncy(false), mole: mole(false), rex: rex(false) }
 
 const fake = document.getElementById('fakewin')!.getBoundingClientRect()
 const ledge: WindowLedge = { hwnd: 42, x: fake.left, y: fake.top, width: fake.width, height: fake.height }
@@ -101,7 +91,7 @@ const init: OverlayInit = {
   display,
   displays: [display],
   settings,
-  pets: (['catbot', 'dusty', 'syncy', 'mole', 'rex', 'squirrel'] as PetId[]).map((id) => ({ id, isOwner: true, snapshot: null, status: status[id] })),
+  pets: (['catbot', 'dusty', 'syncy', 'mole', 'rex'] as PetId[]).map((id) => ({ id, isOwner: true, snapshot: null, status: status[id] })),
   ledge
 }
 
@@ -156,7 +146,6 @@ const actions: Record<string, () => void> = {
   'Syncy: unpushed': () => setStatus('syncy', syncy(true)),
   'Mole: port taken': () => setStatus('mole', mole(true)),
   'Rex: leak found': () => setStatus('rex', rex(true)),
-  'Squirrel: tier low': () => setStatus('squirrel', squirrel(true)),
   'Mole: port freed': () => {
     setStatus('mole', mole(false))
     emit('feed', 'mole', { text: ':3000 IS FREE! SLURP.' })

@@ -9,7 +9,7 @@ import '@fontsource/jetbrains-mono/latin-500.css'
 import '@fontsource/jetbrains-mono/latin-600.css'
 import { PET_IDS } from '../shared/constants'
 import { ago, formatBytes } from '../shared/format'
-import type { CleanMode, HubView, JunkTarget, MoleAction, PetConfig, PetId, PortClash, PortLookup, RepoAction, RepoInfo, Leak, LivePlatform, ServerInfo, Settings, SquirrelMeter, SquirrelNotice, SquirrelPlatform, ThemeMode, UpdateRelease } from '../shared/types'
+import type { CleanMode, HubView, JunkTarget, MoleAction, PetConfig, PetId, PortClash, PortLookup, RepoAction, RepoInfo, Leak, ServerInfo, Settings, ThemeMode, UpdateRelease } from '../shared/types'
 
 /**
  * The GitGremlin panel ("pixel glass"): a rail of pets on the left, and for
@@ -55,14 +55,6 @@ const PET_UI: Record<PetId, { n: string; species: string; accent: string; lede: 
     accent: '#D9577F',
     lede: "Digs through your ports. Tells you who's sitting on the one you need, and frees it in two clicks.",
     art: ['idle', 0, 'idle'],
-    scale: 6
-  },
-  squirrel: {
-    n: '06',
-    species: 'Red squirrel',
-    accent: '#C4612B',
-    lede: 'Keeps your projects inside their free tiers. Knows which project runs where, and warns before an allowance runs out.',
-    art: ['sit', 0, 'idle'],
     scale: 6
   },
   rex: {
@@ -367,7 +359,6 @@ function fillPet(id: PetId): void {
   const q = <T extends HTMLElement>(sel: string) => p.querySelector<T>(sel)!
   q('.crumb-name').textContent = c.name
   q('.title').textContent = c.name.toUpperCase()
-  q<HTMLElement>('.title').style.setProperty('--chars', String(Math.max(6, c.name.length)))
   setSwitch(q('[data-k="enabled"]'), c.enabled)
   q('.bubble-text').textContent = bubbleText(id)
   // Look and movement.
@@ -433,15 +424,6 @@ function heroInfo(id: PetId): HeroInfo {
     if (!sel) return { stats, primary: { label: 'Scan now', disabled: !enabled }, link: null }
     return { stats, primary: { label: `Clean ${formatBytes(sel)}`, disabled: !enabled }, link: { label: 'Scan again' } }
   }
-  if (id === 'squirrel') {
-    const q = view.squirrel
-    const low = q.meters.filter((m) => m.percent >= q.warnAt).length + q.notices.filter((n) => n.state !== 'active').length
-    return {
-      stats: [plural(q.platforms.length, 'platform'), `${plural(q.projects.length, 'project')}`, low ? `${low} need${low === 1 ? 's' : ''} a look` : q.meters.length ? 'all tiers healthy' : 'limits only'],
-      primary: { label: q.busy ? 'Counting...' : 'Check now', disabled: Boolean(q.busy) || !enabled },
-      link: q.meters.length || q.notices.length ? { label: 'See the free tiers' } : { label: 'Connect a platform' }
-    }
-  }
   if (id === 'rex') {
     const r = view.rex
     const scan = r.scan
@@ -485,15 +467,6 @@ async function heroAction(id: PetId, which: 'primary' | 'link'): Promise<void> {
   if (id === 'dusty') {
     if (which === 'primary' && selectedJunk().length) return cleanJunk()
     return scanJunk()
-  }
-  if (id === 'squirrel') {
-    if (which === 'primary') {
-      const p = api.squirrelCheck()
-      await reload()
-      return apply(await p)
-    }
-    const target = view.squirrel.meters.length || view.squirrel.notices.length ? 'sqMeters' : 'sqPlatforms'
-    return $(target).closest('.card')!.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
   if (id === 'rex') {
     const linked = Boolean(view.rex.login)
@@ -1106,182 +1079,6 @@ function wireMole(): void {
   })
 }
 
-// --- Squirrel: free tiers --------------------------------------------------------------------------
-const KEY_HELP: Record<LivePlatform, { placeholder: string; how: string; note: string }> = {
-  supabase: {
-    placeholder: 'Personal access token (sbp_...)',
-    how: 'https://supabase.com/dashboard/account/tokens',
-    note: 'Account > Access Tokens. Squirrel reads project status and request counts.'
-  },
-  cloudinary: {
-    placeholder: 'cloudinary://API_KEY:API_SECRET@CLOUD_NAME',
-    how: 'https://console.cloudinary.com/settings/api-keys',
-    note: 'Your CLOUDINARY_URL (Settings > API Keys). Squirrel reads usage only.'
-  },
-  cloudflare: {
-    placeholder: 'API token (not the Global API Key)',
-    how: 'https://dash.cloudflare.com/profile/api-tokens',
-    note: 'Create Token > Custom token, permission Account > Account Analytics > Read. Not the Global API Key. Squirrel reads Workers requests.'
-  }
-}
-
-const SVG_EXT = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"></path><path d="M20 4l-9 9"></path><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"></path></svg>'
-
-const fmtNum = (n: number, unit: string) => {
-  if (unit === 'bytes') return formatBytes(n)
-  const v = n >= 100 ? Math.round(n).toLocaleString() : String(Math.round(n * 10) / 10)
-  return unit ? `${v} ${unit}` : v
-}
-
-function until(t: number): string {
-  const m = Math.max(0, (t - Date.now()) / 60_000)
-  return m < 60 ? `${Math.round(m)} min` : m < 48 * 60 ? `${Math.round(m / 60)} h` : `${Math.round(m / 1440)} days`
-}
-
-async function squirrelAction(action: Parameters<typeof api.squirrelAction>[0]): Promise<boolean> {
-  const r = await api.squirrelAction(action)
-  if (r.message) toast(r.message)
-  await reload()
-  return r.ok
-}
-
-function meterRow(m: SquirrelMeter, warnAt: number, link: string): HTMLElement {
-  const row = el('div', 'repo')
-  const left = el('div')
-  const name = el('div', 'repo-name', m.label)
-  name.append(el('span', 'tag', view.squirrel.platforms.find((p) => p.id === m.platform)?.name ?? m.platform))
-  const bar = el('div', `meter-bar${m.percent >= 95 ? ' hot' : m.percent >= warnAt ? ' warn' : ''}`)
-  const fill = el('span')
-  fill.style.width = `${Math.min(100, m.percent)}%`
-  bar.append(fill)
-  const badges = el('div', 'badges')
-  badges.append(el('span', m.percent >= warnAt ? 'b hot' : 'b', `${fmtNum(m.used, m.unit)} of ${fmtNum(m.limit, m.unit)} · ${Math.round(m.percent)}%`))
-  if (m.runsOutAt && m.runsOutAt > Date.now()) badges.append(el('span', 'b warn', `on pace to run out in ${until(m.runsOutAt)}`))
-  if (m.resetAt) badges.append(el('span', 'b', `resets in ${until(m.resetAt)}`))
-  left.append(name, bar, badges)
-  const acts = el('div', 'acts')
-  acts.append(iconButton(SVG_EXT, 'Usage page', 'Open the usage page on the platform', () => void squirrelAction({ kind: 'open', url: link })))
-  row.append(left, acts)
-  return row
-}
-
-function noticeRow(n: SquirrelNotice): HTMLElement {
-  const row = el('div', 'repo')
-  const left = el('div')
-  const name = el('div', 'repo-name', n.project)
-  name.append(el('span', 'tag', 'Supabase'))
-  const badges = el('div', 'badges')
-  const cls = n.state === 'active' ? 'b ok' : n.state === 'quiet' ? 'b warn' : 'b hot'
-  badges.append(el('span', cls, n.state === 'quiet' ? 'going quiet' : n.state))
-  left.append(name, el('div', 'path', n.text), badges)
-  const acts = el('div', 'acts')
-  if (n.link) acts.append(iconButton(SVG_EXT, 'Dashboard', 'Open it on Supabase', () => void squirrelAction({ kind: 'open', url: n.link! })))
-  row.append(left, acts)
-  return row
-}
-
-function platformRow(p: SquirrelPlatform): HTMLElement {
-  const row = el('div', 'repo')
-  const left = el('div')
-  const name = el('div', 'repo-name', p.name)
-  name.append(el('span', p.connected ? 'tag ok' : 'tag', p.live ? (p.connected ? 'live' : 'live with a key') : 'limits only'))
-  left.append(name)
-  if (p.rules.length) {
-    const rules = el('div', 'rules')
-    for (const r of p.rules) rules.append(el('span', '', `${r.what}: ${r.limit}${r.resets ? ` · resets ${r.resets}` : ''}`))
-    left.append(rules)
-  }
-  if (p.watch) left.append(el('div', 'path', p.watch))
-  const badges = el('div', 'badges')
-  if (p.projects.length) badges.append(el('span', 'b', `used by ${p.projects.join(', ')}`))
-  if (p.connected && p.label) badges.append(el('span', 'b ok', `connected · ${p.label}${p.checkedAt ? ` · ${ago(p.checkedAt)}` : ''}`))
-  if (p.error) badges.append(el('span', 'b hot', p.error))
-  left.append(badges)
-  if (p.live && !p.connected) {
-    const help = KEY_HELP[p.id as LivePlatform]
-    const form = el('form', 'key-form')
-    const input = el('input', 'input')
-    input.type = 'password'
-    input.autocomplete = 'off'
-    input.spellcheck = false
-    input.placeholder = help.placeholder
-    input.setAttribute('aria-label', `${p.name} read-only key`)
-    const go = el('button', 'ib', 'Connect')
-    go.type = 'submit'
-    const how = button('How to get one', help.note, () => void squirrelAction({ kind: 'open', url: help.how }), 'link')
-    form.append(input, go, how)
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault()
-      go.disabled = true
-      go.textContent = 'Checking...'
-      const ok = await squirrelAction({ kind: 'connect', platform: p.id as LivePlatform, secret: input.value })
-      input.value = ''
-      if (!ok) {
-        go.disabled = false
-        go.textContent = 'Connect'
-      }
-    })
-    left.append(form, el('div', 'path', help.note))
-  }
-  const acts = el('div', 'acts')
-  acts.append(iconButton(SVG_EXT, 'Usage page', `Open ${p.name}'s usage page`, () => void squirrelAction({ kind: 'open', url: p.usageUrl })))
-  if (p.connected) acts.append(button('Disconnect', 'Forget this key', () => void squirrelAction({ kind: 'disconnect', platform: p.id as LivePlatform }), 'ib ghost'))
-  row.append(left, acts)
-  return row
-}
-
-function renderSquirrel(): void {
-  const q = view.squirrel
-  const enabled = view.settings.pets.squirrel.enabled
-  setSeg($('sqWarn'), 'data-w', String(draft.squirrel.warnAt))
-  $<HTMLSelectElement>('sqEvery').value = String(draft.squirrel.checkEveryMinutes)
-  $('sqInfo').textContent = !enabled ? 'Squirrel is resting.' : q.busy ? 'Counting acorns...' : q.at ? `Checked ${ago(q.at)}` : ''
-
-  const linkFor = (platform: string) => q.platforms.find((p) => p.id === platform)?.usageUrl ?? ''
-  const notices = [...q.notices].sort((a, b) => Number(a.state === 'active') - Number(b.state === 'active'))
-  $('sqMeters').replaceChildren(...q.meters.map((m) => meterRow(m, q.warnAt, linkFor(m.platform))), ...notices.map(noticeRow))
-  if (!q.meters.length && !q.notices.length) {
-    const live = q.platforms.filter((p) => p.live)
-    $('sqMeters').append(
-      el('div', 'empty', live.length ? `No live usage yet. Connect ${live.map((p) => p.name).join(', ')} below with a read-only key.` : 'None of your projects use a platform Squirrel can read live yet. Their free-tier limits are below.')
-    )
-  }
-
-  $('sqProjects').replaceChildren(
-    ...q.projects.map((pr) => {
-      const row = el('div', 'repo')
-      const left = el('div')
-      left.append(el('div', 'repo-name', pr.name), el('div', 'path', pr.path))
-      const chips = el('div', 'badges')
-      for (const pl of pr.platforms) {
-        const chip = button(pl.name, `Found in ${pl.evidence}. Click to open its usage page.`, () => void squirrelAction({ kind: 'open', url: pl.link }), 'portchip')
-        chips.append(chip)
-      }
-      left.append(chips)
-      row.append(left)
-      return row
-    })
-  )
-  if (!q.projects.length) $('sqProjects').append(el('div', 'empty', 'No hosting or cloud platforms found in your repos yet. Squirrel looks in the repos Syncy watches.'))
-
-  $('sqPlatforms').replaceChildren(...q.platforms.map(platformRow))
-  if (!q.platforms.length) $('sqPlatforms').append(el('div', 'empty', 'Nothing to show yet.'))
-}
-
-function wireSquirrel(): void {
-  for (const b of $('sqWarn').querySelectorAll<HTMLElement>('[data-w]')) {
-    b.addEventListener('click', () => {
-      draft.squirrel.warnAt = Number(b.dataset.w)
-      renderSquirrel()
-      saveSoon(0)
-    })
-  }
-  $('sqEvery').addEventListener('change', (e) => {
-    draft.squirrel.checkEveryMinutes = Number((e.target as HTMLSelectElement).value)
-    saveSoon(0)
-  })
-}
-
 // --- Rex: leaked secrets ---------------------------------------------------------------------------
 const SVG_GITHUB = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>'
 
@@ -1540,8 +1337,7 @@ function wireGeneral(): void {
     petCanvas('syncy', 'idle', 0, 'idle', 4),
     petCanvas('dusty', 'wash', 0, 'happy', 4),
     petCanvas('mole', 'sit', 0, 'idle', 4),
-    petCanvas('rex', 'sit', 0, 'idle', 4),
-    petCanvas('squirrel', 'sit', 0, 'idle', 4)
+    petCanvas('rex', 'sit', 0, 'idle', 4)
   ]).then((cs) => {
     lineup.replaceChildren(...cs)
     fitPets()
@@ -1562,7 +1358,6 @@ function apply(v: HubView, refill = false): void {
   renderSyncy()
   renderMole()
   renderRex()
-  renderSquirrel()
   renderGeneral()
   renderUpdates()
   for (const id of PET_IDS) fillPet(id)
@@ -1587,7 +1382,6 @@ async function start(): Promise<void> {
   wireSyncy()
   wireMole()
   wireRex()
-  wireSquirrel()
   wireGeneral()
   wireUpdates()
   apply(view, true)
