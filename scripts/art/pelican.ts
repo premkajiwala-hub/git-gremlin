@@ -1,13 +1,10 @@
 /**
- * Pelican: carries files from your PC to your phone in its pouch. A white
- * pelican with black wingtips, a grey crest, a long yellow bill and a big
- * orange throat pouch. Side view, facing right.
+ * Pelican: opens the sites you build on your phone. A white pelican with
+ * black wingtips, a grey crest, a long yellow bill and a big orange throat
+ * pouch. Side view, facing right.
  *
- * The accent overlay is a few files (a PDF, a photo, a document) sticking out
- * of its mouth: shown while files are waiting in its pouch.
- *
- * Extra animations: `rummage` (bill down, sorting through its pouch: its
- * "busy" and alert pose) and `wash` (preening its chest feathers).
+ * Extra animations: `rummage` (bill down, fishing around: its "busy" and
+ * alert pose) and `wash` (preening its chest feathers).
  */
 import { gaitSwings, Img, RUN, RUN_LIFT, stamp, WALK, WALK_LIFT, type AnimOut, type FrameOut, type PetArt } from './pixel.ts'
 
@@ -32,12 +29,8 @@ const LEG = '#f0a24a'
 const LEG_FAR = '#c88134'
 const EYE = '#17181c'
 const GLINT = '#ffffff'
-const PAPER = '#ffffff'
-const PAPER_SHADE = '#dfe4ea'
-const PDF = '#e5484d'
-const PHOTO = '#3fa34d'
-const DOC = '#3b7ddd'
-const FISH = '#8fb6d9'
+const FISH = '#a9c6de'
+const FISH_SHADE = '#7f9fbb'
 
 const W = 56
 const H = 44
@@ -105,7 +98,7 @@ const BILL_LEN = 14
 
 /**
  * Head at (hx, hy) with its long bill and throat pouch. Returns the eye-overlay
- * origin and where the mouth is (for the files sticking out of it).
+ * origin and where the mouth is.
  */
 function drawHead(img: Img, hx: number, hy: number, pitch = 0, bulge = 0, len = BILL_LEN): { eye: [number, number]; mouth: [number, number] } {
   // Crest and head.
@@ -251,7 +244,7 @@ function frame(p: Pose): FrameOut {
 
   const img = new Img(W, H)
   img.over(back.outline()).over(body.outline()).over(near.outline()).over(head.outline())
-  return { img, screen: out.eye, accent: out.mouth }
+  return { img, screen: out.eye, accent: null }
 }
 
 // --- animations ---------------------------------------------------------------------------------
@@ -276,7 +269,7 @@ const ANIMS: Record<string, { fps: number; loop: boolean; poses: Pose[] }> = {
   sit: { fps: 1.5, loop: true, poses: [{ kind: 'sit' }, { kind: 'sit', head: { dy: 1 } }] },
   // Preening its chest feathers.
   wash: { fps: 5, loop: true, poses: [0, 1].map((phase) => ({ kind: 'wash' as const, phase })) },
-  // Bill down, sorting through its pouch.
+  // Bill down, fishing around.
   rummage: { fps: 6, loop: true, poses: [0, 1, 0, 1].map((phase) => ({ kind: 'dig' as const, phase })) },
   sleep: { fps: 1.2, loop: true, poses: [{ kind: 'loaf', dy: 0 }, { kind: 'loaf', dy: 1 }] },
   starving: { fps: 1, loop: true, poses: [{ kind: 'flop', dy: 0 }, { kind: 'flop', dy: 1 }] },
@@ -287,7 +280,7 @@ const ANIMS: Record<string, { fps: number; loop: boolean; poses: Pose[] }> = {
     loop: true,
     poses: [1, 2].map((w) => ({ wings: w, head: { pitch: -0.4 }, legs: [L(22, 0, 0, 1), L(18, 0, 0, 1)] as [Leg, Leg] }))
   },
-  // Gulping: bill tipped up, pouch bulging.
+  // Gulping a fish: bill tipped up, pouch bulging.
   eat: { fps: 7, loop: true, poses: [1, 3, 2, 3].map((b) => ({ head: { dy: -2, pitch: 1.6 }, bulge: b })) },
   happy: { fps: 6, loop: true, poses: [2, 1].map((w, i) => ({ wings: w, dy: -i, head: { pitch: 0.5 } })) },
   hurt: { fps: 8, loop: true, poses: [0, 1].map((d) => ({ dy: d, wings: 1, head: { dy: 1, pitch: -0.5 } })) },
@@ -311,41 +304,15 @@ function eyes(rows: string[]): Img {
   return img
 }
 
-/** Files peeking out of its mouth: a PDF, a photo and a document. */
-function filesInMouth(): Img {
-  const img = new Img(10, 8)
-  const sheet = (x: number, y: number, w: number, h: number, mark: string, photo = false) => {
-    img.rect(x, y, w, h, PAPER)
-    img.rect(x, y + h - 1, w, 1, PAPER_SHADE)
-    if (photo) {
-      img.rect(x + 1, y + 1, w - 2, h - 3, FISH)
-      img.set(x + 1, y + h - 3, mark)
-      img.set(x + 2, y + h - 3, mark)
-    } else {
-      img.rect(x, y, w, 1, mark)
-      img.rect(x + 1, y + 2, w - 2, 1, PAPER_SHADE)
-    }
-  }
-  sheet(0, 2, 4, 5, PDF)
-  sheet(5, 1, 5, 5, PHOTO, true)
-  sheet(3, 0, 4, 6, DOC)
-  img.outline('#3a3f47')
-  return img
-}
-
 export function pelican(): PetArt {
   const anims: Record<string, AnimOut> = {}
   for (const [name, a] of Object.entries(ANIMS)) anims[name] = { fps: a.fps, loop: a.loop, frames: a.poses.map(frame) }
 
-  // What Pelican gulps down: a file (a page with a folded corner).
+  // What Pelican gulps down: a little silver fish.
   const food = new Img(10, 10)
-  food.rect(1, 0, 6, 10, PAPER)
-  food.rect(7, 3, 2, 7, PAPER)
-  stamp(food, ['XX', 'XX'], 7, 1, PAPER_SHADE)
-  food.rect(2, 3, 4, 1, DOC)
-  food.rect(2, 5, 5, 1, PAPER_SHADE)
-  food.rect(2, 7, 5, 1, PAPER_SHADE)
-  food.outline('#3a3f47')
+  stamp(food, ['..XXXX..X', '.XXXXXXXX', 'XXoXXXXX.', '.XXXXXXXX', '..XXXX..X'], 0, 3, FISH, EYE)
+  food.rect(2, 7, 4, 1, FISH_SHADE)
+  food.outline('#2c4a63')
 
   const portrait = new Img(30, 22)
   const pHead = drawHead(portrait, 3, 5, 0, 0, 13)
@@ -358,7 +325,7 @@ export function pelican(): PetArt {
     anchor: { x: 22, y: GROUND + 1 },
     anims,
     eyes: Object.fromEntries(Object.entries(EYES).map(([k, v]) => [k, eyes(v)])),
-    accentOn: filesInMouth(),
+    accentOn: null,
     food,
     portrait
   }

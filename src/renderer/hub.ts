@@ -62,7 +62,7 @@ const PET_UI: Record<PetId, { n: string; species: string; accent: string; lede: 
     n: '06',
     species: 'White pelican',
     accent: '#F08B3B',
-    lede: 'Carries files from your PC to your phone. Drop files on it, scan its QR code, and they download on your phone. No cable, no app.',
+    lede: 'Opens the sites you build on your phone. Start a dev server, scan its QR code, and see how it looks on a small screen.',
     art: ['idle', 0, 'idle'],
     scale: 5
   },
@@ -435,11 +435,11 @@ function heroInfo(id: PetId): HeroInfo {
   }
   if (id === 'pelican') {
     const p = view.pelican
-    const sharing = Boolean(p.share && p.share.state !== 'stopped')
+    const open = p.sites.filter((s) => !s.local).length
     return {
-      stats: [plural(p.files.length, 'file'), p.files.length ? formatBytes(p.total) : 'pouch empty', sharing ? 'sharing now' : p.address ? 'on your Wi-Fi' : 'no network'],
-      primary: sharing ? { label: 'Stop sharing' } : { label: 'Show QR code', disabled: !p.files.length || !p.address || !enabled },
-      link: { label: 'Add files' }
+      stats: [plural(p.sites.length, 'site') + ' running', `${open} open on your phone`, p.address ? 'on your Wi-Fi' : 'no Wi-Fi'],
+      primary: { label: 'Show QR code', disabled: !open || !enabled },
+      link: null
     }
   }
   if (id === 'rex') {
@@ -487,9 +487,8 @@ async function heroAction(id: PetId, which: 'primary' | 'link'): Promise<void> {
     return scanJunk()
   }
   if (id === 'pelican') {
-    const sharing = Boolean(view.pelican.share && view.pelican.share.state !== 'stopped')
-    if (which === 'primary') return void (sharing ? await pelicanDo({ kind: 'stop' }) : await showQr())
-    return void (await pelicanDo({ kind: 'add' }))
+    pickSite(view.pelican.sites.find((s) => !s.local)?.url ?? null)
+    return $('pelSites').closest('.card')!.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
   if (id === 'rex') {
     const linked = Boolean(view.rex.login)
@@ -1102,22 +1101,7 @@ function wireMole(): void {
   })
 }
 
-// --- Pelican: files to your phone -------------------------------------------------------------------
-async function pelicanDo(action: Parameters<typeof api.pelicanAction>[0]): Promise<boolean> {
-  const r = await api.pelicanAction(action)
-  if (r.message) toast(r.message)
-  await reload()
-  return r.ok
-}
-
-async function showQr(): Promise<void> {
-  const r = await api.pelicanAction({ kind: 'share' })
-  $('pelError').hidden = r.ok
-  $('pelError').textContent = r.ok ? '' : r.message
-  await reload()
-  if (r.ok) $('pelQrCard').scrollIntoView({ behavior: 'smooth', block: 'center' })
-}
-
+// --- Pelican: your sites on your phone --------------------------------------------------------------
 /** Paint a QR code as crisp black squares on white, with the standard quiet zone. */
 function drawQr(canvas: HTMLCanvasElement, text: string, size: number): void {
   const qr = qrcode(0, 'M')
@@ -1135,12 +1119,27 @@ function drawQr(canvas: HTMLCanvasElement, text: string, size: number): void {
   for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) g.fillRect((c + 4) * k, (r + 4) * k, k, k)
 }
 
-let qrShown = ''
-/** The dev site whose QR code is open, if any. */
-let siteQr: string | null = null
+/** The site whose QR code is open ('' = none picked yet: show the first one a phone can open). */
+let siteQr = ''
 
-function renderSites(): void {
+function shownSite(): string | null {
   const p = view.pelican
+  if (p.focus && p.sites.some((s) => s.url === p.focus && !s.local)) return p.focus
+  if (siteQr === '-') return null
+  if (siteQr && p.sites.some((s) => s.url === siteQr && !s.local)) return siteQr
+  return p.sites.find((s) => !s.local)?.url ?? null
+}
+
+function pickSite(url: string | null): void {
+  siteQr = url ?? '-'
+  void api.pelicanAction({ kind: 'focus', url: null })
+  view.pelican.focus = null
+  renderPelican()
+}
+
+function renderPelican(): void {
+  const p = view.pelican
+  const open = shownSite()
   const rows: HTMLElement[] = []
   for (const s of p.sites) {
     const row = el('div', 'repo')
@@ -1151,115 +1150,32 @@ function renderSites(): void {
     left.append(badges)
     if (s.local && s.hint) left.append(el('div', 'path', s.hint))
     const acts = el('div', 'acts')
-    if (!s.local) acts.append(button(siteQr === s.url ? 'Hide QR' : 'QR code', 'Show a QR code to open this site on your phone', () => {
-      siteQr = siteQr === s.url ? null : s.url
-      renderSites()
-    }, 'btn glass sm'))
+    if (!s.local) {
+      acts.append(
+        button(open === s.url ? 'Hide QR' : 'QR code', 'Show a QR code to open this site on your phone', () => pickSite(open === s.url ? null : s.url), 'btn glass sm'),
+        button('Copy link', 'Copy the address for your phone', () => void api.pelicanAction({ kind: 'copy', url: s.url }).then((r) => r.message && toast(r.message)), 'link')
+      )
+    }
     row.append(left, acts)
     rows.push(row)
-    if (siteQr === s.url && !s.local) {
+    if (open === s.url) {
       const box = el('div', 'pel-site-qr')
       const c = el('canvas')
-      drawQr(c, s.url, 150)
-      box.append(c, el('p', 'muted', 'Scan it with your phone on the same Wi-Fi. If Windows asks about network access for this server, click Allow.'))
+      drawQr(c, s.url, 180)
+      box.append(c, el('p', 'muted', "Point your phone's camera at the code. Your phone needs to be on the same Wi-Fi as this PC."))
       rows.push(box)
     }
   }
-  if (siteQr && !p.sites.some((s) => s.url === siteQr)) siteQr = null
-  if (!rows.length) rows.push(el('div', 'empty', p.address ? 'Start a dev server (npm run dev...) and it shows up here. Mole finds it.' : 'Connect this PC to Wi-Fi to open your sites on your phone.'))
+  if (!rows.length)
+    rows.push(
+      el(
+        'div',
+        'empty',
+        p.address ? 'No sites running. Start one (npm run dev, for example) and it shows up here with its QR code.' : 'Connect this PC to Wi-Fi to open your sites on your phone.'
+      )
+    )
   $('pelSites').replaceChildren(...rows)
-}
-
-function renderPelican(): void {
-  renderSites()
-  const p = view.pelican
-  const n = p.files.length
-  $('pelInfo').textContent = n ? `${plural(n, 'file')} · ${formatBytes(p.total)}` : 'Empty'
-  $('pelFiles').replaceChildren(
-    ...p.files.map((f) => {
-      const row = el('div', 'repo')
-      const left = el('div')
-      left.append(el('div', 'repo-name', f.name), el('div', 'path', formatBytes(f.size)))
-      const acts = el('div', 'acts')
-      acts.append(button('Remove', `Take ${f.name} out of the pouch`, () => void pelicanDo({ kind: 'remove', id: f.id }), 'ib ghost'))
-      row.append(left, acts)
-      return row
-    })
-  )
-  const share = p.share
-  const live = Boolean(share && share.state !== 'stopped')
-  $('pelFoot').hidden = !n
-  $<HTMLButtonElement>('pelShare').disabled = !n || !p.address || live
-  $<HTMLButtonElement>('pelShare').textContent = live ? 'QR code is showing' : 'Show QR code'
-  if (!p.address) {
-    $('pelError').hidden = false
-    $('pelError').textContent = "This PC isn't on a Wi-Fi or local network, so your phone can't reach it."
-  }
-
-  // The QR card: while sharing, and once more to say how it ended.
-  const card = $('pelQrCard')
-  const ended = share && share.state === 'stopped' && (share.reason === 'delivered' || share.reason === 'idle')
-  card.hidden = !(live || ended)
-  if (card.hidden || !share) {
-    qrShown = ''
-    return
-  }
-  const canvas = $<HTMLCanvasElement>('pelQr')
-  canvas.hidden = !live || share.state === 'delivered'
-  if (live && qrShown !== share.url) {
-    drawQr(canvas, share.url, 220)
-    qrShown = share.url
-  }
-  const pct = Math.min(100, Math.round((share.sent * 100) / Math.max(1, share.total)))
-  const device = share.device ?? 'Your phone'
-  const states: Record<string, [string, string]> = {
-    waiting: ["Point your phone's camera at the code", 'Your phone must be on the same Wi-Fi as this PC. The code works once, then switches off. If Windows asks about network access, click Allow.'],
-    opened: [`${device} opened it`, 'Tap Download all on the phone to get every file at once.'],
-    downloading: [`Sending... ${pct}%`, `To ${device}. Keep the page open on the phone until it's done.`],
-    delivered: ['Delivered!', `${plural(share.files, 'file')} on ${device}. The code is switched off.`]
-  }
-  const [title, hint] =
-    share.state === 'stopped'
-      ? share.reason === 'delivered'
-        ? ['Delivered!', `${plural(share.files, 'file')} on ${device}. The code is switched off.`]
-        : ['The code switched off', 'Nobody used it for 30 minutes. Show a new one when you need it.']
-      : states[share.state]
-  $('pelQrState').textContent = title
-  $('pelQrHint').textContent = hint
-  $('pelQrInfo').textContent = `${plural(share.files, 'file')} · ${formatBytes(share.total)}`
-  const bar = $('pelBar')
-  bar.hidden = !(share.state === 'downloading' || share.state === 'delivered')
-  ;(bar.firstElementChild as HTMLElement).style.width = `${share.state === 'downloading' ? pct : 100}%`
-  $('pelStop').textContent = live && share.state !== 'delivered' ? 'Stop sharing' : 'Done'
-  $('pelCopy').hidden = !live || share.state === 'delivered'
-}
-
-function wirePelican(): void {
-  $('pelAdd').addEventListener('click', () => void pelicanDo({ kind: 'add' }))
-  $('pelShare').addEventListener('click', () => void showQr())
-  $('pelStop').addEventListener('click', () => void pelicanDo({ kind: 'stop' }))
-  $('pelClear').addEventListener('click', () => void pelicanDo({ kind: 'clear' }))
-  $('pelCopy').addEventListener('click', () => {
-    if (view.pelican.share) void pelicanDo({ kind: 'copy', url: view.pelican.share.url })
-  })
-  // Drop files anywhere on Pelican's page; never let a dropped file open in the panel.
-  const zone = $('pelDrop')
-  document.addEventListener('dragover', (e) => {
-    e.preventDefault()
-    const onPage = page === 'pelican'
-    if (e.dataTransfer) e.dataTransfer.dropEffect = onPage ? 'copy' : 'none'
-    zone.classList.toggle('over', onPage)
-  })
-  document.addEventListener('dragleave', (e) => {
-    if (!e.relatedTarget) zone.classList.remove('over')
-  })
-  document.addEventListener('drop', (e) => {
-    e.preventDefault()
-    zone.classList.remove('over')
-    if (page !== 'pelican' || !e.dataTransfer) return
-    const paths = [...e.dataTransfer.files].map((f) => api.pathForFile(f)).filter(Boolean)
-    if (paths.length) void pelicanDo({ kind: 'addPaths', paths })
-  })
+  $('pelInfo').textContent = p.address ? `This PC on your Wi-Fi: ${p.address}` : 'Not on Wi-Fi'
 }
 
 // --- Rex: leaked secrets ---------------------------------------------------------------------------
@@ -1567,7 +1483,6 @@ async function start(): Promise<void> {
   wireSyncy()
   wireMole()
   wireRex()
-  wirePelican()
   wireGeneral()
   wireUpdates()
   apply(view, true)

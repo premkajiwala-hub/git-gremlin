@@ -59,7 +59,7 @@ if (process.argv.includes('--install-shortcut')) {
     const sayText = after('--say')
     if (argv.includes('--feed')) {
       const pet = petArg('--feed')
-      const text = pet === 'dusty' ? 'MMM, A TEST CRUMB!' : pet === 'syncy' ? 'CRUNCHY LOG!' : pet === 'mole' ? 'A JUICY WORM!' : pet === 'rex' ? 'A TASTY TIN BONE!' : pet === 'pelican' ? 'GULP! A TEST FILE.' : catbotFeedText(1)
+      const text = pet === 'dusty' ? 'MMM, A TEST CRUMB!' : pet === 'syncy' ? 'CRUNCHY LOG!' : pet === 'mole' ? 'A JUICY WORM!' : pet === 'rex' ? 'A TASTY TIN BONE!' : pet === 'pelican' ? 'GULP! A FRESH FISH.' : catbotFeedText(1)
       feed(pet, { text, debug: true })
     } else if (argv.includes('--scan')) void dusty.scan()
     else if (argv.includes('--check')) void syncy.check()
@@ -132,7 +132,6 @@ function start(): void {
   })
   pelican = new PelicanService({
     changed: () => pushStatus(),
-    feed: (text) => feed('pelican', { text }),
     say: (text) => overlays.sendToPet('pelican', IPC.say, text),
     servers: () => mole.view().servers
   })
@@ -159,8 +158,7 @@ function start(): void {
     moleReview: () => openHub('mole'),
     rexScan: () => void rex.scan(),
     rexReview: () => openHub('rex'),
-    pelicanAdd: () => void pelicanAddFiles(),
-    pelicanShare: () => void pelicanShowQr(),
+    pelicanReview: () => openHub('pelican'),
     hideForHour: () => setHidden(true, 60 * 60_000),
     showPets: () => setHidden(false),
     toggleStartWithWindows: () => {
@@ -362,10 +360,11 @@ function showPetMenu(id: PetId): void {
     })
     own.push({ label: 'Show running servers...', click: () => openHub('mole') })
   } else if (id === 'pelican') {
-    if (pelican.sharing) own.push({ label: 'Show the QR code...', click: () => openHub('pelican') }, { label: 'Stop sharing', click: () => pelican.stopShare() })
-    else if (pelican.count) own.push({ label: `Show QR code (${pelican.count} file${pelican.count === 1 ? '' : 's'})...`, click: () => void pelicanShowQr() })
-    own.push({ label: 'Add files...', click: () => void pelicanAddFiles() })
-    if (pelican.count) own.push({ label: 'Empty my pouch', click: () => void pelican.act({ kind: 'clear' }) })
+    const sites = pelican.sites()
+    for (const site of sites.filter((x) => !x.local).slice(0, 6))
+      own.push({ label: `Open ${site.name} :${site.port} on my phone...`, click: () => showSite(site.url) })
+    if (!sites.length) own.push({ label: 'No dev sites running', enabled: false })
+    own.push({ label: 'Show my sites...', click: () => openHub('pelican') })
   } else if (id === 'rex') {
     if (github.source === 'none') own.push({ label: 'Sign in with GitHub...', click: () => openHub('rex') })
     own.push(
@@ -426,7 +425,6 @@ async function confirmStop(sv: ServerInfo): Promise<void> {
 }
 
 function registerHubIpc(): void {
-  ipcMain.on(IPC.pelicanDrop, (_e, paths: unknown) => pelicanDropped(paths))
   ipcMain.on(IPC.petMenu, (_e, id: unknown) => {
     if (PET_IDS.includes(id as PetId)) showPetMenu(id as PetId)
   })
@@ -603,28 +601,16 @@ app.on('before-quit', () => {
   syncy?.stop()
   mole?.stop()
   rex?.stop()
-  pelican?.stop()
   updater?.stop()
   tracker?.stop()
   overlays?.stop()
   tray?.destroy()
 })
 
-/** Files dropped on Pelican (from the overlay). */
-function pelicanDropped(paths: unknown): void {
-  if (!Array.isArray(paths)) return
-  void pelican.act({ kind: 'addPaths', paths: paths.filter((p): p is string => typeof p === 'string') })
-}
-
-async function pelicanAddFiles(): Promise<void> {
-  await pelican.act({ kind: 'add' })
-}
-
-/** Start sharing and show the QR code in the panel. */
-async function pelicanShowQr(): Promise<void> {
-  const r = await pelican.act({ kind: 'share' })
+/** Open Pelican's page with this site's QR code showing. */
+function showSite(url: string): void {
+  pelican.show(url)
   openHub('pelican')
-  if (!r.ok && r.message) overlays.sendToPet('pelican', IPC.say, r.message.toUpperCase())
 }
 
 /** A repo the panel may act on: one from Syncy's last check, or an ignored one. */

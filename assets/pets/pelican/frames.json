@@ -12,7 +12,7 @@
     "w": 3,
     "h": 2
   },
-  "accent": "accent_on.png",
+  "accent": null,
   "anims": {
     "idle": {
       "fps": 3,
@@ -24,10 +24,7 @@
             36,
             9
           ],
-          "accent": [
-            41,
-            9
-          ]
+          "accent": null
         },
         {
           "file": "idle-1.png",
@@ -35,10 +32,7 @@
             36,
             9
           ],
-          "accent": [
-            41,
-            9
-          ]
+          "accent": null
         },
         {
           "file": "idle-2.png",
@@ -46,10 +40,7 @@
             36,
             10
           ],
-          "accent": [
-            41,
-            10
-          ]
+          "accent": null
         },
         {
           "file": "idle-3.png",
@@ -57,10 +48,7 @@
             36,
             9
           ],
-          "accent": [
-            41,
-            9
-          ]
+          "accent": null
         }
       ]
     },
@@ -74,10 +62,7 @@
             36,
             11
           ],
-          "accent": [
-            40,
-            12
-          ]
+          "accent": null
         },
         {
           "file": "idle_sad-1.png",
@@ -85,10 +70,7 @@
             36,
             11
           ],
-          "accent": [
-            40,
-            12
-          ]
+          "accent": null
         },
         {
           "file": "idle_sad-2.png",
@@ -96,10 +78,7 @@
             36,
             12
           ],
-          "accent": [
-            40,
-            13
-          ]
+          "accent": null
         },
         {
           "file": "idle_sad-3.png",
@@ -107,10 +86,7 @@
             36,
             11
           ],
-          "accent": [
-            40,
-            12
-          ]
+          "accent": null
         }
       ]
     },
@@ -124,10 +100,7 @@
             36,
             9
           ],
-          "accent": [
-            41,
-            9
-          ]
+          "accent": null
         },
         {
           "file": "walk-1.png",
@@ -135,10 +108,7 @@
             36,
             9
           ],
-          "accent": [
-            41,
-            9
-          ]
+          "accent": null
         },
         {
           "file": "walk-2.png",
@@ -146,10 +116,7 @@
             36,
             10
           ],
-          "accent": [
-            41,
-            10
-          ]
+          "accent": null
         },
         {
           "file": "walk-3.png",
@@ -157,10 +124,7 @@
             36,
             9
           ],
-          "accent": [
-            41,
-            9
-          ]
+          "accent": null
         },
         {
           "file": "walk-4.png",
@@ -168,10 +132,7 @@
             36,
             9
           ],
-          "accent": [
-            41,
-            9
-          ]
+          "accent": null
         },
         {
           "file": "walk-5.png",
@@ -179,10 +140,7 @@
             36,
             10
           ],
-          "accent": [
-            41,
-            10
-          ]
+          "accent": null
         }
       ]
     },
@@ -196,10 +154,7 @@
             36,
             12
           ],
-          "accent": [
-            40,
-            13
-          ]
+          "accent": null
         },
         {
           "file": "walk_sad-1.png",
@@ -207,10 +162,7 @@
             36,
             12
           ],
-          "accent": [
-            40,
-            13
-          ]
+          "accent": null
         },
         {
           "file": "walk_sad-2.png",
@@ -218,10 +170,7 @@
             36,
             12
           ],
-          "accent": [
-            40,
-            13
-          ]
+          "accent": null
         },
         {
           "file": "walk_sad-3.png",
@@ -229,10 +178,7 @@
             36,
             12
           ],
-          "accent": [
-            40,
-            13
-          ]
+          "accent": null
         },
         {
           "file": "walk_sad-4.png",
@@ -240,10 +186,7 @@
             36,
             12
           ],
-          "accent": [
-            40,
-            13
-          ]
+          "accent": null
         },
         {
           "file": "walk_sad-5.png",
@@ -251,10 +194,7 @@
             36,
             12
           ],
-          "accent": [
-            40,
-            13
-          ]
+          "accent": null
         }
       ]
     },
@@ -268,10 +208,7 @@
             37,
             10
           ],
-          "accent": [
-            42,
-            10
-          ]
+          "accent": null
         },
         {
           "file": "run-1.png",
@@ -279,10 +216,7 @@
             37,
             9
           ],
-          "accent": [
-            42,
-            9
-          ]
+          "accent": null
         },
         {
           "file": "run-2.png",
@@ -290,10 +224,7 @@
             37,
             9
           ],
-          "accent": [
-            42,
-            9
-          ]
+          "accent": null
         },
         {
           "file": "run-3.png",
@@ -301,10 +232,7 @@
             37,
             10
           ],
-          "accent": [
-            42,
-            10
-          ]
+          "accent": null
         },
         {
           "file": "run-4.png",
@@ -312,10 +240,7 @@
             37,
             11
           ],
-          "accent": [
-            42,
-            11
-          ]
+          "accent": null
         },
         {
           "file": "run-5.png",
@@ -323,10 +248,7 @@
             37,
             10
           ],
-          "accent": [
-            42,
-            10
-          ]
+          "accent": null
         }
       ]
     },
@@ -340,10 +262,7 @@
             37,
             16
           ],
-          "accent": [
-            42,
-            17
-          ]
+          "accent": null
         },
         {
           "file": "crawl-1.png",
@@ -351,10 +270,7 @@
             37,
             16
           ],
-          "accent": [
-            42,
-            17
-          ]
+          "accent": null
         },
         {
           "file": "crawl-2.png",
@@ -362,10 +278,7 @@
             37,
             16
           ],
-          "accent": [
-            42,
-            17
-          ]
+          "accent": null
         },
         {
           "file": "crawl-3.png",
@@ -373,10 +286,7 @@
             37,
             16
           ],
-          "accent": [
-            42,
-            17
-          ]
+          "accent": null
         },
         {
           "file": "crawl-4.png",
@@ -384,10 +294,7 @@
             37,
             16
           ],
-          "accent": [
-            42,
-            17
-          ]
+          "accent": null
         },
         {
           "file": "crawl-5.png",
@@ -395,10 +302,7 @@
             37,
             16
           ],
-          "accent": [
-            42,
-            17
-          ]
+          "accent": null
         }
       ]
     },
@@ -412,10 +316,7 @@
             35,
             16
           ],
-          "accent": [
-            40,
-            16
-          ]
+          "accent": null
         },
         {
           "file": "sit-1.png",
@@ -423,10 +324,7 @@
             35,
             17
           ],
-          "accent": [
-            40,
-            17
-          ]
+          "accent": null
         }
       ]
     },
@@ -440,10 +338,7 @@
             34,
             20
           ],
-          "accent": [
-            32,
-            23
-          ]
+          "accent": null
         },
         {
           "file": "wash-1.png",
@@ -451,10 +346,7 @@
             34,
             21
           ],
-          "accent": [
-            31,
-            23
-          ]
+          "accent": null
         }
       ]
     },
@@ -468,10 +360,7 @@
             38,
             19
           ],
-          "accent": [
-            38,
-            22
-          ]
+          "accent": null
         },
         {
           "file": "rummage-1.png",
@@ -479,10 +368,7 @@
             38,
             20
           ],
-          "accent": [
-            38,
-            23
-          ]
+          "accent": null
         },
         {
           "file": "rummage-2.png",
@@ -490,10 +376,7 @@
             38,
             19
           ],
-          "accent": [
-            38,
-            22
-          ]
+          "accent": null
         },
         {
           "file": "rummage-3.png",
@@ -501,10 +384,7 @@
             38,
             20
           ],
-          "accent": [
-            38,
-            23
-          ]
+          "accent": null
         }
       ]
     },
@@ -518,10 +398,7 @@
             32,
             24
           ],
-          "accent": [
-            36,
-            25
-          ]
+          "accent": null
         },
         {
           "file": "sleep-1.png",
@@ -529,10 +406,7 @@
             32,
             23
           ],
-          "accent": [
-            36,
-            24
-          ]
+          "accent": null
         }
       ]
     },
@@ -546,10 +420,7 @@
             36,
             33
           ],
-          "accent": [
-            40,
-            32
-          ]
+          "accent": null
         },
         {
           "file": "starving-1.png",
@@ -557,10 +428,7 @@
             36,
             33
           ],
-          "accent": [
-            40,
-            32
-          ]
+          "accent": null
         }
       ]
     },
@@ -574,10 +442,7 @@
             36,
             8
           ],
-          "accent": [
-            41,
-            7
-          ]
+          "accent": null
         }
       ]
     },
@@ -591,10 +456,7 @@
             36,
             9
           ],
-          "accent": [
-            41,
-            9
-          ]
+          "accent": null
         }
       ]
     },
@@ -608,10 +470,7 @@
             36,
             9
           ],
-          "accent": [
-            40,
-            10
-          ]
+          "accent": null
         },
         {
           "file": "dragged-1.png",
@@ -619,10 +478,7 @@
             36,
             9
           ],
-          "accent": [
-            40,
-            10
-          ]
+          "accent": null
         }
       ]
     },
@@ -636,10 +492,7 @@
             36,
             7
           ],
-          "accent": [
-            41,
-            3
-          ]
+          "accent": null
         },
         {
           "file": "eat-1.png",
@@ -647,10 +500,7 @@
             36,
             7
           ],
-          "accent": [
-            41,
-            3
-          ]
+          "accent": null
         },
         {
           "file": "eat-2.png",
@@ -658,10 +508,7 @@
             36,
             7
           ],
-          "accent": [
-            41,
-            3
-          ]
+          "accent": null
         },
         {
           "file": "eat-3.png",
@@ -669,10 +516,7 @@
             36,
             7
           ],
-          "accent": [
-            41,
-            3
-          ]
+          "accent": null
         }
       ]
     },
@@ -686,10 +530,7 @@
             36,
             9
           ],
-          "accent": [
-            41,
-            8
-          ]
+          "accent": null
         },
         {
           "file": "happy-1.png",
@@ -697,10 +538,7 @@
             36,
             8
           ],
-          "accent": [
-            41,
-            7
-          ]
+          "accent": null
         }
       ]
     },
@@ -714,10 +552,7 @@
             36,
             10
           ],
-          "accent": [
-            40,
-            11
-          ]
+          "accent": null
         },
         {
           "file": "hurt-1.png",
@@ -725,10 +560,7 @@
             36,
             11
           ],
-          "accent": [
-            40,
-            12
-          ]
+          "accent": null
         }
       ]
     },
@@ -742,10 +574,7 @@
             36,
             10
           ],
-          "accent": [
-            40,
-            11
-          ]
+          "accent": null
         },
         {
           "file": "tap-1.png",
@@ -753,10 +582,7 @@
             36,
             10
           ],
-          "accent": [
-            40,
-            11
-          ]
+          "accent": null
         }
       ]
     },
@@ -770,10 +596,7 @@
             37,
             7
           ],
-          "accent": [
-            42,
-            5
-          ]
+          "accent": null
         }
       ]
     }

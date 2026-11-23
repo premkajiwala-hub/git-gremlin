@@ -1099,60 +1099,6 @@ summary:focus-visible {
 }
 
 /* Pelican */
-.pel-drop {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 14px;
-  border: 2px dashed var(--line);
-  border-radius: 14px;
-  padding: 16px 18px;
-  margin-bottom: 10px;
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.pel-drop span {
-  color: var(--ink-3);
-  flex: 1;
-}
-
-.pel-drop.over {
-  border-color: #f08b3b;
-  background: rgba(240, 139, 59, 0.08);
-}
-
-.pel-foot {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 14px;
-  margin-top: 12px;
-}
-
-.pel-qr {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 22px;
-}
-
-.pel-qr canvas {
-  image-rendering: pixelated;
-  border-radius: 12px;
-  background: #fff;
-  flex: none;
-}
-
-.pel-qr-text {
-  flex: 1 1 260px;
-  display: grid;
-  gap: 8px;
-}
-
-.pel-qr-text p {
-  margin: 0;
-}
-
 .pel-site-qr {
   display: flex;
   flex-wrap: wrap;
@@ -1164,21 +1110,6 @@ summary:focus-visible {
 .pel-site-qr canvas {
   image-rendering: pixelated;
   border-radius: 10px;
-}
-
-.pel-bar {
-  height: 8px;
-  border-radius: 4px;
-  background: var(--line);
-  overflow: hidden;
-  max-width: 360px;
-}
-
-.pel-bar span {
-  display: block;
-  height: 100%;
-  background: #f08b3b;
-  border-radius: 4px;
 }
 
 .empty {

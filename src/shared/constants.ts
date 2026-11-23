@@ -39,7 +39,7 @@ export const PET_PURPOSE: Record<PetId, string> = {
   syncy: "Beaver that guards work you haven't pushed to GitHub",
   mole: 'Mole that digs through your ports and frees the one you need',
   rex: 'Robot dog that sniffs your public GitHub repos for leaked secrets',
-  pelican: 'Pelican that carries files from your PC to your phone'
+  pelican: 'Pelican that opens the sites you build on your phone'
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -120,7 +120,6 @@ export const IPC = {
   rexScan: 'hub:rex-scan',
   rexAction: 'hub:rex-action',
   pelicanAction: 'hub:pelican-action',
-  pelicanDrop: 'pet:pelican-drop',
   updateCheck: 'hub:update-check',
   updateApply: 'hub:update-apply',
   updateAuto: 'hub:update-auto',

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, webUtils } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../shared/constants'
 import type {
   ActionResult,
@@ -40,10 +40,6 @@ const api = {
   setStanding: (id: PetId, hwnd: number): void => ipcRenderer.send(IPC.standing, id, hwnd),
   openHub: (id: PetId): void => ipcRenderer.send(IPC.openHub, id),
   petMenu: (id: PetId): void => ipcRenderer.send(IPC.petMenu, id),
-  /** Where a dropped file is on disk. */
-  pathForFile: (file: File): string => webUtils.getPathForFile(file),
-  /** Files dropped on Pelican. */
-  pelicanDrop: (paths: string[]): void => ipcRenderer.send(IPC.pelicanDrop, paths),
 
   onAdopt: (cb: (id: PetId, snap: PetSnapshot | null, status: PetStatus) => void): Unsub => on(IPC.adopt, cb),
   onRelease: (cb: (id: PetId) => void): Unsub => on(IPC.release, cb),
@@ -72,7 +68,7 @@ const api = {
   moleLookup: (port: number): Promise<PortLookup | null> => ipcRenderer.invoke(IPC.moleLookup, port),
   rexScan: (): Promise<HubView> => ipcRenderer.invoke(IPC.rexScan),
   rexAction: (action: RexAction): Promise<ActionResult> => ipcRenderer.invoke(IPC.rexAction, action),
-  /** Pelican: add/remove files, show the QR code, stop sharing, copy the link. */
+  /** Pelican: pick the site to show, copy a site's link. */
   pelicanAction: (action: PelicanAction): Promise<ActionResult> => ipcRenderer.invoke(IPC.pelicanAction, action),
   updateCheck: (): Promise<HubView> => ipcRenderer.invoke(IPC.updateCheck),
   /** Download and install the newest release (GitGremlin restarts). */

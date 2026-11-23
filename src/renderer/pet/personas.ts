@@ -130,17 +130,17 @@ const REX: Persona = {
 }
 
 const PELICAN: Persona = {
-  hungryLines: ['MY POUCH FEELS LIGHT...'],
+  hungryLines: ['ANY FISH AROUND?'],
   starvingLines: ['...'],
   fedLines: [
     [],
-    ['FILES FOR YOUR PHONE? DROP THEM ON ME.'],
-    ['DROP FILES ON ME. I CARRY THEM TO YOUR PHONE.', 'NO CABLES NEEDED.'],
-    ['FLAP FLAP.', 'PHOTOS, PDFS, VIDEOS... I CARRY THEM ALL.', 'BIG POUCH, NO CABLES.'],
-    ['POUCH PACKED!', 'READY TO FLY TO YOUR PHONE.', 'CLICK ME FOR THE QR CODE.']
+    ['NO WI-FI, NO PHONE. SORRY.'],
+    ['START A SITE AND I\'LL PUT IT ON YOUR PHONE.', 'NPM RUN DEV? I\'M READY.'],
+    ['FLAP FLAP.', 'HOW DOES IT LOOK ON A PHONE?', 'SCAN ME, NOT THE WHOLE ADDRESS.'],
+    ['YOUR SITE IS PHONE-READY!', 'RIGHT-CLICK ME FOR THE QR CODE.', 'TEST IT ON YOUR PHONE!']
   ],
   thrownLines: ['SQUAWK!', 'MIND THE POUCH!', 'I CAN FLY, YOU KNOW!'],
-  tapLines: ['*TAP TAP* ANY FILES?', '*FLAP*'],
+  tapLines: ['*TAP TAP* ANY SITES?', '*FLAP*'],
   extraWeights: [
     ['wash', 6],
     ['rummage', 4]

@@ -458,26 +458,6 @@ export interface UpdateView {
   needsRestart: boolean
 }
 
-/** A file waiting in Pelican's pouch. */
-export interface PelicanFile {
-  id: string
-  /** Shown name; may include a folder ("trip/photo.jpg") when a folder was added. */
-  name: string
-  size: number
-}
-
-/** The QR code being shared, and how far the phone has got. */
-export interface PelicanShare {
-  url: string
-  state: 'waiting' | 'opened' | 'downloading' | 'delivered' | 'stopped'
-  device: string | null
-  sent: number
-  total: number
-  files: number
-  /** Why it ended: delivered, idle or stopped. */
-  reason: string | null
-}
-
 /** A dev server Pelican can open on your phone. */
 export interface PelicanSite {
   name: string
@@ -490,22 +470,14 @@ export interface PelicanSite {
 }
 
 export interface PelicanView {
-  files: PelicanFile[]
-  total: number
-  share: PelicanShare | null
   /** This PC's address on the Wi-Fi, or null when it's not on a network. */
   address: string | null
   sites: PelicanSite[]
+  /** The site whose QR code to show first (picked from Pelican's right-click menu). */
+  focus: string | null
 }
 
-export type PelicanAction =
-  | { kind: 'add' }
-  | { kind: 'addPaths'; paths: string[] }
-  | { kind: 'remove'; id: string }
-  | { kind: 'clear' }
-  | { kind: 'share' }
-  | { kind: 'stop' }
-  | { kind: 'copy'; url: string }
+export type PelicanAction = { kind: 'focus'; url: string | null } | { kind: 'copy'; url: string }
 
 export interface HubView {
   version: string

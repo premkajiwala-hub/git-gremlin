@@ -212,14 +212,14 @@ const rex: Pose[] = [
 writeFileSync(join(DOCS, 'rex-poses.png'), png(scale(strip('rex', rex), 3)))
 
 const pelican: Pose[] = [
-  { anim: 'idle', frame: 0, eyes: 'idle', accent: false },
-  { anim: 'walk', frame: 1, eyes: 'idle', accent: false },
+  { anim: 'idle', frame: 0, eyes: 'idle' },
+  { anim: 'walk', frame: 1, eyes: 'idle' },
+  { anim: 'curious', frame: 0, eyes: 'alert' },
   { anim: 'eat', frame: 1, eyes: 'happy', food: true },
-  { anim: 'idle', frame: 0, eyes: 'happy' },
-  { anim: 'happy', frame: 0, eyes: 'happy', hearts: true, accent: false },
+  { anim: 'happy', frame: 0, eyes: 'happy', hearts: true },
   { anim: 'rummage', frame: 0, eyes: 'idle' },
-  { anim: 'sit', frame: 0, eyes: 'idle', accent: false },
-  { anim: 'sleep', frame: 0, eyes: 'blink', zzz: true, accent: false }
+  { anim: 'sit', frame: 0, eyes: 'idle' },
+  { anim: 'sleep', frame: 0, eyes: 'blink', zzz: true }
 ]
 writeFileSync(join(DOCS, 'pelican-poses.png'), png(scale(strip('pelican', pelican), 3)))
 

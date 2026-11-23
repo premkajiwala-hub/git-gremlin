@@ -80,16 +80,15 @@ const rex = (leak: boolean): PetStatus => ({
   busy: null,
   connected: true
 })
-const pelican = (files: boolean): PetStatus => ({
+const pelican = (site: boolean): PetStatus => ({
   name: 'Pelican',
   stage: 'fed',
-  level: files ? 4 : 3,
-  report: files ? ['3 FILES IN MY POUCH', '24 MB', '', '> CLICK ME FOR THE QR CODE.'] : ['MY POUCH IS EMPTY.', 'DROP FILES ON ME TO SEND', 'THEM TO YOUR PHONE.'],
+  level: site ? 4 : 3,
+  report: site ? ['1 SITE RUNNING', ':5173 PORTFOLIO', '', '> RIGHT-CLICK ME FOR THE QR CODE.'] : ['NO SITES RUNNING.', 'START ONE (NPM RUN DEV) AND', "I'LL OPEN IT ON YOUR PHONE."],
   grid: null,
-  alert: files ? '3 FILES READY. CLICK ME FOR THE QR CODE.' : null,
+  alert: null,
   busy: null,
-  connected: true,
-  accent: files
+  connected: true
 })
 const status: Record<PetId, PetStatus> = { catbot: catbot(2, 5), dusty: dusty(null), syncy: syncy(false), mole: mole(false), rex: rex(false), pelican: pelican(false) }
 
@@ -157,7 +156,7 @@ const actions: Record<string, () => void> = {
   'Syncy: unpushed': () => setStatus('syncy', syncy(true)),
   'Mole: port taken': () => setStatus('mole', mole(true)),
   'Rex: leak found': () => setStatus('rex', rex(true)),
-  'Pelican: files in pouch': () => setStatus('pelican', pelican(true)),
+  'Pelican: site running': () => setStatus('pelican', pelican(true)),
   'Mole: port freed': () => {
     setStatus('mole', mole(false))
     emit('feed', 'mole', { text: ':3000 IS FREE! SLURP.' })
