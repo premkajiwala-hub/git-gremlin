@@ -1153,6 +1153,19 @@ summary:focus-visible {
   margin: 0;
 }
 
+.pel-site-qr {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 4px 0 14px;
+}
+
+.pel-site-qr canvas {
+  image-rendering: pixelated;
+  border-radius: 10px;
+}
+
 .pel-bar {
   height: 8px;
   border-radius: 4px;

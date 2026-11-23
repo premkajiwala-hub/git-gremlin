@@ -1136,8 +1136,42 @@ function drawQr(canvas: HTMLCanvasElement, text: string, size: number): void {
 }
 
 let qrShown = ''
+/** The dev site whose QR code is open, if any. */
+let siteQr: string | null = null
+
+function renderSites(): void {
+  const p = view.pelican
+  const rows: HTMLElement[] = []
+  for (const s of p.sites) {
+    const row = el('div', 'repo')
+    const left = el('div')
+    left.append(el('div', 'repo-name', `${s.name} · :${s.port}`), el('div', 'path', s.url))
+    const badges = el('div', 'badges')
+    badges.append(el('span', s.local ? 'b warn' : 'b ok', s.local ? 'only this PC can open it' : 'your phone can open it'))
+    left.append(badges)
+    if (s.local && s.hint) left.append(el('div', 'path', s.hint))
+    const acts = el('div', 'acts')
+    if (!s.local) acts.append(button(siteQr === s.url ? 'Hide QR' : 'QR code', 'Show a QR code to open this site on your phone', () => {
+      siteQr = siteQr === s.url ? null : s.url
+      renderSites()
+    }, 'btn glass sm'))
+    row.append(left, acts)
+    rows.push(row)
+    if (siteQr === s.url && !s.local) {
+      const box = el('div', 'pel-site-qr')
+      const c = el('canvas')
+      drawQr(c, s.url, 150)
+      box.append(c, el('p', 'muted', 'Scan it with your phone on the same Wi-Fi. If Windows asks about network access for this server, click Allow.'))
+      rows.push(box)
+    }
+  }
+  if (siteQr && !p.sites.some((s) => s.url === siteQr)) siteQr = null
+  if (!rows.length) rows.push(el('div', 'empty', p.address ? 'Start a dev server (npm run dev...) and it shows up here. Mole finds it.' : 'Connect this PC to Wi-Fi to open your sites on your phone.'))
+  $('pelSites').replaceChildren(...rows)
+}
 
 function renderPelican(): void {
+  renderSites()
   const p = view.pelican
   const n = p.files.length
   $('pelInfo').textContent = n ? `${plural(n, 'file')} · ${formatBytes(p.total)}` : 'Empty'

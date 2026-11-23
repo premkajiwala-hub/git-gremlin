@@ -8,6 +8,7 @@
  */
 import { randomBytes } from 'node:crypto'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { connect } from 'node:net'
 import { hostname } from 'node:os'
 import { basename, join, relative } from 'node:path'
 import { app, BrowserWindow, clipboard, dialog } from 'electron'
@@ -225,13 +226,39 @@ export class PelicanService {
     }
   }
 
-  /** Dev servers you can open on your phone. */
+  /** Whether each port answers on the Wi-Fi address (a server bound to localhost refuses). */
+  private reach = new Map<string, boolean>()
+  private probing = new Set<string>()
+
+  private probe(address: string, port: number): void {
+    const key = `${address}:${port}`
+    if (this.probing.has(key)) return
+    this.probing.add(key)
+    const sock = connect({ host: address, port, timeout: 600 })
+    const done = (ok: boolean) => {
+      sock.destroy()
+      this.probing.delete(key)
+      if (this.reach.get(key) !== ok) {
+        this.reach.set(key, ok)
+        this.hooks.changed()
+      }
+    }
+    sock.once('connect', () => done(true))
+    sock.once('error', () => done(false))
+    sock.once('timeout', () => done(false))
+  }
+
+  /** Dev servers you can open on your phone: one row per port. */
   private sites(address: string): PelicanSite[] {
     const out: PelicanSite[] = []
     for (const s of this.hooks.servers()) {
-      if (s.kind !== 'dev' || !s.ports.length) continue
-      const port = s.ports[0]
-      out.push({ name: s.name, port, url: `http://${address}:${port}/`, local: s.local, hint: s.local ? hostHint(s.command) : null })
+      if (s.kind !== 'dev') continue
+      for (const port of s.ports) {
+        this.probe(address, port)
+        const ok = this.reach.get(`${address}:${port}`)
+        const local = ok === undefined ? s.local : !ok
+        out.push({ name: s.name, port, url: `http://${address}:${port}/`, local, hint: local ? hostHint(s.command) : null })
+      }
     }
     return out
   }
