@@ -456,6 +456,8 @@ export interface UpdateView {
   failed: string | null
   /** Packages will be installed: GitGremlin closes for a minute. */
   needsRestart: boolean
+  /** The new version is already downloaded: Update only swaps it in and restarts. */
+  ready: boolean
 }
 
 /** A dev server Pelican can open on your phone. */

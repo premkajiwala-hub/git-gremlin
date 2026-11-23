@@ -1304,6 +1304,65 @@ summary:focus-visible {
   gap: 12px;
 }
 
+/* Update banner: one line on top of every page */
+.upd-banner {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 10px 12px 10px 16px;
+  border-radius: 14px;
+  background: var(--ink);
+  color: var(--bg);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+
+.upd-banner[hidden] {
+  display: none;
+}
+
+.upd-banner-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  background: #3fb950;
+}
+
+.upd-banner-text {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.upd-banner .link {
+  color: var(--bg);
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
+.upd-banner .btn {
+  background: var(--bg);
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.upd-banner-x {
+  border: 0;
+  background: none;
+  color: var(--bg);
+  opacity: 0.6;
+  font-size: 20px;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
 /* Updates */
 .upd-head {
   display: flex;

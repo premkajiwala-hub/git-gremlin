@@ -145,6 +145,10 @@ export class Updater {
   private blocked: string | null = null
   private error: string | null = null
   private needsRestart = false
+  /** The newest release is downloaded (git: its tag is fetched; ZIP: unpacked in staging). */
+  private ready = false
+  /** Which release's archive is unpacked in staging (ZIP copies). */
+  private stagedFor: string | null = null
   private updated: UpdateView['updated'] = null
   private failed: string | null = null
 
@@ -201,7 +205,8 @@ export class Updater {
       autoCheck: this.saved.autoCheck,
       updated: this.updated,
       failed: this.failed,
-      needsRestart: this.needsRestart
+      needsRestart: this.needsRestart,
+      ready: this.ready
     }
   }
 
@@ -218,6 +223,7 @@ export class Updater {
       this.note = null
       this.packages = []
       this.needsRestart = false
+      this.ready = false
       const next = this.available
       if (next) await this.inspect(next)
       this.saved.checkedAt = Date.now()
@@ -249,6 +255,19 @@ export class Updater {
       this.note = kept ? `Keeps ${kept}.` : null
       newPkg = gitShow(run, this.root, tag, 'package.json')
       newLock = gitShow(run, this.root, tag, 'package-lock.json')
+      this.ready = true
+    } else if (this.kind === 'zip') {
+      // Download it now, in the background, so Update only has to swap the files in.
+      try {
+        const root = await this.download(tag)
+        const read = (f: string) => (existsSync(join(root, f)) ? readFileSync(join(root, f), 'utf8') : null)
+        newPkg = read('package.json')
+        newLock = read('package-lock.json')
+        this.ready = true
+      } catch {
+        newPkg = await this.source.file(tag, 'package.json')
+        newLock = await this.source.file(tag, 'package-lock.json')
+      }
     } else {
       newPkg = await this.source.file(tag, 'package.json')
       newLock = await this.source.file(tag, 'package-lock.json')
@@ -256,6 +275,28 @@ export class Updater {
     if (newPkg && localPkg) this.packages = packageChanges(JSON.parse(localPkg), JSON.parse(newPkg))
     this.needsRestart = fingerprintOf(newPkg, newLock) !== this.installedDeps()
     if (this.kind === 'installer') this.blocked = 'Installed with the Windows installer: get the new installer from GitHub.'
+  }
+
+  /** Download and unpack a release's archive into staging (once per release). Returns its folder. */
+  private async download(tag: string): Promise<string> {
+    const staging = join(this.dir, 'staging')
+    if (this.stagedFor === tag) {
+      try {
+        return tarballRoot(staging)
+      } catch {
+        this.stagedFor = null
+      }
+    }
+    const tarball = join(this.dir, `${tag}.tar.gz`)
+    rmSync(staging, { recursive: true, force: true })
+    mkdirSync(staging, { recursive: true })
+    await this.source.tarball(tag, tarball)
+    const tar = existsSync('C:\\Windows\\System32\\tar.exe') ? 'C:\\Windows\\System32\\tar.exe' : 'tar'
+    const x = run(tar, ['-xzf', tarball, '-C', staging], this.dir, 120_000)
+    rmSync(tarball, { force: true })
+    if (x.code !== 0) throw new Error(`Couldn't unpack the update (${lastLine(x)}).`)
+    this.stagedFor = tag
+    return tarballRoot(staging)
   }
 
   /** A picture of each new pet (its poses), so you see it before updating. */
@@ -272,8 +313,8 @@ export class Updater {
     this.saved.notified = next.version
     this.save()
     const pets = this.releases.flatMap((r) => r.pets.map((p) => p.name))
-    const what = pets.length ? `${pets.length === 1 ? 'A new pet' : `${pets.length} new pets`}: ${list(pets)}.` : `${next.title || 'New features and fixes'}.`
-    toast(`GitGremlin ${next.version} is ready`, `${what} Open GitGremlin from the tray to update.`)
+    const what = pets.length ? `${pets.length === 1 ? 'New pet' : `${pets.length} new pets`}: ${list(pets)}.` : `${next.title || 'New features and fixes'}.`
+    toast(`GitGremlin ${next.version} is ready`, `${what} Open GitGremlin and click Update now. It takes a few seconds.`)
   }
 
   // --- installing ---------------------------------------------------------------------------------
@@ -301,15 +342,7 @@ export class Updater {
         newPkg = gitShow(run, this.root, tag, 'package.json')
         newLock = gitShow(run, this.root, tag, 'package-lock.json')
       } else {
-        const tarball = join(this.dir, `${tag}.tar.gz`)
-        const staging = join(this.dir, 'staging')
-        rmSync(staging, { recursive: true, force: true })
-        mkdirSync(staging, { recursive: true })
-        await this.source.tarball(tag, tarball)
-        const tar = existsSync('C:\\Windows\\System32\\tar.exe') ? 'C:\\Windows\\System32\\tar.exe' : 'tar'
-        const x = run(tar, ['-xzf', tarball, '-C', staging], this.dir, 120_000)
-        if (x.code !== 0) throw new Error(`Couldn't unpack the update (${lastLine(x)}).`)
-        staged = tarballRoot(staging)
+        staged = await this.download(tag)
         const read = (f: string) => (existsSync(join(staged!, f)) ? readFileSync(join(staged!, f), 'utf8') : null)
         newPkg = read('package.json')
         newLock = read('package-lock.json')

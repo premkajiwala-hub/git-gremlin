@@ -1328,7 +1328,49 @@ function releaseBlock(r: UpdateRelease, withVersion: boolean): HTMLElement {
   return box
 }
 
+/** Version the banner was put away for (until the next version, or the next start). */
+let bannerLater = ''
+
+/** One line on top of every page: a new version is ready, or was just installed. */
+function renderBanner(): void {
+  const u = view.update
+  const next = u.releases[0]
+  const banner = $('updBanner')
+  const go = $<HTMLButtonElement>('updBannerGo')
+  const text = $('updBannerText')
+  const pets = (u.updated?.releases ?? u.releases).flatMap((r) => r.pets.map((p) => p.name))
+  const petText = pets.length ? `${pets.length === 1 ? 'new pet' : 'new pets'}: ${pets.join(', ')}` : ''
+  if (next && u.kind !== 'installer' && bannerLater !== next.version) {
+    const busy = u.state === 'downloading' ? 'Downloading...' : u.state === 'installing' ? 'Installing...' : null
+    text.textContent = busy ? `Updating to GitGremlin ${next.version}... it restarts in a few seconds.` : `GitGremlin ${next.version} is ready${petText ? `, with a ${petText}` : `: ${next.title || 'new features and fixes'}`}.`
+    go.hidden = false
+    go.textContent = busy ?? 'Update now'
+    go.disabled = Boolean(busy) || u.state === 'checking'
+    banner.hidden = false
+    return
+  }
+  if (u.updated && bannerLater !== `updated-${u.updated.to}`) {
+    text.textContent = `You're on GitGremlin ${u.updated.to}${petText ? `. Say hi to ${pets.join(', ')}!` : '. Enjoy the new version!'}`
+    go.hidden = true
+    banner.hidden = false
+    return
+  }
+  banner.hidden = true
+}
+
+function wireBanner(): void {
+  $('updBannerGo').addEventListener('click', () => void updateNow())
+  $('updBannerMore').addEventListener('click', () => show('updates'))
+  $('updBannerLater').addEventListener('click', () => {
+    const u = view.update
+    bannerLater = u.releases[0] ? u.releases[0].version : u.updated ? `updated-${u.updated.to}` : ''
+    if (u.updated && !u.releases[0]) void api.updateSeen().then((v) => apply(v))
+    else renderBanner()
+  })
+}
+
 function renderUpdates(): void {
+  renderBanner()
   const u = view.update
   setSwitch($('updAuto'), u.autoCheck)
   $('updInfo').textContent = u.state === 'checking' ? 'Checking...' : `Version ${u.current}`
@@ -1485,6 +1527,7 @@ async function start(): Promise<void> {
   wireRex()
   wireGeneral()
   wireUpdates()
+  wireBanner()
   apply(view, true)
   show(page)
   api.onShowPage((p) => show(p))
