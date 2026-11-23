@@ -80,7 +80,18 @@ const rex = (leak: boolean): PetStatus => ({
   busy: null,
   connected: true
 })
-const status: Record<PetId, PetStatus> = { catbot: catbot(2, 5), dusty: dusty(null), syncy: syncy(false), mole: mole(false), rex: rex(false) }
+const pelican = (files: boolean): PetStatus => ({
+  name: 'Pelican',
+  stage: 'fed',
+  level: files ? 4 : 3,
+  report: files ? ['3 FILES IN MY POUCH', '24 MB', '', '> CLICK ME FOR THE QR CODE.'] : ['MY POUCH IS EMPTY.', 'DROP FILES ON ME TO SEND', 'THEM TO YOUR PHONE.'],
+  grid: null,
+  alert: files ? '3 FILES READY. CLICK ME FOR THE QR CODE.' : null,
+  busy: null,
+  connected: true,
+  accent: files
+})
+const status: Record<PetId, PetStatus> = { catbot: catbot(2, 5), dusty: dusty(null), syncy: syncy(false), mole: mole(false), rex: rex(false), pelican: pelican(false) }
 
 const fake = document.getElementById('fakewin')!.getBoundingClientRect()
 const ledge: WindowLedge = { hwnd: 42, x: fake.left, y: fake.top, width: fake.width, height: fake.height }
@@ -91,7 +102,7 @@ const init: OverlayInit = {
   display,
   displays: [display],
   settings,
-  pets: (['catbot', 'dusty', 'syncy', 'mole', 'rex'] as PetId[]).map((id) => ({ id, isOwner: true, snapshot: null, status: status[id] })),
+  pets: (['catbot', 'dusty', 'syncy', 'mole', 'rex', 'pelican'] as PetId[]).map((id) => ({ id, isOwner: true, snapshot: null, status: status[id] })),
   ledge
 }
 
@@ -146,6 +157,7 @@ const actions: Record<string, () => void> = {
   'Syncy: unpushed': () => setStatus('syncy', syncy(true)),
   'Mole: port taken': () => setStatus('mole', mole(true)),
   'Rex: leak found': () => setStatus('rex', rex(true)),
+  'Pelican: files in pouch': () => setStatus('pelican', pelican(true)),
   'Mole: port freed': () => {
     setStatus('mole', mole(false))
     emit('feed', 'mole', { text: ':3000 IS FREE! SLURP.' })

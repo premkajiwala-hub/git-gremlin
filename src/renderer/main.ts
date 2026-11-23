@@ -459,6 +459,29 @@ async function boot(): Promise<void> {
     for (const h of list()) h.visibilityChanged(document.hidden)
   })
 
+  // Files dragged from Explorer onto Pelican go into its pouch. The overlay only
+  // catches them while the cursor is over a pet; anywhere else drops pass through.
+  const pelicanUnder = () => {
+    const h = hosts.get('pelican')
+    return h && h.mode === 'owner' && h.hovered ? h : null
+  }
+  let invited = 0
+  document.addEventListener('dragover', (e) => {
+    e.preventDefault()
+    const p = pelicanUnder()
+    if (e.dataTransfer) e.dataTransfer.dropEffect = p ? 'copy' : 'none'
+    if (p && performance.now() - invited > 4000) {
+      invited = performance.now()
+      p.say('OPEN WIDE! DROP THEM IN MY POUCH.', 2500)
+    }
+  })
+  document.addEventListener('drop', (e) => {
+    e.preventDefault()
+    if (!pelicanUnder() || !e.dataTransfer) return
+    const paths = [...e.dataTransfer.files].map((f) => api.pathForFile(f)).filter(Boolean)
+    if (paths.length) api.pelicanDrop(paths)
+  })
+
   for (const p of init.pets) if (p.isOwner) hosts.get(p.id)?.becomeOwner(p.snapshot)
 }
 

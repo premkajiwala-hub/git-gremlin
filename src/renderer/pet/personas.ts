@@ -129,4 +129,25 @@ const REX: Persona = {
   bubble: { accent: '#D8433A' }
 }
 
-export const PERSONAS: Record<PetId, Persona> = { catbot: CATBOT, dusty: DUSTY, syncy: SYNCY, mole: MOLE, rex: REX }
+const PELICAN: Persona = {
+  hungryLines: ['MY POUCH FEELS LIGHT...'],
+  starvingLines: ['...'],
+  fedLines: [
+    [],
+    ['FILES FOR YOUR PHONE? DROP THEM ON ME.'],
+    ['DROP FILES ON ME. I CARRY THEM TO YOUR PHONE.', 'NO CABLES NEEDED.'],
+    ['FLAP FLAP.', 'PHOTOS, PDFS, VIDEOS... I CARRY THEM ALL.', 'BIG POUCH, NO CABLES.'],
+    ['POUCH PACKED!', 'READY TO FLY TO YOUR PHONE.', 'CLICK ME FOR THE QR CODE.']
+  ],
+  thrownLines: ['SQUAWK!', 'MIND THE POUCH!', 'I CAN FLY, YOU KNOW!'],
+  tapLines: ['*TAP TAP* ANY FILES?', '*FLAP*'],
+  extraWeights: [
+    ['wash', 6],
+    ['rummage', 4]
+  ],
+  washAfterEat: true,
+  alertAnim: 'rummage',
+  bubble: { accent: '#F08B3B' }
+}
+
+export const PERSONAS: Record<PetId, Persona> = { catbot: CATBOT, dusty: DUSTY, syncy: SYNCY, mole: MOLE, rex: REX, pelican: PELICAN }

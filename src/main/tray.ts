@@ -15,6 +15,8 @@ export interface TrayActions {
   moleReview(): void
   rexScan(): void
   rexReview(): void
+  pelicanAdd(): void
+  pelicanShare(): void
   hideForHour(): void
   showPets(): void
   toggleStartWithWindows(): void
@@ -70,6 +72,10 @@ export class AppTray {
         rex: [
           { label: 'Sniff my repos now', enabled: cfg.enabled, click: () => a.rexScan() },
           { label: 'Show leaked secrets...', enabled: cfg.enabled, click: () => a.rexReview() }
+        ],
+        pelican: [
+          { label: 'Add files...', enabled: cfg.enabled, click: () => a.pelicanAdd() },
+          { label: 'Show QR code...', enabled: cfg.enabled, click: () => a.pelicanShare() }
         ]
       }
       const extra = extras[id]

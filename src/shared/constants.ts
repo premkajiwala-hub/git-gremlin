@@ -30,7 +30,7 @@ export const PET_SIZE_MIN = 48
 export const PET_SIZE_MAX = 112
 
 /** Every pet, in the order the GitGremlin panel lists them. */
-export const PET_IDS: PetId[] = ['catbot', 'dusty', 'syncy', 'mole', 'rex']
+export const PET_IDS: PetId[] = ['catbot', 'dusty', 'syncy', 'mole', 'rex', 'pelican']
 
 /** What each pet is for (shown in the panel). */
 export const PET_PURPOSE: Record<PetId, string> = {
@@ -38,7 +38,8 @@ export const PET_PURPOSE: Record<PetId, string> = {
   dusty: 'Raccoon that eats junk files and caches',
   syncy: "Beaver that guards work you haven't pushed to GitHub",
   mole: 'Mole that digs through your ports and frees the one you need',
-  rex: 'Robot dog that sniffs your public GitHub repos for leaked secrets'
+  rex: 'Robot dog that sniffs your public GitHub repos for leaked secrets',
+  pelican: 'Pelican that carries files from your PC to your phone'
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -49,7 +50,8 @@ export const DEFAULT_SETTINGS: Settings = {
     dusty: { enabled: true, name: 'Dusty', petSize: 64, petSpeed: 40, movement: 'roam', followCursor: false },
     syncy: { enabled: true, name: 'Syncy', petSize: 64, petSpeed: 38, movement: 'roam', followCursor: false },
     mole: { enabled: true, name: 'Mole', petSize: 60, petSpeed: 36, movement: 'ground', followCursor: false },
-    rex: { enabled: true, name: 'Rex', petSize: 64, petSpeed: 50, movement: 'roam', followCursor: false }
+    rex: { enabled: true, name: 'Rex', petSize: 64, petSpeed: 50, movement: 'roam', followCursor: false },
+    pelican: { enabled: true, name: 'Pelican', petSize: 64, petSpeed: 48, movement: 'roam', followCursor: false }
   },
   dusty: {
     mode: 'ask',
@@ -117,6 +119,8 @@ export const IPC = {
   moleLookup: 'hub:mole-lookup',
   rexScan: 'hub:rex-scan',
   rexAction: 'hub:rex-action',
+  pelicanAction: 'hub:pelican-action',
+  pelicanDrop: 'pet:pelican-drop',
   updateCheck: 'hub:update-check',
   updateApply: 'hub:update-apply',
   updateAuto: 'hub:update-auto',

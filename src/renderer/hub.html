@@ -383,6 +383,38 @@
       </article>
     </template>
 
+    <!-- Pelican: files from your PC to your phone -->
+    <template id="pelicanPurpose">
+      <article class="card wide" id="pelPouchCard">
+        <div class="card-head"><h2 class="card-title"><i></i>Your pouch</h2><span class="muted" id="pelInfo"></span></div>
+        <div class="pel-drop" id="pelDrop">
+          <b>Drop files here</b><span>or on Pelican on your desktop</span>
+          <button type="button" class="btn glass sm" id="pelAdd">Add files</button>
+        </div>
+        <div class="repos compact" id="pelFiles"></div>
+        <div class="pel-foot" id="pelFoot">
+          <button type="button" class="link" id="pelClear">Empty pouch</button>
+          <button type="button" class="btn sm" id="pelShare">Show QR code</button>
+        </div>
+        <p class="err" id="pelError" hidden></p>
+      </article>
+      <article class="card wide" id="pelQrCard" hidden>
+        <div class="card-head"><h2 class="card-title"><i></i>Scan with your phone</h2><span class="muted" id="pelQrInfo"></span></div>
+        <div class="pel-qr">
+          <canvas id="pelQr" aria-label="QR code to open on your phone"></canvas>
+          <div class="pel-qr-text">
+            <p class="upd-title" id="pelQrState"></p>
+            <p class="muted" id="pelQrHint"></p>
+            <div class="pel-bar" id="pelBar" hidden><span></span></div>
+            <div class="row">
+              <button type="button" class="btn glass sm" id="pelStop">Stop sharing</button>
+              <button type="button" class="link" id="pelCopy">Copy link</button>
+            </div>
+          </div>
+        </div>
+      </article>
+    </template>
+
     <!-- Rex: leaked secrets on GitHub -->
     <template id="rexPurpose">
       <article class="card wide">

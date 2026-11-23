@@ -47,7 +47,7 @@ function defaults(): AppState {
     githubAuth: null,
     githubTokenEnc: null,
     github: { login: null, name: null, avatarUrl: null, days: [], source: 'none', fetchedAt: 0 },
-    pets: { catbot: null, dusty: null, syncy: null, mole: null, rex: null },
+    pets: { catbot: null, dusty: null, syncy: null, mole: null, rex: null, pelican: null },
     dusty: { lastScan: null, lastClean: null },
     syncy: { lastScan: null },
     mole: { usual: {} },
@@ -116,7 +116,8 @@ export function normalizeSettings(raw: Partial<Settings> | undefined): Settings 
       dusty: petConfig(r.pets?.dusty, d.pets.dusty),
       syncy: petConfig(r.pets?.syncy, d.pets.syncy),
       mole: petConfig(r.pets?.mole, d.pets.mole),
-      rex: petConfig(r.pets?.rex, d.pets.rex)
+      rex: petConfig(r.pets?.rex, d.pets.rex),
+      pelican: petConfig(r.pets?.pelican, d.pets.pelican)
     },
     dusty: {
       mode: dusty.mode === 'auto' || dusty.mode === 'report' ? dusty.mode : 'ask',
@@ -173,10 +174,11 @@ export class Store {
             dusty: d.settings.pets.dusty,
             syncy: d.settings.pets.syncy,
             mole: d.settings.pets.mole,
-            rex: d.settings.pets.rex
+            rex: d.settings.pets.rex,
+            pelican: d.settings.pets.pelican
           }
         })
-        pets = { catbot: raw.pet ?? null, dusty: null, syncy: null, mole: null, rex: null }
+        pets = { catbot: raw.pet ?? null, dusty: null, syncy: null, mole: null, rex: null, pelican: null }
       }
       const linked = (raw.version ?? 0) >= 3 && (raw.githubAuth === 'oauth' || raw.githubAuth === 'gh')
       this.state = {

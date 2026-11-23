@@ -1137,7 +1137,7 @@ export class PetBrain {
       bob,
       mood,
       lookY,
-      glow,
+      glow: this.status.accent ?? glow,
       dim: this.stage === 'starving' ? 0.35 : this.stage === 'hungry' ? 0.15 : 0,
       tint: this.flashT > 0 && Math.floor(this.flashT * 20) % 2 === 0 ? 1 : 0,
       food,

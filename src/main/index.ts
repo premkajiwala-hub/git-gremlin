@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path'
 import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeTheme, powerMonitor, shell, type MenuItemConstructorOptions } from 'electron'
 import { APP_ID, IPC, PET_IDS } from '../shared/constants'
 import { formatBytes } from '../shared/format'
-import type { ActionResult, FeedEvent, HubView, MoleAction, PetId, PetStatus, PortLookup, RepoAction, RexAction, ServerInfo, Settings, SignInCode, SignInResult } from '../shared/types'
+import type { ActionResult, FeedEvent, HubView, MoleAction, PelicanAction, PetId, PetStatus, PortLookup, RepoAction, RexAction, ServerInfo, Settings, SignInCode, SignInResult } from '../shared/types'
 import { clientId, DeviceFlow } from './github-auth'
 import { GitHubWatcher, moodFrom, type GitHubData } from './github'
 import { openInVSCode } from './editor'
@@ -14,6 +14,7 @@ import { catbotFeedText, catbotStatus, newContributions } from './pets/catbot'
 import { DustyService } from './pets/dusty'
 import { MoleService } from './pets/mole'
 import { RexService } from './pets/rex'
+import { PelicanService } from './pets/pelican'
 import { SyncyService } from './pets/syncy'
 import { normalizeSettings, Store } from './store'
 import { Updater } from './updater'
@@ -53,11 +54,12 @@ if (process.argv.includes('--install-shortcut')) {
       const at = argv.indexOf(flag)
       return at >= 0 ? argv.slice(at + 1).find((a) => !a.startsWith('--')) : undefined
     }
-    const petArg = (flag: string): PetId => (PET_IDS.includes(after(flag) as PetId) ? (after(flag) as PetId) : 'catbot')
+    const petArg = (flag: string): PetId =>
+      (argv.slice(argv.indexOf(flag) + 1).find((a) => PET_IDS.includes(a as PetId)) as PetId | undefined) ?? 'catbot'
     const sayText = after('--say')
     if (argv.includes('--feed')) {
       const pet = petArg('--feed')
-      const text = pet === 'dusty' ? 'MMM, A TEST CRUMB!' : pet === 'syncy' ? 'CRUNCHY LOG!' : pet === 'mole' ? 'A JUICY WORM!' : pet === 'rex' ? 'A TASTY TIN BONE!' : catbotFeedText(1)
+      const text = pet === 'dusty' ? 'MMM, A TEST CRUMB!' : pet === 'syncy' ? 'CRUNCHY LOG!' : pet === 'mole' ? 'A JUICY WORM!' : pet === 'rex' ? 'A TASTY TIN BONE!' : pet === 'pelican' ? 'GULP! A TEST FILE.' : catbotFeedText(1)
       feed(pet, { text, debug: true })
     } else if (argv.includes('--scan')) void dusty.scan()
     else if (argv.includes('--check')) void syncy.check()
@@ -77,6 +79,7 @@ let dusty: DustyService
 let syncy: SyncyService
 let mole: MoleService
 let rex: RexService
+let pelican: PelicanService
 let updater: Updater
 let tray: AppTray
 let hideTimer: NodeJS.Timeout | null = null
@@ -127,6 +130,12 @@ function start(): void {
     account: async () => (github.source === 'none' ? { login: null, token: null } : { login: github.data.login, token: await github.token() }),
     login: () => (github.source === 'none' ? null : github.data.login)
   })
+  pelican = new PelicanService({
+    changed: () => pushStatus(),
+    feed: (text) => feed('pelican', { text }),
+    say: (text) => overlays.sendToPet('pelican', IPC.say, text),
+    servers: () => mole.view().servers
+  })
   updater = new Updater({
     changed: () => pushStatus(),
     quit: (relaunch) => {
@@ -150,6 +159,8 @@ function start(): void {
     moleReview: () => openHub('mole'),
     rexScan: () => void rex.scan(),
     rexReview: () => openHub('rex'),
+    pelicanAdd: () => void pelicanAddFiles(),
+    pelicanShare: () => void pelicanShowQr(),
     hideForHour: () => setHidden(true, 60 * 60_000),
     showPets: () => setHidden(false),
     toggleStartWithWindows: () => {
@@ -190,6 +201,7 @@ function status(id: PetId): PetStatus {
   if (id === 'catbot') return catbotStatus(cfg, github.data, github.source !== 'none')
   if (id === 'mole') return mole.status(cfg)
   if (id === 'rex') return rex.status(cfg)
+  if (id === 'pelican') return pelican.status(cfg)
   return id === 'dusty' ? dusty.status(cfg) : syncy.status(cfg)
 }
 
@@ -301,7 +313,8 @@ async function hubView(): Promise<HubView> {
     dusty: dusty.view(),
     syncy: syncy.view(),
     mole: mole.view(),
-    rex: rex.view()
+    rex: rex.view(),
+    pelican: pelican.view()
   }
 }
 
@@ -348,6 +361,11 @@ function showPetMenu(id: PetId): void {
         : [{ label: 'Nothing running', enabled: false }]
     })
     own.push({ label: 'Show running servers...', click: () => openHub('mole') })
+  } else if (id === 'pelican') {
+    if (pelican.sharing) own.push({ label: 'Show the QR code...', click: () => openHub('pelican') }, { label: 'Stop sharing', click: () => pelican.stopShare() })
+    else if (pelican.count) own.push({ label: `Show QR code (${pelican.count} file${pelican.count === 1 ? '' : 's'})...`, click: () => void pelicanShowQr() })
+    own.push({ label: 'Add files...', click: () => void pelicanAddFiles() })
+    if (pelican.count) own.push({ label: 'Empty my pouch', click: () => void pelican.act({ kind: 'clear' }) })
   } else if (id === 'rex') {
     if (github.source === 'none') own.push({ label: 'Sign in with GitHub...', click: () => openHub('rex') })
     own.push(
@@ -408,6 +426,7 @@ async function confirmStop(sv: ServerInfo): Promise<void> {
 }
 
 function registerHubIpc(): void {
+  ipcMain.on(IPC.pelicanDrop, (_e, paths: unknown) => pelicanDropped(paths))
   ipcMain.on(IPC.petMenu, (_e, id: unknown) => {
     if (PET_IDS.includes(id as PetId)) showPetMenu(id as PetId)
   })
@@ -481,6 +500,9 @@ function registerHubIpc(): void {
     updater.seen()
     return hubView()
   })
+
+  // --- Pelican ---------------------------------------------------------------------------
+  ipcMain.handle(IPC.pelicanAction, (_e, action: PelicanAction) => pelican.act(action))
 
   // --- Rex -----------------------------------------------------------------------------
   ipcMain.handle(IPC.rexScan, async () => {
@@ -581,11 +603,29 @@ app.on('before-quit', () => {
   syncy?.stop()
   mole?.stop()
   rex?.stop()
+  pelican?.stop()
   updater?.stop()
   tracker?.stop()
   overlays?.stop()
   tray?.destroy()
 })
+
+/** Files dropped on Pelican (from the overlay). */
+function pelicanDropped(paths: unknown): void {
+  if (!Array.isArray(paths)) return
+  void pelican.act({ kind: 'addPaths', paths: paths.filter((p): p is string => typeof p === 'string') })
+}
+
+async function pelicanAddFiles(): Promise<void> {
+  await pelican.act({ kind: 'add' })
+}
+
+/** Start sharing and show the QR code in the panel. */
+async function pelicanShowQr(): Promise<void> {
+  const r = await pelican.act({ kind: 'share' })
+  openHub('pelican')
+  if (!r.ok && r.message) overlays.sendToPet('pelican', IPC.say, r.message.toUpperCase())
+}
 
 /** A repo the panel may act on: one from Syncy's last check, or an ignored one. */
 function knownRepo(path: unknown): string | null {

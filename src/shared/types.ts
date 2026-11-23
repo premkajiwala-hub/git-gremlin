@@ -67,7 +67,7 @@ export type GitHubSource = 'oauth' | 'gh' | 'none'
 export type HungerStage = 'fed' | 'hungry' | 'starving'
 
 /** Every pet GitGremlin can host. */
-export type PetId = 'catbot' | 'dusty' | 'syncy' | 'mole' | 'rex'
+export type PetId = 'catbot' | 'dusty' | 'syncy' | 'mole' | 'rex' | 'pelican'
 
 /**
  * A pet's live state, built by its "purpose" service in the main process
@@ -88,6 +88,8 @@ export interface PetStatus {
   busy: 'scanning' | 'cleaning' | null
   /** Catbot: whether a GitHub account is linked. */
   connected: boolean
+  /** Show the pet's accent overlay regardless of its mood (Pelican: files in its pouch). */
+  accent?: boolean
 }
 
 /** Make the pet play its eating animation, saying `text`. */
@@ -456,6 +458,55 @@ export interface UpdateView {
   needsRestart: boolean
 }
 
+/** A file waiting in Pelican's pouch. */
+export interface PelicanFile {
+  id: string
+  /** Shown name; may include a folder ("trip/photo.jpg") when a folder was added. */
+  name: string
+  size: number
+}
+
+/** The QR code being shared, and how far the phone has got. */
+export interface PelicanShare {
+  url: string
+  state: 'waiting' | 'opened' | 'downloading' | 'delivered' | 'stopped'
+  device: string | null
+  sent: number
+  total: number
+  files: number
+  /** Why it ended: delivered, idle or stopped. */
+  reason: string | null
+}
+
+/** A dev server Pelican can open on your phone. */
+export interface PelicanSite {
+  name: string
+  port: number
+  url: string
+  /** Only this PC can open it: the server needs to listen on the network. */
+  local: boolean
+  /** How to let the phone in, for this server's tool. */
+  hint: string | null
+}
+
+export interface PelicanView {
+  files: PelicanFile[]
+  total: number
+  share: PelicanShare | null
+  /** This PC's address on the Wi-Fi, or null when it's not on a network. */
+  address: string | null
+  sites: PelicanSite[]
+}
+
+export type PelicanAction =
+  | { kind: 'add' }
+  | { kind: 'addPaths'; paths: string[] }
+  | { kind: 'remove'; id: string }
+  | { kind: 'clear' }
+  | { kind: 'share' }
+  | { kind: 'stop' }
+  | { kind: 'copy'; url: string }
+
 export interface HubView {
   version: string
   update: UpdateView
@@ -469,6 +520,7 @@ export interface HubView {
   syncy: SyncyView
   mole: MoleView
   rex: RexView
+  pelican: PelicanView
 }
 
 /** Shown while signing in: enter this code at the verification URL. */
