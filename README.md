@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white" alt="Windows 10 | 11" />
   <img src="https://img.shields.io/badge/Electron-45-47848F?logo=electron&logoColor=white" alt="Electron 45" />
   <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/version-0.3.1-121315" alt="Version 0.3.1" />
+  <img src="https://img.shields.io/badge/version-0.4.0-121315" alt="Version 0.4.0" />
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license" />
 </p>
 
@@ -39,17 +39,21 @@ GitGremlin puts little pixel-art pets on your Windows desktop, and each one does
 
 The next GitGremlin update is in the works:
 
-- **3 new pets:** the first one, **Pelican**, is already here (see [Meet the pets](#meet-the-pets)). Two more are on the way, and all three ship together in the next update.
 - **Pets that work in the background:** keep a pet on duty without it showing on your screen. It keeps watching and still warns you when something needs you.
 
 ## What's new
 
-### 0.3.1
+### 0.4
 
-- **GitGremlin updates itself:** a Windows notification tells you when a new version is ready. Open **General → Updates** to see what's new, then click **Update**. No `git pull` or `npm install` by hand, and your own changes are kept. See [Updating](#updating).
+- **Pelican, a new pet:** opens the sites you build on your phone. Every dev server on your PC gets a QR code: scan it and your site opens on your phone, over your Wi-Fi. If a server only lets this PC in, Pelican shows the fix for your tool. [Meet Pelican →](docs/pets/pelican.md)
+- **Updates download by themselves:** GitGremlin downloads a new version in the background as soon as it's out. A banner on top of the panel says what's new; click **Update now** and it restarts on the new version in a few seconds. See [Updating](#updating).
 
 <details>
 <summary>Earlier versions</summary>
+
+#### 0.3.1
+
+- **GitGremlin updates itself:** a Windows notification tells you when a new version is ready. Open **General → Updates** to see what's new, then click **Update**. No `git pull` or `npm install` by hand, and your own changes are kept.
 
 #### 0.3
 
@@ -105,7 +109,7 @@ More pets are on the way.
 - **Plays with you.** Pets can follow your cursor, and you can pick them up, drag them and toss them.
 - **Crisp pixel art.** Everything is drawn in whole device pixels, so it stays sharp at any Windows scaling.
 - **A real Windows app.** Open it from the Start menu or search, pin it, and start it with Windows.
-- **Updates itself.** A Windows notification tells you when a new version is out, and one click in **General → Updates** installs it.
+- **Updates itself.** New versions download in the background. A banner on top of the panel (and a Windows notification) tells you, and one click installs it.
 - **Light on your PC.** Rendering slows down when nothing on screen changes. Syncy watches your repos with file events, Mole's port check takes a few milliseconds, and the only internet access is GitHub (Catbot's chart, Rex's public repos, and the update check).
 
 ## Installation
@@ -239,7 +243,7 @@ To keep it handy, right-click **GitGremlin** in the Start menu and choose **Pin 
 
 ### Updating
 
-From 0.3.1 on, **GitGremlin updates itself**. When a new version is out, a Windows notification tells you, the tray menu shows **Update to ...**, and **General → Updates** lists what's new. Click **Update to ...**: GitGremlin downloads the new version and restarts. If the update brings new packages, it closes for about a minute while it installs them, then opens again by itself. If anything goes wrong, it puts the old version back.
+From 0.3.1 on, **GitGremlin updates itself**. When a new version is out, GitGremlin downloads it in the background. Then a banner on top of the panel says **GitGremlin 0.x is ready**, a Windows notification tells you, the tray menu shows **Update to ...**, and **General → Updates** lists what's new. Click **Update now**: GitGremlin swaps in the new version and restarts in a few seconds. If the update brings new packages, it closes for about a minute while it installs them, then opens again by itself. If anything goes wrong, it puts the old version back.
 
 - **Cloned with git:** files you changed and commits of your own are kept. If one of your changes clashes with the update, the update wins and your change is saved in `git stash`.
 - **Downloaded as a ZIP:** it downloads the new version and copies it over your folder. Your settings are kept.
