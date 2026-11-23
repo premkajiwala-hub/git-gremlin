@@ -156,6 +156,8 @@ export class Updater {
     mkdirSync(this.dir, { recursive: true })
     this.kind = app.isPackaged ? 'installer' : existsSync(join(this.root, '.git')) && which('git.exe') ? 'git' : 'zip'
     this.saved = { autoCheck: true, notified: null, checkedAt: null, ...this.readJson<Saved>('state.json') }
+    // Always on: GitGremlin looks for new versions by itself (the old switch is gone).
+    this.saved.autoCheck = true
     this.finishPrevious()
   }
 

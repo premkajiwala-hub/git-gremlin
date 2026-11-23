@@ -1372,7 +1372,6 @@ function wireBanner(): void {
 function renderUpdates(): void {
   renderBanner()
   const u = view.update
-  setSwitch($('updAuto'), u.autoCheck)
   $('updInfo').textContent = u.state === 'checking' ? 'Checking...' : `Version ${u.current}`
   const next = u.releases[0]
   const sub = $('generalSub')
@@ -1385,7 +1384,6 @@ function renderUpdates(): void {
     const head = el('div', 'upd-head')
     head.append(el('p', 'upd-title', `Updated to ${u.updated.to}`), button('Got it', 'Hide this', seen, 'btn glass sm'))
     body.push(head)
-    if (u.updated.note) body.push(el('p', 'muted', u.updated.note))
     for (const r of u.updated.releases) body.push(releaseBlock(r, u.updated.releases.length > 1))
   }
   if (u.failed) {
@@ -1406,14 +1404,8 @@ function renderUpdates(): void {
     }
     head.append(el('p', 'upd-title', `New: version ${next.version}`), acts)
     body.push(head)
-    const hint = u.blocked ?? [u.note, u.needsRestart ? 'Closes for about a minute to install packages.' : null].filter(Boolean).join(' ')
-    if (hint) body.push(el('p', 'muted', hint))
+    if (u.blocked) body.push(el('p', 'muted', u.blocked))
     for (const r of u.releases) body.push(releaseBlock(r, u.releases.length > 1))
-    if (u.packages.length) {
-      const badges = el('div', 'badges upd-release')
-      for (const p of u.packages) badges.append(el('span', 'b', p.from && p.to ? `${p.name} ${p.from} → ${p.to}` : p.to ? `+ ${p.name} ${p.to}` : `− ${p.name}`))
-      body.push(badges)
-    }
   } else if (!u.updated) {
     const head = el('div', 'upd-head')
     const check = button(u.state === 'checking' ? 'Checking...' : 'Check now', 'Look for a new version', () => void api.updateCheck().then((v) => apply(v)), 'btn glass sm')
@@ -1429,10 +1421,6 @@ async function updateNow(): Promise<void> {
   const r = await api.updateApply()
   if (!r.ok && r.message) toast(r.message)
   await reload()
-}
-
-function wireUpdates(): void {
-  $('updAuto').addEventListener('click', () => void api.updateAuto(!view.update.autoCheck).then((v) => apply(v)))
 }
 
 // --- General -------------------------------------------------------------------------------------
@@ -1526,7 +1514,6 @@ async function start(): Promise<void> {
   wireMole()
   wireRex()
   wireGeneral()
-  wireUpdates()
   wireBanner()
   apply(view, true)
   show(page)

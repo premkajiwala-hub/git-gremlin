@@ -332,7 +332,7 @@ Pets are awake the whole time GitGremlin runs. Turn one off with its switch, or 
 - **Your repos:** Syncy only reads them with git. It never fetches or pushes, and the only change it can make is deleting merged local branches, after you confirm. [Safety →](docs/pets/syncy.md#safety)
 - **Your processes:** Mole only reads which programs listen on which ports. It stops a server only when you ask and confirm, never Windows itself or your terminal. [Safety →](docs/pets/mole.md#safety)
 - **Your public repos:** Rex only reads public repos you own, with GET requests and your one GitHub sign-in (General → GitHub account). It never changes a repo, and keeps only masked previews of what it finds, never the secrets themselves. [Safety →](docs/pets/rex.md#safety-and-privacy)
-- **Network:** the only internet access is GitHub: Catbot's contribution check, Rex's reads of your public repos, and the update check. Every 6 hours GitGremlin reads its list of releases on GitHub, and it downloads an update only when you click **Update**. Turn the check off under **General → Updates**. Dusty, Syncy, Mole and Pelican work offline.
+- **Network:** the only internet access is GitHub: Catbot's contribution check, Rex's reads of your public repos, and the update check. Every 6 hours GitGremlin reads its list of releases on GitHub, and it downloads an update only when you click **Update**. Dusty, Syncy, Mole and Pelican work offline.
 - **Your data stays local:** settings and state are in `%APPDATA%\GitGremlin\state.json`.
 
 ## Troubleshooting

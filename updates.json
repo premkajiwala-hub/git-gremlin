@@ -3,7 +3,7 @@
     {
       "version": "0.4.0",
       "date": "2026-11-24",
-      "title": "Pelican, and updates that download themselves",
+      "title": "Pelican",
       "pets": [
         {
           "id": "pelican",
@@ -11,19 +11,15 @@
           "summary": "Opens the sites you build on your phone with a QR code."
         }
       ],
-      "features": [
-        "Updates download in the background; a banner on top of the panel says when one is ready"
-      ],
+      "features": [],
       "fixes": []
     },
     {
       "version": "0.3.1",
       "date": "2026-11-18",
-      "title": "GitGremlin updates itself",
+      "title": "Fixes",
       "pets": [],
-      "features": [
-        "Update GitGremlin in one click from General > Updates"
-      ],
+      "features": [],
       "fixes": [
         "Notifications show as GitGremlin",
         "npm start works on a fresh clone"
