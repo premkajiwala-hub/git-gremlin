@@ -18,7 +18,7 @@
   <img src="docs/images/pets-hero.png" alt="Catbot, a white robot cat, Syncy, a brown beaver in a yellow hard hat, Dusty, a grey raccoon with a teal bandana, Mole, a grey mole in round glasses, and Rex, a cream wind-up tin toy dog with floppy red ears and a brass key on its back, with hearts between them" width="720" />
 </p>
 
-GitGremlin puts little pixel-art pets on your Windows desktop, and each one does a job for you. Catbot keeps an eye on your GitHub contributions. Dusty cleans junk files off your PC. Syncy makes sure your work actually reaches GitHub. Mole tells you who's sitting on the port you need, and frees it. Rex sniffs your public GitHub repos for leaked secrets. They roam, play and talk to you, and you manage them all from one app.
+GitGremlin puts little pixel-art pets on your Windows desktop, and each one does a job for you. Catbot keeps an eye on your GitHub contributions. Dusty cleans junk files off your PC. Syncy makes sure your work actually reaches GitHub. Mole tells you who's sitting on the port you need, and frees it. Rex sniffs your public GitHub repos for leaked secrets. Pelican carries files from your PC to your phone. They roam, play and talk to you, and you manage them all from one app.
 
 ## Contents
 
@@ -39,7 +39,7 @@ GitGremlin puts little pixel-art pets on your Windows desktop, and each one does
 
 The next GitGremlin update is in the works:
 
-- **3 new pets:** three more pets with a purpose, each taking on a real chore on your PC. They ship together in one update.
+- **3 new pets:** the first one, **Pelican**, is already here (see [Meet the pets](#meet-the-pets)). Two more are on the way, and all three ship together in the next update.
 - **Pets that work in the background:** keep a pet on duty without it showing on your screen. It keeps watching and still warns you when something needs you.
 
 ## What's new
@@ -90,6 +90,7 @@ GitGremlin is a home for **pets with a purpose**:
 | <img src="assets/pets/dusty/portrait.png" alt="Dusty" width="66" /> | **Dusty**<br /><sub>raccoon</sub> | Sniffs out **junk files**: developer caches, the Recycle Bin, and optionally temp files and browser caches. Cleans them only the way you allow: ask first, automatically, or report only. | [Dusty's guide →](docs/pets/dusty.md) |
 | <img src="assets/pets/syncy/portrait.png" alt="Syncy" width="66" /> | **Syncy**<br /><sub>beaver</sub> | Guards **work that isn't on GitHub**: uncommitted changes, unpushed commits and forgotten stashes across all your repos. Watches them live, nudges you when work sits too long, and tidies merged branches. | [Syncy's guide →](docs/pets/syncy.md) |
 | <img src="assets/pets/mole/portrait.png" alt="Mole" width="72" /> | **Mole**<br /><sub>mole</sub> | Digs through your **ports**: shows every dev server and its port, warns you the moment a project you start finds **its port taken**, and **frees the port** (stops whatever holds it) after you confirm. Also spots servers left running after their terminal closed. | [Mole's guide →](docs/pets/mole.md) |
+| <img src="assets/pets/pelican/portrait.png" alt="Pelican" width="72" /> | **Pelican**<br /><sub>white pelican</sub> | Carries **files from your PC to your phone**. Drop files on it (as many as you like), show its **QR code**, scan it with your phone and tap **Download all**. Over your Wi-Fi, single use, no app on the phone. Also opens your **dev sites on your phone**. | [Pelican's guide →](docs/pets/pelican.md) |
 | <img src="assets/pets/rex/portrait.png" alt="Rex" width="72" /> | **Rex**<br /><sub>wind-up tin dog</sub> | Sniffs your **public GitHub repos** for **leaked secrets**: API keys and tokens, private keys, database passwords and URLs, `.env` and credential files. Checks current files and recent commits, after you push and once a day, and barks when it finds one. Read-only. | [Rex's guide →](docs/pets/rex.md) |
 
 More pets are on the way.
@@ -105,7 +106,7 @@ More pets are on the way.
 - **Crisp pixel art.** Everything is drawn in whole device pixels, so it stays sharp at any Windows scaling.
 - **A real Windows app.** Open it from the Start menu or search, pin it, and start it with Windows.
 - **Updates itself.** A Windows notification tells you when a new version is out, and one click in **General → Updates** installs it.
-- **Light on your PC.** Rendering slows down when nothing on screen changes. Syncy watches your repos with file events, Mole's port check takes a few milliseconds, and the only network access is GitHub (Catbot's chart, Rex's public repos, and the update check).
+- **Light on your PC.** Rendering slows down when nothing on screen changes. Syncy watches your repos with file events, Mole's port check takes a few milliseconds, and the only internet access is GitHub (Catbot's chart, Rex's public repos, and the update check).
 
 ## Installation
 
@@ -229,6 +230,7 @@ Copy-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\GitGremlin.lnk" ([
    - **Syncy** lists repos with work that isn't on GitHub yet. It finds your repos by itself.
    - **Mole** shows your running dev servers and their ports, and frees a port you need.
    - **Rex** sniffs your public GitHub repos for leaked secrets, using the same GitHub sign-in.
+   - **Pelican** sends files to your phone: drop files on it, then scan its QR code.
    - **General → System → Start with Windows** brings the pets back every time you sign in.
 
 To keep it handy, right-click **GitGremlin** in the Start menu and choose **Pin to Start** or **Pin to taskbar**. Opening GitGremlin while it's already running opens the panel. To stop it, right-click the tray icon and choose **Quit**.
@@ -326,7 +328,8 @@ Pets are awake the whole time GitGremlin runs. Turn one off with its switch, or 
 - **Your repos:** Syncy only reads them with git. It never fetches or pushes, and the only change it can make is deleting merged local branches, after you confirm. [Safety →](docs/pets/syncy.md#safety)
 - **Your processes:** Mole only reads which programs listen on which ports. It stops a server only when you ask and confirm, never Windows itself or your terminal. [Safety →](docs/pets/mole.md#safety)
 - **Your public repos:** Rex only reads public repos you own, with GET requests and your one GitHub sign-in (General → GitHub account). It never changes a repo, and keeps only masked previews of what it finds, never the secrets themselves. [Safety →](docs/pets/rex.md#safety-and-privacy)
-- **Network:** the only network access is GitHub: Catbot's contribution check, Rex's reads of your public repos, and the update check. Every 6 hours GitGremlin reads its list of releases on GitHub, and it downloads an update only when you click **Update**. Turn the check off under **General → Updates**. Dusty, Syncy and Mole work offline.
+- **Your files on your phone:** Pelican shares only the files you put in its pouch, only while its QR code is showing, only on your Wi-Fi, and only with the first device that opens the link. It switches off once that device has the files, or after 30 minutes without use. Nothing goes to the internet. [Safety →](docs/pets/pelican.md#safety-and-privacy)
+- **Network:** the only internet access is GitHub: Catbot's contribution check, Rex's reads of your public repos, and the update check. Every 6 hours GitGremlin reads its list of releases on GitHub, and it downloads an update only when you click **Update**. Turn the check off under **General → Updates**. Dusty, Syncy and Mole work offline, and Pelican only uses your local Wi-Fi.
 - **Your data stays local:** settings and state are in `%APPDATA%\GitGremlin\state.json`.
 
 ## Troubleshooting
@@ -351,7 +354,7 @@ Pets are awake the whole time GitGremlin runs. Turn one off with its switch, or 
 - **Full-screen games and apps cover the pets, even in on-top mode.** So do the Start menu, notification centre, Alt+Tab and Task View.
 - Window hopping uses the **focused** window only, and skips maximised and full-screen windows.
 - Dragging works only on the monitor the pet is on. To change monitors, toss it or let it walk.
-- Each pet has its own limits; see [Catbot's](docs/pets/catbot.md#limitations), [Dusty's](docs/pets/dusty.md#limitations), [Syncy's](docs/pets/syncy.md#limitations), [Mole's](docs/pets/mole.md#limitations) and [Rex's](docs/pets/rex.md#limitations) guides.
+- Each pet has its own limits; see [Catbot's](docs/pets/catbot.md#limitations), [Dusty's](docs/pets/dusty.md#limitations), [Syncy's](docs/pets/syncy.md#limitations), [Mole's](docs/pets/mole.md#limitations), [Rex's](docs/pets/rex.md#limitations) and [Pelican's](docs/pets/pelican.md#limitations) guides.
 
 ## Documentation
 
@@ -362,6 +365,7 @@ Pets are awake the whole time GitGremlin runs. Turn one off with its switch, or 
 | [Syncy](docs/pets/syncy.md) | What counts as unsaved work, where it looks, nudges, merged branches, safety |
 | [Mole](docs/pets/mole.md) | Freeing a port, port-taken warnings, running servers, servers left running, safety |
 | [Rex](docs/pets/rex.md) | What it sniffs out, files and history, when it sniffs, fixing a leak, privacy |
+| [Pelican](docs/pets/pelican.md) | Sending files to your phone, the single-use QR code, your sites on your phone, if your phone can't open it |
 | [Publishing an update](docs/releasing.md) | How updates reach everyone, releasing a version, testing an update |
 | [Development guide](docs/development.md) | Dev mode, project structure, how it works, pet art, adding a pet, building the installer |
 

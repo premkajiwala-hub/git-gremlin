@@ -8,6 +8,7 @@
  *   docs/images/syncy-poses.png    a strip of Syncy's animations
  *   docs/images/mole-poses.png     a strip of Mole's animations
  *   docs/images/rex-poses.png      a strip of Rex's animations
+ *   docs/images/pelican-poses.png  a strip of Pelican's animations
  *
  * Run with:  npm run docs-images
  */
@@ -87,6 +88,8 @@ interface Pose {
   food?: boolean
   hearts?: boolean
   zzz?: boolean
+  /** Draw the accent overlay (default yes; Pelican: files in its mouth). */
+  accent?: boolean
 }
 
 /** One finished frame: body + eyes + lit accent + food, as the app composes it. */
@@ -96,7 +99,7 @@ function pose(pet: string, p: Pose): Img {
   const f = meta.anims[p.anim].frames[p.frame]
   const img = readPng(join(dir, f.file))
   img.over(readPng(join(dir, `eyes_${p.eyes}.png`)), f.screen[0], f.screen[1])
-  if (meta.accent && f.accent && p.eyes !== 'sad' && p.eyes !== 'blink') img.over(readPng(join(dir, meta.accent)), f.accent[0], f.accent[1])
+  if (meta.accent && f.accent && p.accent !== false && p.eyes !== 'sad' && p.eyes !== 'blink') img.over(readPng(join(dir, meta.accent)), f.accent[0], f.accent[1])
   if (p.food) {
     const food = readPng(join(dir, 'food.png'))
     img.over(food, meta.anchor.x + 20 - Math.floor(food.w / 2), meta.anchor.y + 1 - food.h)
@@ -207,5 +210,17 @@ const rex: Pose[] = [
   { anim: 'sleep', frame: 0, eyes: 'blink', zzz: true }
 ]
 writeFileSync(join(DOCS, 'rex-poses.png'), png(scale(strip('rex', rex), 3)))
+
+const pelican: Pose[] = [
+  { anim: 'idle', frame: 0, eyes: 'idle', accent: false },
+  { anim: 'walk', frame: 1, eyes: 'idle', accent: false },
+  { anim: 'eat', frame: 1, eyes: 'happy', food: true },
+  { anim: 'idle', frame: 0, eyes: 'happy' },
+  { anim: 'happy', frame: 0, eyes: 'happy', hearts: true, accent: false },
+  { anim: 'rummage', frame: 0, eyes: 'idle' },
+  { anim: 'sit', frame: 0, eyes: 'idle', accent: false },
+  { anim: 'sleep', frame: 0, eyes: 'blink', zzz: true, accent: false }
+]
+writeFileSync(join(DOCS, 'pelican-poses.png'), png(scale(strip('pelican', pelican), 3)))
 
 console.log(`Wrote README images to ${DOCS}`)
